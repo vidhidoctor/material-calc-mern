@@ -1,0 +1,21 @@
+import { createApp } from './app.js';
+import { EnvError, getEnv, loadDotEnv, type Env } from './config/env.js';
+import { connectDb } from './db/connect.js';
+
+loadDotEnv();
+
+let env: Env;
+try {
+  env = getEnv();
+} catch (error) {
+  if (error instanceof EnvError) {
+    console.error(error.message);
+    process.exit(1);
+  }
+  throw error;
+}
+
+await connectDb(env.MONGODB_URI);
+createApp().listen(env.PORT, () => {
+  console.info(`API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
+});

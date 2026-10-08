@@ -1,5 +1,11 @@
 {
   "name": "material-calc-mern",
   "private": true,
-  "workspaces": ["client", "server", "shared"]
+  "workspaces": ["client", "server", "shared"],
+  "scripts": {
+    "dev": "npm run dev -w server",
+    "seed": "npm run seed -w server",
+    "test": "npm test -w server",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
 }
