@@ -1,0 +1,672 @@
+{
+  "source": "MATRIAL.xlsx — design 26-49, party FR, item CHOLI, order date 2026-09-15",
+  "materials": [
+    {
+      "code": "SEQ-3MM",
+      "name": "3-MM Sequence",
+      "category": "SEQUENCE",
+      "seqPerCd": 31600,
+      "cdPerRoll": 210,
+      "sortOrder": 0
+    },
+    {
+      "code": "SEQ-4MM",
+      "name": "4-MM Sequence",
+      "category": "SEQUENCE",
+      "seqPerCd": 23725,
+      "cdPerRoll": 165,
+      "sortOrder": 1
+    },
+    {
+      "code": "SEQ-7MM",
+      "name": "7-MM Sequence",
+      "category": "SEQUENCE",
+      "seqPerCd": 13550,
+      "cdPerRoll": 100,
+      "sortOrder": 2
+    },
+    {
+      "code": "SEQ-9MM",
+      "name": "9-MM Sequence",
+      "category": "SEQUENCE",
+      "seqPerCd": 10500,
+      "cdPerRoll": 70,
+      "sortOrder": 3
+    },
+    {
+      "code": "BEAD-2MM-A",
+      "name": "2-MM Bead A",
+      "category": "BEAD",
+      "pcsPerKg": 80000,
+      "sortOrder": 4
+    },
+    {
+      "code": "BEAD-2MM-B",
+      "name": "2-MM Bead B",
+      "category": "BEAD",
+      "pcsPerKg": 80000,
+      "sortOrder": 5
+    },
+    {
+      "code": "BEAD-2.5MM",
+      "name": "2.5-MM Bead",
+      "category": "BEAD",
+      "pcsPerKg": 70000,
+      "sortOrder": 6
+    },
+    {
+      "code": "MOTI-3MM",
+      "name": "3-MM Moti",
+      "category": "BEAD",
+      "pcsPerKg": 45000,
+      "sortOrder": 7
+    },
+    {
+      "code": "PIPE-4MM",
+      "name": "4-MM Pipe",
+      "category": "BEAD",
+      "pcsPerKg": 35000,
+      "sortOrder": 8
+    },
+    {
+      "code": "ZARDOSHI-7MM",
+      "name": "7-MM Zardoshi",
+      "category": "BEAD",
+      "pcsPerKg": 45000,
+      "sortOrder": 9
+    },
+    {
+      "code": "CORD",
+      "name": "Cord",
+      "category": "CORD",
+      "denier": 1200,
+      "sortOrder": 10
+    }
+  ],
+  "design": {
+    "designNo": "26-49",
+    "productName": "CHOLI",
+    "components": [
+      {
+        "name": "KALI",
+        "sizes": [
+          {
+            "size": "18",
+            "consumption": {
+              "SEQ-3MM": 975,
+              "SEQ-4MM": 975,
+              "CORD": 30
+            }
+          },
+          {
+            "size": "20",
+            "consumption": {
+              "SEQ-3MM": 1170,
+              "SEQ-4MM": 1170,
+              "CORD": 33
+            }
+          },
+          {
+            "size": "22",
+            "consumption": {
+              "SEQ-3MM": 1420,
+              "SEQ-4MM": 1420,
+              "CORD": 36.2
+            }
+          },
+          {
+            "size": "24",
+            "consumption": {
+              "SEQ-3MM": 1510,
+              "SEQ-4MM": 1510,
+              "CORD": 43
+            }
+          },
+          {
+            "size": "26",
+            "consumption": {
+              "SEQ-3MM": 1620,
+              "SEQ-4MM": 1620,
+              "CORD": 56
+            }
+          },
+          {
+            "size": "28",
+            "consumption": {
+              "SEQ-3MM": 1750,
+              "SEQ-4MM": 1750,
+              "SEQ-7MM": 100,
+              "SEQ-9MM": 100,
+              "BEAD-2MM-A": 100,
+              "BEAD-2MM-B": 100,
+              "MOTI-3MM": 100,
+              "ZARDOSHI-7MM": 100,
+              "CORD": 57
+            }
+          },
+          {
+            "size": "30",
+            "consumption": {
+              "SEQ-3MM": 2060,
+              "SEQ-4MM": 2060,
+              "CORD": 65
+            }
+          },
+          {
+            "size": "32",
+            "consumption": {
+              "SEQ-3MM": 1970,
+              "SEQ-4MM": 1970,
+              "CORD": 73
+            }
+          },
+          {
+            "size": "34",
+            "consumption": {
+              "SEQ-3MM": 2275,
+              "SEQ-4MM": 2275,
+              "CORD": 77
+            }
+          },
+          {
+            "size": "36",
+            "consumption": {
+              "SEQ-3MM": 2765,
+              "SEQ-4MM": 2765,
+              "CORD": 78
+            }
+          },
+          {
+            "size": "38",
+            "consumption": {
+              "SEQ-3MM": 2510,
+              "SEQ-4MM": 2510,
+              "CORD": 80
+            }
+          },
+          {
+            "size": "40",
+            "consumption": {
+              "SEQ-3MM": 2900,
+              "SEQ-4MM": 2900,
+              "CORD": 81
+            }
+          }
+        ]
+      },
+      {
+        "name": "BLOUSE",
+        "sizes": [
+          {
+            "size": "18",
+            "consumption": {
+              "SEQ-3MM": 810,
+              "SEQ-4MM": 390,
+              "BEAD-2.5MM": 1820,
+              "PIPE-4MM": 125,
+              "CORD": 36
+            }
+          },
+          {
+            "size": "20",
+            "consumption": {
+              "SEQ-3MM": 875,
+              "SEQ-4MM": 420,
+              "BEAD-2.5MM": 2050,
+              "PIPE-4MM": 135,
+              "CORD": 39
+            }
+          },
+          {
+            "size": "22",
+            "consumption": {
+              "SEQ-3MM": 1030,
+              "SEQ-4MM": 480,
+              "BEAD-2.5MM": 2375,
+              "PIPE-4MM": 160,
+              "CORD": 45
+            }
+          },
+          {
+            "size": "24",
+            "consumption": {
+              "SEQ-3MM": 1075,
+              "SEQ-4MM": 500,
+              "BEAD-2.5MM": 2620,
+              "PIPE-4MM": 170,
+              "CORD": 51
+            }
+          },
+          {
+            "size": "26",
+            "consumption": {
+              "SEQ-3MM": 1200,
+              "SEQ-4MM": 550,
+              "BEAD-2.5MM": 2960,
+              "PIPE-4MM": 190,
+              "CORD": 56
+            }
+          },
+          {
+            "size": "28",
+            "consumption": {
+              "SEQ-3MM": 1325,
+              "SEQ-4MM": 600,
+              "BEAD-2.5MM": 3300,
+              "PIPE-4MM": 210,
+              "CORD": 60
+            }
+          },
+          {
+            "size": "30",
+            "consumption": {
+              "SEQ-3MM": 1490,
+              "SEQ-4MM": 665,
+              "BEAD-2.5MM": 3540,
+              "PIPE-4MM": 235,
+              "CORD": 67
+            }
+          },
+          {
+            "size": "32",
+            "consumption": {
+              "SEQ-3MM": 1580,
+              "SEQ-4MM": 695,
+              "BEAD-2.5MM": 3820,
+              "PIPE-4MM": 250,
+              "CORD": 71
+            }
+          },
+          {
+            "size": "34",
+            "consumption": {
+              "SEQ-3MM": 1780,
+              "SEQ-4MM": 775,
+              "BEAD-2.5MM": 4000,
+              "PIPE-4MM": 280,
+              "CORD": 73
+            }
+          },
+          {
+            "size": "36",
+            "consumption": {
+              "SEQ-3MM": 1810,
+              "SEQ-4MM": 785,
+              "BEAD-2.5MM": 4420,
+              "PIPE-4MM": 290,
+              "CORD": 80
+            }
+          },
+          {
+            "size": "38",
+            "consumption": {
+              "SEQ-3MM": 2110,
+              "SEQ-4MM": 910,
+              "BEAD-2.5MM": 4750,
+              "PIPE-4MM": 345,
+              "CORD": 85
+            }
+          },
+          {
+            "size": "40",
+            "consumption": {
+              "SEQ-3MM": 2255,
+              "SEQ-4MM": 975,
+              "BEAD-2.5MM": 5185,
+              "PIPE-4MM": 370,
+              "CORD": 93
+            }
+          }
+        ]
+      },
+      {
+        "name": "GALISH",
+        "sizes": [
+          {
+            "size": "18",
+            "consumption": {
+              "BEAD-2.5MM": 170,
+              "CORD": 2.75
+            }
+          },
+          {
+            "size": "20",
+            "consumption": {
+              "BEAD-2.5MM": 170,
+              "CORD": 2.75
+            }
+          },
+          {
+            "size": "22",
+            "consumption": {
+              "BEAD-2.5MM": 195,
+              "CORD": 3
+            }
+          },
+          {
+            "size": "24",
+            "consumption": {
+              "BEAD-2.5MM": 195,
+              "CORD": 3
+            }
+          },
+          {
+            "size": "26",
+            "consumption": {
+              "BEAD-2.5MM": 215,
+              "CORD": 3.5
+            }
+          },
+          {
+            "size": "28",
+            "consumption": {
+              "BEAD-2.5MM": 215,
+              "CORD": 3.5
+            }
+          },
+          {
+            "size": "30",
+            "consumption": {
+              "BEAD-2.5MM": 220,
+              "CORD": 3.75
+            }
+          },
+          {
+            "size": "32",
+            "consumption": {
+              "BEAD-2.5MM": 220,
+              "CORD": 3.75
+            }
+          },
+          {
+            "size": "34",
+            "consumption": {
+              "BEAD-2.5MM": 230,
+              "CORD": 4
+            }
+          },
+          {
+            "size": "36",
+            "consumption": {
+              "BEAD-2.5MM": 230,
+              "CORD": 4
+            }
+          },
+          {
+            "size": "38",
+            "consumption": {
+              "BEAD-2.5MM": 250,
+              "CORD": 4.5
+            }
+          },
+          {
+            "size": "40",
+            "consumption": {
+              "BEAD-2.5MM": 250,
+              "CORD": 4.5
+            }
+          }
+        ]
+      },
+      {
+        "name": "BELT",
+        "sizes": [
+          {
+            "size": "ALL",
+            "consumption": {
+              "SEQ-3MM": 290,
+              "CORD": 11
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "order": {
+    "designNo": "26-49",
+    "party": "FR",
+    "orderDate": "2026-09-15",
+    "lines": [
+      {
+        "component": "KALI",
+        "size": "18",
+        "quantity": 230
+      },
+      {
+        "component": "KALI",
+        "size": "20",
+        "quantity": 230
+      },
+      {
+        "component": "KALI",
+        "size": "22",
+        "quantity": 230
+      },
+      {
+        "component": "KALI",
+        "size": "24",
+        "quantity": 230
+      },
+      {
+        "component": "KALI",
+        "size": "26",
+        "quantity": 460
+      },
+      {
+        "component": "KALI",
+        "size": "28",
+        "quantity": 460
+      },
+      {
+        "component": "KALI",
+        "size": "30",
+        "quantity": 460
+      },
+      {
+        "component": "KALI",
+        "size": "32",
+        "quantity": 460
+      },
+      {
+        "component": "KALI",
+        "size": "34",
+        "quantity": 460
+      },
+      {
+        "component": "KALI",
+        "size": "36",
+        "quantity": 460
+      },
+      {
+        "component": "KALI",
+        "size": "38",
+        "quantity": 230
+      },
+      {
+        "component": "KALI",
+        "size": "40",
+        "quantity": 230
+      },
+      {
+        "component": "BLOUSE",
+        "size": "18",
+        "quantity": 23
+      },
+      {
+        "component": "BLOUSE",
+        "size": "20",
+        "quantity": 23
+      },
+      {
+        "component": "BLOUSE",
+        "size": "22",
+        "quantity": 23
+      },
+      {
+        "component": "BLOUSE",
+        "size": "24",
+        "quantity": 23
+      },
+      {
+        "component": "BLOUSE",
+        "size": "26",
+        "quantity": 46
+      },
+      {
+        "component": "BLOUSE",
+        "size": "28",
+        "quantity": 46
+      },
+      {
+        "component": "BLOUSE",
+        "size": "30",
+        "quantity": 46
+      },
+      {
+        "component": "BLOUSE",
+        "size": "32",
+        "quantity": 46
+      },
+      {
+        "component": "BLOUSE",
+        "size": "34",
+        "quantity": 46
+      },
+      {
+        "component": "BLOUSE",
+        "size": "36",
+        "quantity": 46
+      },
+      {
+        "component": "BLOUSE",
+        "size": "38",
+        "quantity": 23
+      },
+      {
+        "component": "BLOUSE",
+        "size": "40",
+        "quantity": 23
+      },
+      {
+        "component": "GALISH",
+        "size": "18",
+        "quantity": 23
+      },
+      {
+        "component": "GALISH",
+        "size": "20",
+        "quantity": 23
+      },
+      {
+        "component": "GALISH",
+        "size": "22",
+        "quantity": 23
+      },
+      {
+        "component": "GALISH",
+        "size": "24",
+        "quantity": 23
+      },
+      {
+        "component": "GALISH",
+        "size": "26",
+        "quantity": 46
+      },
+      {
+        "component": "GALISH",
+        "size": "28",
+        "quantity": 46
+      },
+      {
+        "component": "GALISH",
+        "size": "30",
+        "quantity": 46
+      },
+      {
+        "component": "GALISH",
+        "size": "32",
+        "quantity": 46
+      },
+      {
+        "component": "GALISH",
+        "size": "34",
+        "quantity": 46
+      },
+      {
+        "component": "GALISH",
+        "size": "36",
+        "quantity": 46
+      },
+      {
+        "component": "GALISH",
+        "size": "38",
+        "quantity": 23
+      },
+      {
+        "component": "GALISH",
+        "size": "40",
+        "quantity": 23
+      },
+      {
+        "component": "BELT",
+        "size": "ALL",
+        "quantity": 405
+      }
+    ]
+  },
+  "expected": {
+    "totals": {
+      "SEQ-3MM": 8861475,
+      "SEQ-4MM": 8405695,
+      "SEQ-7MM": 46000,
+      "SEQ-9MM": 46000,
+      "BEAD-2MM-A": 46000,
+      "BEAD-2MM-B": 46000,
+      "BEAD-2.5MM": 1535710,
+      "MOTI-3MM": 46000,
+      "PIPE-4MM": 96945,
+      "ZARDOSHI-7MM": 46000,
+      "CORD": 289206.5
+    },
+    "purchase": {
+      "SEQ-3MM": {
+        "cds": 280.43,
+        "rolls": 1.34
+      },
+      "SEQ-4MM": {
+        "cds": 354.3,
+        "rolls": 2.15
+      },
+      "SEQ-7MM": {
+        "cds": 3.39,
+        "rolls": 0.03
+      },
+      "SEQ-9MM": {
+        "cds": 4.38,
+        "rolls": 0.06
+      },
+      "BEAD-2MM-A": {
+        "kg": 0.58
+      },
+      "BEAD-2MM-B": {
+        "kg": 0.58
+      },
+      "BEAD-2.5MM": {
+        "kg": 21.94
+      },
+      "MOTI-3MM": {
+        "kg": 1.02
+      },
+      "PIPE-4MM": {
+        "kg": 2.77
+      },
+      "ZARDOSHI-7MM": {
+        "kg": 1.02
+      },
+      "CORD": {
+        "grams": 38560.87,
+        "kg": 38.56
+      }
+    }
+  }
+}
