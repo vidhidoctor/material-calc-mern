@@ -4,6 +4,11 @@ import { getEnv } from './config/env.js';
 import { errorHandler, notFound } from './middleware/error-handler.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { designsRoutes } from './modules/designs/designs.routes.js';
+import { materialsRoutes } from './modules/materials/materials.routes.js';
+import { ordersRoutes } from './modules/orders/orders.routes.js';
+import { productionRoutes } from './modules/production/production.routes.js';
+import { purchaseRoutes } from './modules/purchase/purchase.routes.js';
 
 export function createApp(): Express {
   const env = getEnv();
@@ -18,6 +23,11 @@ export function createApp(): Express {
   });
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/materials', materialsRoutes);
+  app.use('/api/designs', designsRoutes);
+  app.use('/api/production', productionRoutes);
+  app.use('/api/orders', ordersRoutes);
+  app.use('/api/purchase', purchaseRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -95,8 +95,7 @@ designs        { designNo (unique, e.g. "26-49"), productName (e.g. "Lehenga Cho
 orders         { orderNo (sequential int from a counters collection, shown as "#12"), designNo, item
                  (= design.productName at creation), party, orderDate (date only), quantity (int | null —
                  null means "per row"), status: PENDING|IN_PROGRESS|COMPLETED|CANCELLED, createdAt,
-                 lines: [ { component, size, quantity (int > 0),
-                            consumption: { [materialCode]: qtyPerPiece } } ] }   // SNAPSHOT, see §8
+                 lines: [ { component, size, quantity (int > 0) } ] }   // no consumption copy, see §8
 
 counters       { _id: "orderNo", seq }
 
@@ -211,16 +210,19 @@ after a session expiry, the user returns to the page they were on.
 7. **Ambiguous requirements decided late** (what Order Quantity means, "Sketch"/"Weight"). → Settled:
    Stitch (required) + Laser (optional) only; order quantity is "same for all" or "per row".
 8. **Past orders changed when Punching edited consumption**, and sizes couldn't be deleted because
-   orders pointed at them. → Orders store a **snapshot** of consumption per line (§8).
+   orders pointed at them. → Decided in §8: orders follow the design; removing a size or component
+   that an order uses is refused with a clear message.
 9. **Logout bug**: the next user was sent to the previous user's last page. → See §6 Auth pages.
 10. **Windows dev quirk**: Vite sometimes serves a half-saved file ("does not provide an export
     named …"). → Not a code bug; hard-refresh (Ctrl+Shift+R) or restart `vite`.
 
-## 8. Decision to confirm: consumption snapshot on orders
+## 8. Decision (2026-10-08): orders follow the design (no consumption snapshot)
 
-When an order is created, copy each line's per-piece consumption from the design into the order line.
-Purchase requirements are calculated from the order's snapshot. Effects:
-- Editing a design later does not change existing orders (predictable purchase figures).
-- Sizes/components can be edited or removed freely.
-- If the business instead wants old orders to follow Punching edits, drop the snapshot and calculate
-  from the design (and then block removing sizes used by orders, as V1 did).
+Order lines store only component, size and quantity. Order summaries and purchase requirements are
+always calculated from the design's **current** consumption. Effects:
+- Editing consumption in the Punching Master changes the figures of existing orders too.
+- A size or component used by any order cannot be removed (409, naming the order). Its consumption
+  can still be edited.
+- Materials used by any design cannot be removed.
+- A line whose component + size is missing from the design is reported with the FRD message
+  "Consumption master not available …", never a crash.

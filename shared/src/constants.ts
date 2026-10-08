@@ -72,6 +72,25 @@ export const MATERIAL_UNITS: Record<MaterialCategory, MaterialUnit> = {
   CORD: 'MTR',
 };
 
+export type MaterialRuleField = 'seqPerCd' | 'cdPerRoll' | 'cdPerRound' | 'pcsPerKg' | 'denier';
+
+export const MATERIAL_RULE_FIELDS: readonly MaterialRuleField[] = ['seqPerCd', 'cdPerRoll', 'cdPerRound', 'pcsPerKg', 'denier'];
+
+/** Conversion-rule fields per category. Fields of other categories are cleared on save. */
+export const RULE_FIELDS: Record<MaterialCategory, { required: readonly MaterialRuleField[]; optional: readonly MaterialRuleField[] }> = {
+  SEQUENCE: { required: ['seqPerCd', 'cdPerRoll'], optional: ['cdPerRound'] },
+  BEAD: { required: ['pcsPerKg'], optional: [] },
+  CORD: { required: ['denier'], optional: [] },
+};
+
+export const RULE_FIELD_LABELS: Record<MaterialRuleField, string> = {
+  seqPerCd: 'Sequence per CD',
+  cdPerRoll: 'CD per roll',
+  cdPerRound: 'CD per round',
+  pcsPerKg: 'Pieces per KG',
+  denier: 'Denier',
+};
+
 /** Cord: grams = MTR × denier ÷ CORD_DIVISOR. */
 export const CORD_DIVISOR = 9000;
 

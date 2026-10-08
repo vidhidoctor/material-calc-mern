@@ -146,11 +146,11 @@ export interface ProductionDesignDetailDto extends DesignDetailDto {
   previousOrders: PreviousOrderDto[];
 }
 
+/** Orders follow the design: consumption is always read from the design's current values. */
 export interface OrderLineDto {
   component: string;
   size: string;
   quantity: number;
-  consumption: Consumption;
 }
 
 export interface OrderListItemDto {

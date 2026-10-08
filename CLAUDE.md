@@ -24,6 +24,8 @@ server/   Express API
   src/config/env.ts        Zod-validated env (loads server/.env)
   src/middleware/          error-handler, validate (Zod), auth (authenticate / requirePermission / guard)
   src/modules/<m>/         <m>.model / .validation / .service / .controller / .routes
+                           auth, users, roles, departments, admin, materials, designs, orders, production, purchase
+  src/calculation/         pure engine (decimal.js) — must not import mongoose, express or modules/
   src/lib/                 AppError, crypto (scrypt, tokens), zod helpers, logger
   scripts/seed.ts          npm run seed;  tests/  node:test + supertest + mongodb-memory-server
 shared/   @app/shared: constants (permissions, roles, MESSAGES …) and API DTO types, consumed as TS source
@@ -40,6 +42,9 @@ Imports in server/ and shared/ end in `.js` (NodeNext ESM).
 - Names, codes, design numbers, components and sizes are stored upper-case (and trimmed).
 - Every route is validated with Zod and guarded by a permission (checked by permission code, never role name).
 - Never commit `.env` — only `server/.env.example` with placeholders.
+- Orders follow the design (context §8): no consumption copy on order lines; sizes/components used by
+  an order cannot be removed. Design consumption is stored as `[{ material, qty }]` (codes may contain dots).
+- Don't seed sample data (fixture 26-49) into Atlas; the fixture is for tests only. The user enters real data.
 
 ## Git
 
