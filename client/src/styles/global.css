@@ -472,11 +472,10 @@ a {
   box-shadow: var(--shadow), 0 0 0 1px var(--border);
 }
 /* Per-row order entry: one line per component, sizes with their quantity box side by side. */
+/* No inner scroll: the whole dialog body scrolls; header and footer stay fixed. */
 .order-components {
   display: flex;
   flex-direction: column;
-  max-height: 50vh;
-  overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
@@ -882,10 +881,23 @@ a {
   justify-content: space-between;
   border-bottom: 1px solid var(--border);
 }
+/* Header and footer stay put; only the body scrolls when the content is taller than the screen. */
+.modal[open] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 18px;
   overflow: auto;
-  max-height: calc(100vh - 180px);
 }
 .modal-footer {
   justify-content: flex-end;
