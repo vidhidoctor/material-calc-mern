@@ -182,7 +182,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                 <th className="align-right">Stitch *</th>
                 <th className="align-right">Laser</th>
                 {design.materials.map((m) => (
-                  <th key={m.code} className="align-right" title={`${m.name} — ${m.unit} per piece`}>
+                  <th key={m.code} className="align-right" title={`${m.code} — ${m.unit} per piece`}>
                     {m.code}
                     <span className="th-unit">{m.unit}</span>
                   </th>

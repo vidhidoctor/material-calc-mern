@@ -25,7 +25,6 @@ const RULE_HINTS: Record<MaterialRuleField, string> = {
 export function MaterialFormModal({ material, onClose }: { material: MaterialDto | null; onClose: () => void }) {
   const save = useSaveMaterial();
   const [code, setCode] = useState(material?.code ?? '');
-  const [name, setName] = useState(material?.name ?? '');
   const [category, setCategory] = useState<MaterialCategory>(material?.category ?? 'SEQUENCE');
   const [rules, setRules] = useState<Record<MaterialRuleField, string>>({
     seqPerCd: material?.seqPerCd?.toString() ?? '',
@@ -40,7 +39,7 @@ export function MaterialFormModal({ material, onClose }: { material: MaterialDto
   const missing = required.some((f) => !(parseNumberInput(rules[f]) ?? 0));
 
   const onSubmit = () => {
-    const body: MaterialBody = { name, category };
+    const body: MaterialBody = { category };
     for (const field of fields) body[field] = parseNumberInput(rules[field]);
     save.mutate({ code: code.trim().toUpperCase(), body, isNew: material === null }, { onSuccess: onClose });
   };
@@ -64,14 +63,16 @@ export function MaterialFormModal({ material, onClose }: { material: MaterialDto
     >
       <div className="stack">
         <ErrorAlert error={save.error} />
-        <div className="grid-2">
-          <Field label="Code" required hint={material ? 'The code cannot change after it is created.' : 'e.g. SEQ-3MM. Stored in capitals.'}>
-            <input className="input mono" required disabled={!!material} value={code} onChange={(e) => setCode(e.target.value)} />
-          </Field>
-          <Field label="Name" required>
-            <input className="input" required value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-        </div>
+        <Field label="Code" required hint={material ? 'The code cannot change after it is created.' : 'e.g. SEQ-3MM. Stored in capitals.'}>
+          <input
+            className="input mono upper"
+            required
+            autoFocus={!material}
+            disabled={!!material}
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+          />
+        </Field>
         <Field label="Category" required hint={`Unit: ${MATERIAL_UNITS[category]}`}>
           <select className="input" value={category} onChange={(e) => setCategory(e.target.value as MaterialCategory)}>
             {MATERIAL_CATEGORIES.map((c) => (

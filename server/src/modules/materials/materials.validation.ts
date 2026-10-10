@@ -1,6 +1,5 @@
 import { MATERIAL_CATEGORIES, MATERIAL_CATEGORY_LABELS, RULE_FIELD_LABELS, RULE_FIELDS, type MaterialRuleField } from '@app/shared';
 import { z } from 'zod';
-import { requiredName } from '../../lib/zod.js';
 
 export const materialCode = z
   .string({ error: 'Material code is required.' })
@@ -18,7 +17,8 @@ const ruleValue = (field: MaterialRuleField) =>
     .optional();
 
 const materialFields = z.object({
-  name: requiredName('Material name'),
+  /** Optional: the code identifies a material; the name falls back to the code. */
+  name: z.string({ error: 'Material name must be text.' }).trim().max(100, 'Material name is too long.').optional(),
   category: z.enum(MATERIAL_CATEGORIES, { error: 'Choose a category: SEQUENCE, BEAD or CORD.' }),
   seqPerCd: ruleValue('seqPerCd'),
   cdPerRoll: ruleValue('cdPerRoll'),

@@ -57,7 +57,7 @@ export async function createMaterial(input: CreateMaterialInput): Promise<Materi
   const last = await MaterialModel.findOne().sort({ sortOrder: -1 });
   const material = await MaterialModel.create({
     code: input.code,
-    name: input.name,
+    name: input.name || input.code,
     category: input.category,
     sortOrder: last ? last.sortOrder + 1 : 0,
     ...categoryRules(input),
@@ -68,7 +68,8 @@ export async function createMaterial(input: CreateMaterialInput): Promise<Materi
 export async function updateMaterial(code: string, input: UpdateMaterialInput): Promise<MaterialDto> {
   const material = await MaterialModel.findOne({ code });
   if (!material) throw new AppError(404, MATERIAL_MESSAGES.NOT_FOUND);
-  material.set({ name: input.name, category: input.category, ...categoryRules(input) });
+  // The name is optional; without one the material is shown by its code.
+  material.set({ name: input.name || material.code, category: input.category, ...categoryRules(input) });
   await material.save();
   return toMaterialDto(material);
 }

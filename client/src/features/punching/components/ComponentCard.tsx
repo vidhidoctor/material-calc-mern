@@ -21,7 +21,7 @@ export function ComponentCard({ component, materials, onEdit, onRemove, removing
     ...used.map<Column<DesignSizeDto>>((m) => ({
       key: m.code,
       header: (
-        <span title={`${m.name} (${m.unit} per piece)`}>
+        <span title={`${m.code} (${m.unit} per piece)`}>
           {m.code}
           <span className="th-unit">{m.unit}</span>
         </span>

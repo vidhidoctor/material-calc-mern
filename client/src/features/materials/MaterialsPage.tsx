@@ -31,13 +31,12 @@ export function MaterialsPage() {
   const canManage = auth.can('MATERIAL_MASTER_MANAGE');
 
   const onDelete = (m: MaterialDto) => {
-    if (window.confirm(`Remove ${m.code} (${m.name})? Only possible while no design uses it.`)) remove.mutate(m.code);
+    if (window.confirm(`Remove ${m.code}? Only possible while no design uses it.`)) remove.mutate(m.code);
   };
 
   const columns: Column<MaterialDto>[] = [
     { key: 'n', header: '#', align: 'right', width: '3rem', render: (_m, i) => i + 1 },
-    { key: 'code', header: 'Code', render: (m) => <span className="mono">{m.code}</span> },
-    { key: 'name', header: 'Name', render: (m) => <strong>{m.name}</strong> },
+    { key: 'code', header: 'Material', render: (m) => <strong className="mono">{m.code}</strong> },
     { key: 'category', header: 'Category', render: (m) => <StatusBadge tone={TONES[m.category]}>{MATERIAL_CATEGORY_LABELS[m.category]}</StatusBadge> },
     { key: 'unit', header: 'Unit', render: (m) => m.unit },
     { key: 'rule', header: 'Conversion rule', render: (m) => <span className="small">{ruleText(m)}</span> },

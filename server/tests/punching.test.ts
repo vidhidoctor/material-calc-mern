@@ -197,6 +197,17 @@ describe('materials and designs (Punching)', () => {
       assert.equal(updated.body.unit, 'MTR');
     });
 
+    it('the name is optional and falls back to the code', async () => {
+      const created = await ctx.api.post('/api/materials').set(bearer(ctx.adminToken)).send({ code: 'seq-5mm', category: 'SEQUENCE', seqPerCd: 9000, cdPerRoll: 60 });
+      assert.equal(created.status, 201, JSON.stringify(created.body));
+      assert.equal(created.body.name, 'SEQ-5MM');
+      const named = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ name: '5-MM', category: 'SEQUENCE', seqPerCd: 9000, cdPerRoll: 60 });
+      assert.equal(named.body.name, '5-MM');
+      const cleared = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ category: 'SEQUENCE', seqPerCd: 9000, cdPerRoll: 60 });
+      assert.equal(cleared.body.name, 'SEQ-5MM');
+      assert.equal((await ctx.api.delete('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken))).status, 204);
+    });
+
     it('refuses to remove a material a design uses; removes an unused one', async () => {
       const used = await ctx.api.delete('/api/materials/SEQ-3MM').set(bearer(ctx.adminToken));
       assert.equal(used.status, 409);
