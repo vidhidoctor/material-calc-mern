@@ -39,7 +39,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
           )}
           {auth.can('PURCHASE_REQUIREMENT_VIEW') && (
             <Link className="btn footer-note" to={`/purchase?orderNo=${orderNo}`}>
-              Purchase requirement
+              Procurement planning
             </Link>
           )}
           <button type="button" className="btn btn-primary" onClick={onClose}>

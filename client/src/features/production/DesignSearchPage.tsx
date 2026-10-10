@@ -61,7 +61,7 @@ export function DesignSearchPage() {
 
   return (
     <>
-      <PageHeader title="Design search" subtitle="Find a design to see its previous orders or create a new order." />
+      <PageHeader title="Design & Order Lookup" subtitle="Find a design to see its orders by party or create a new order." />
       <section className="card">
         <div className="toolbar">
           <input

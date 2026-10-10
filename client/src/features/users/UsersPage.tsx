@@ -65,7 +65,7 @@ export function UsersPage() {
   return (
     <>
       <PageHeader
-        title="Users"
+        title="User Management"
         subtitle="Accounts waiting for activation are listed first."
         actions={
           auth.can('USER_CREATE') && (

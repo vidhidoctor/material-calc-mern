@@ -81,7 +81,7 @@ export function PurchasePage() {
 
   return (
     <>
-      <PageHeader title="Purchase Requirements" subtitle="Material to buy, from the design's current Punching values × ordered quantities." />
+      <PageHeader title="Procurement Planning" subtitle="Material to buy, from the design's current Punching values × ordered quantities." />
 
       <section className="card filters">
         <div className="filters-row">

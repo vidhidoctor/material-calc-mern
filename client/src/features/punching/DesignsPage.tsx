@@ -72,7 +72,7 @@ export function DesignsPage() {
   return (
     <>
       <PageHeader
-        title="Punching Master"
+        title="Design Master"
         subtitle="Designs, their components and sizes, and the material one piece consumes."
         actions={
           auth.can('PUNCHING_CREATE') && (

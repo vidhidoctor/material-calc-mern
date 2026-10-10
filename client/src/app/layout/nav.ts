@@ -15,23 +15,20 @@ export interface NavSection {
 export const NAV: NavSection[] = [
   {
     title: 'Punching',
-    items: [{ to: '/punching', label: 'Punching Master', any: ['PUNCHING_VIEW'] }],
+    items: [{ to: '/punching', label: 'Design Master', any: ['PUNCHING_VIEW'] }],
   },
   {
     title: 'Production',
     items: [
-      { to: '/production', label: 'Design search', any: ['PRODUCTION_VIEW'] },
-      { to: '/orders', label: 'All orders', any: ['PRODUCTION_VIEW'] },
+      { to: '/production', label: 'Design & Order Lookup', any: ['PRODUCTION_VIEW'] },
+      { to: '/orders', label: 'Production Orders', any: ['PRODUCTION_VIEW'] },
+      { to: '/purchase', label: 'Procurement Planning', any: ['PURCHASE_REQUIREMENT_VIEW'] },
     ],
   },
   {
-    title: 'Purchase',
-    items: [{ to: '/purchase', label: 'Purchase Requirements', any: ['PURCHASE_REQUIREMENT_VIEW'] }],
-  },
-  {
-    title: 'Admin',
+    title: 'Administration',
     items: [
-      { to: '/admin/users', label: 'Users', any: ['USER_VIEW'] },
+      { to: '/admin/users', label: 'User Management', any: ['USER_VIEW'] },
       { to: '/admin/roles', label: 'Roles & permissions', any: ['ROLE_MANAGE', 'PERMISSION_MANAGE'] },
       { to: '/admin/departments', label: 'Departments', any: ['DEPARTMENT_MANAGE'] },
       { to: '/admin/materials', label: 'Material Master', any: ['MATERIAL_MASTER_VIEW'] },

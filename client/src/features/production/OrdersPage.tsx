@@ -54,7 +54,7 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHeader title="All orders" subtitle="Newest first. Open an order to see its quantities and material requirement." />
+      <PageHeader title="Production Orders" subtitle="Newest first. Open an order to see its quantities and material requirement." />
       <section className="card">
         <div className="toolbar">
           <input
@@ -75,7 +75,7 @@ export function OrdersPage() {
               rowClassName={(o) => (o.orderNo === selected ? 'row-selected' : undefined)}
               empty={
                 <EmptyState title={list.length === 0 ? 'No orders yet.' : 'No order matches your search.'}>
-                  {list.length === 0 ? 'Create one from Design search → a design → “+ Create New Order”.' : null}
+                  {list.length === 0 ? 'Create one from Design & Order Lookup → a design → “+ Create New Order”.' : null}
                 </EmptyState>
               }
             />
@@ -87,7 +87,7 @@ export function OrdersPage() {
   );
 }
 
-/** Old /orders/12 links open the order's drawer on All orders. */
+/** Old /orders/12 links open the order's drawer on Production Orders. */
 export function OrderRedirect() {
   const raw = useParams().orderNo ?? '';
   return <Navigate to={/^\d+$/.test(raw) ? `/orders?order=${raw}` : '/orders'} replace />;

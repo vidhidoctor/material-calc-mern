@@ -45,7 +45,7 @@ export function ProductionDesignPage() {
   return (
     <>
       <Link to="/production" className="back-link">
-        ← Design search
+        ← Design & Order Lookup
       </Link>
       <QueryState query={design}>
         {(d) => {
