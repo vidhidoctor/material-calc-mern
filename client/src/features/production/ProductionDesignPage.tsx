@@ -7,7 +7,6 @@ import { useAuth } from '../../lib/auth';
 import { formatDate, formatNumber } from '../../lib/format';
 import { NewOrderModal } from './components/NewOrderModal';
 import { OrderDrawer } from './components/OrderDrawer';
-import { OrderStatusBadge, orderQuantityText } from './components/OrderStatusBadge';
 import { useOrders, useProductionDesign } from './production.hooks';
 import { useSelectedOrder } from './useSelectedOrder';
 
@@ -17,13 +16,13 @@ interface PartyGroup {
   latest: string;
 }
 
-/** Parties with their orders (newest first); parties with the most recent order first. */
+/** Parties with their orders (#1 first); parties with the most recent order first. */
 function groupByParty(orders: PreviousOrderDto[]): PartyGroup[] {
   const groups = new Map<string, PreviousOrderDto[]>();
   for (const order of orders) groups.set(order.party, [...(groups.get(order.party) ?? []), order]);
   return [...groups]
     .map(([party, list]) => {
-      const sorted = [...list].sort((a, b) => b.partyOrderNo - a.partyOrderNo);
+      const sorted = [...list].sort((a, b) => a.partyOrderNo - b.partyOrderNo);
       const latest = sorted.reduce((max, o) => (o.orderDate > max ? o.orderDate : max), sorted[0]!.orderDate);
       return { party, orders: sorted, latest };
     })
@@ -100,10 +99,8 @@ export function ProductionDesignPage() {
                               onClick={() => setSelected(order.orderNo)}
                             >
                               <strong className="order-no">#{order.partyOrderNo}</strong>
-                              <OrderStatusBadge status={order.status} />
-                              <span>{formatDate(order.orderDate)}</span>
-                              <span className="muted small">{order.quantity === null ? 'Per row' : `${orderQuantityText(order.quantity)} each`}</span>
                               <span className="order-pcs">{formatNumber(order.totalPieces, 0)} pcs</span>
+                              <span className="order-date">{formatDate(order.orderDate)}</span>
                             </button>
                           ))}
                         </div>
