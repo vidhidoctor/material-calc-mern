@@ -20,7 +20,9 @@ Requirements: Node 22+ (LTS) and a free MongoDB Atlas cluster.
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | API with auto-reload (tsx watch) |
+| `npm run dev` | API with auto-reload (tsx watch) on :4000 |
+| `npm run dev:client` | Web app on http://localhost:5173 (proxies `/api` to :4000) — run alongside `npm run dev` |
+| `npm run build` | Typecheck + production build of the web app |
 | `npm run seed` | Seed / re-seed foundation data |
 | `npm test` | API tests on an in-memory MongoDB (never touches Atlas) |
 | `npm run typecheck` | TypeScript check of every workspace |
