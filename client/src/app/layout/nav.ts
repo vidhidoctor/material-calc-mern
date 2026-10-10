@@ -17,13 +17,13 @@ export interface NavSection {
 export const NAV: NavSection[] = [
   {
     title: 'Punching',
-    items: [{ to: '/punching', label: 'Design Master', icon: 'layers', any: ['PUNCHING_VIEW'] }],
+    items: [{ to: '/punching', label: 'Punching Master', icon: 'layers', any: ['PUNCHING_VIEW'] }],
   },
   {
     title: 'Production',
     items: [
       { to: '/production', label: 'Design & Order Lookup', icon: 'search', any: ['PRODUCTION_VIEW'] },
-      { to: '/orders', label: 'Production Orders', icon: 'clipboard', any: ['PRODUCTION_VIEW'] },
+      { to: '/orders', label: 'Order Master', icon: 'clipboard', any: ['PRODUCTION_VIEW'] },
       { to: '/purchase', label: 'Procurement Planning', icon: 'cart', any: ['PURCHASE_REQUIREMENT_VIEW'] },
     ],
   },

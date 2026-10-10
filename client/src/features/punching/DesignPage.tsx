@@ -39,7 +39,7 @@ export function DesignPage() {
   return (
     <>
       <Link to="/punching" className="back-link">
-        ← Design Master
+        ← Punching Master
       </Link>
       <QueryState query={design}>
         {(d) => (

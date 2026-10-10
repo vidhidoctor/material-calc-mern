@@ -54,7 +54,7 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHeader title="Production Orders" subtitle="Newest first. Open an order to see its quantities and material requirement." />
+      <PageHeader title="Order Master" subtitle="Newest first. Open an order to see its quantities and material requirement." />
       <section className="card">
         <div className="toolbar">
           <input
@@ -87,7 +87,7 @@ export function OrdersPage() {
   );
 }
 
-/** Old /orders/12 links open the order's drawer on Production Orders. */
+/** Old /orders/12 links open the order's drawer on Order Master. */
 export function OrderRedirect() {
   const raw = useParams().orderNo ?? '';
   return <Navigate to={/^\d+$/.test(raw) ? `/orders?order=${raw}` : '/orders'} replace />;
