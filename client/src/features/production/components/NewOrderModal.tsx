@@ -67,7 +67,6 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
   return (
     <Modal
       open
-      wide={mode === 'rows'}
       title={`New order — ${design.designNo} · ${design.productName}`}
       onClose={onClose}
       onSubmit={onSubmit}

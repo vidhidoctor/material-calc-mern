@@ -482,7 +482,7 @@ a {
 }
 .order-component {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr) auto;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
