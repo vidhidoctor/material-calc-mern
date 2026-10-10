@@ -1,10 +1,10 @@
-import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderStatus, type OrderSummaryRowDto } from '@app/shared';
+import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderStatus } from '@app/shared';
 import { Link, useParams } from 'react-router';
-import { DataGrid, type Column } from '../../components/DataGrid';
 import { EmptyState, ErrorAlert, PageHeader, QueryState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDate, formatNumber } from '../../lib/format';
 import { OrderStatusBadge, orderQuantityText } from './components/OrderStatusBadge';
+import { RequirementTable } from './components/RequirementTable';
 import { useOrder, useOrderSummary, useUpdateOrderStatus } from './production.hooks';
 
 export function OrderPage() {
@@ -94,57 +94,20 @@ function OrderDetail({ orderNo }: { orderNo: number }) {
                 <span className="muted small">Consumption per piece × quantity, from the design's current Punching values.</span>
               </header>
               <QueryState query={summary}>
-                {(s) => {
-                  const used = s.materials.filter((m) => s.totals[m.code] !== undefined);
-                  const columns: Column<OrderSummaryRowDto>[] = [
-                    { key: 'component', header: 'Component', render: (r) => <strong>{r.component}</strong> },
-                    { key: 'size', header: 'Size', render: (r) => r.size },
-                    { key: 'qty', header: 'Qty', align: 'right', render: (r) => formatNumber(r.quantity, 0) },
-                    ...used.map<Column<OrderSummaryRowDto>>((m) => ({
-                      key: m.code,
-                      header: (
-                        <span title={`${m.code} (${m.unit})`}>
-                          {m.code}
-                          <span className="th-unit">{m.unit}</span>
-                        </span>
-                      ),
-                      align: 'right',
-                      render: (r) => {
-                        const value = r.requirements[m.code];
-                        return value ? formatNumber(value) : <span className="muted">—</span>;
-                      },
-                    })),
-                  ];
-                  return (
-                    <>
-                      {s.errors.length > 0 && (
-                        <div className="alert alert-error section-alert">
-                          <ul>
-                            {s.errors.map((e) => (
-                              <li key={e}>{e}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      <DataGrid
-                        columns={columns}
-                        rows={s.rows}
-                        rowKey={(r) => `${r.component}|${r.size}`}
-                        footer={
-                          <tr>
-                            <td colSpan={2}>Total</td>
-                            <td className="align-right">{formatNumber(o.totalPieces, 0)}</td>
-                            {used.map((m) => (
-                              <td key={m.code} className="align-right">
-                                {formatNumber(s.totals[m.code])}
-                              </td>
-                            ))}
-                          </tr>
-                        }
-                      />
-                    </>
-                  );
-                }}
+                {(s) => (
+                  <>
+                    {s.errors.length > 0 && (
+                      <div className="alert alert-error section-alert">
+                        <ul>
+                          {s.errors.map((e) => (
+                            <li key={e}>{e}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    <RequirementTable summary={s} totalPieces={o.totalPieces} />
+                  </>
+                )}
               </QueryState>
             </section>
           </>

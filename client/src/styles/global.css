@@ -561,6 +561,48 @@ a {
   margin: 12px;
 }
 
+/* Order requirement: collapsible component rows with subtotals, sizes indented below. */
+.table-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 10px 0;
+}
+.req-group td {
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.requirement-table tbody tr.req-group:hover td {
+  background: var(--primary-soft);
+}
+.req-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.req-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: 4px;
+}
+.chevron {
+  display: inline-block;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+.chevron-open {
+  transform: rotate(90deg);
+}
+.req-size td:first-child {
+  padding-left: 40px;
+  font-weight: 600;
+}
+
 /* ---- Tables ---- */
 .table-wrap {
   overflow: auto;
