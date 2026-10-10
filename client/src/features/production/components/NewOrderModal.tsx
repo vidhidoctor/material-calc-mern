@@ -1,6 +1,5 @@
 import type { ProductionDesignDetailDto } from '@app/shared';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
 import { Modal } from '../../../components/Modal';
 import { ErrorAlert, Field, NumberInput, parseNumberInput } from '../../../components/ui';
 import { formatNumber } from '../../../lib/format';
@@ -23,10 +22,11 @@ interface Props {
   /** Previous parties, suggested in the Party field. */
   parties: string[];
   onClose: () => void;
+  /** Called with the new order number (the page then opens its drawer). */
+  onCreated: (orderNo: number) => void;
 }
 
-export function NewOrderModal({ design, parties, onClose }: Props) {
-  const navigate = useNavigate();
+export function NewOrderModal({ design, parties, onClose, onCreated }: Props) {
   const create = useCreateOrder();
   const [party, setParty] = useState('');
   const [orderDate, setOrderDate] = useState(today);
@@ -61,7 +61,7 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
               .map<OrderLineBody>((r) => ({ ...r, quantity: qtyOf(r.component, r.size) }))
               .filter((line) => line.quantity > 0),
           };
-    create.mutate(body, { onSuccess: (order) => navigate(`/orders/${order.orderNo}`) });
+    create.mutate(body, { onSuccess: (order) => onCreated(order.orderNo) });
   };
 
   return (

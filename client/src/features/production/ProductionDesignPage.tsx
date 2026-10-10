@@ -9,6 +9,7 @@ import { NewOrderModal } from './components/NewOrderModal';
 import { OrderDrawer } from './components/OrderDrawer';
 import { OrderStatusBadge, orderQuantityText } from './components/OrderStatusBadge';
 import { useOrders, useProductionDesign } from './production.hooks';
+import { useSelectedOrder } from './useSelectedOrder';
 
 interface PartyGroup {
   party: string;
@@ -36,7 +37,7 @@ export function ProductionDesignPage() {
   const design = useProductionDesign(designNo);
   const allOrders = useOrders();
   const [creating, setCreating] = useState(false);
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useSelectedOrder();
   const [showPunching, setShowPunching] = useState(false);
 
   const parties = useMemo(() => [...new Set((allOrders.data ?? []).map((o) => o.party))].sort(), [allOrders.data]);
@@ -127,7 +128,15 @@ export function ProductionDesignPage() {
                 )}
               </section>
 
-              {creating && <NewOrderModal design={d} parties={parties} onClose={() => setCreating(false)} />}
+              {creating && <NewOrderModal
+                  design={d}
+                  parties={parties}
+                  onClose={() => setCreating(false)}
+                  onCreated={(orderNo) => {
+                    setCreating(false);
+                    setSelected(orderNo);
+                  }}
+                />}
               {selected !== null && <OrderDrawer orderNo={selected} onClose={() => setSelected(null)} />}
             </>
           );
