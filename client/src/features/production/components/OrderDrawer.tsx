@@ -5,7 +5,6 @@ import { Drawer } from '../../../components/Drawer';
 import { QueryState } from '../../../components/ui';
 import { formatDate, formatNumber } from '../../../lib/format';
 import { useOrder } from '../production.hooks';
-import { OrderStatusBadge, orderQuantityText } from './OrderStatusBadge';
 
 function groupLines(lines: OrderLineDto[]): [string, OrderLineDto[]][] {
   const groups = new Map<string, OrderLineDto[]>();
@@ -20,7 +19,13 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   return (
     <Drawer
       open
-      title={`Order #${orderNo}`}
+      title={
+        <span className="drawer-title">
+          <span>Order #{orderNo}</span>
+          {order.data && <span className="badge badge-blue">{order.data.party}</span>}
+          {order.data && <span className="drawer-date">{formatDate(order.data.orderDate)}</span>}
+        </span>
+      }
       onClose={onClose}
       footer={
         <>
@@ -36,31 +41,6 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
       <QueryState query={order}>
         {(o) => (
           <div className="stack">
-            <dl className="facts">
-              <div>
-                <dt>Status</dt>
-                <dd>
-                  <OrderStatusBadge status={o.status} />
-                </dd>
-              </div>
-              <div>
-                <dt>Party</dt>
-                <dd>{o.party}</dd>
-              </div>
-              <div>
-                <dt>Order date</dt>
-                <dd>{formatDate(o.orderDate)}</dd>
-              </div>
-              <div>
-                <dt>Order Quantity</dt>
-                <dd>{orderQuantityText(o.quantity)}</dd>
-              </div>
-              <div>
-                <dt>Total pieces</dt>
-                <dd>{formatNumber(o.totalPieces, 0)}</dd>
-              </div>
-            </dl>
-
             <div>
               <h3 className="drawer-subtitle">Component-wise quantity</h3>
               <div className="table-wrap bordered">

@@ -670,6 +670,21 @@ a {
   overflow: auto;
   padding: 18px;
 }
+.drawer-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+.drawer-title .badge {
+  font-size: 0.85rem;
+}
+.drawer-date {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
 .drawer-subtitle {
   margin-bottom: 8px;
   font-size: 0.95rem;
