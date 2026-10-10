@@ -427,12 +427,9 @@ a {
   z-index: 3;
   background: var(--surface-2);
 }
-.problems {
-  margin: 0;
-  padding: 10px 14px 10px 30px;
-  border-radius: var(--radius);
-  background: var(--warning-soft);
-  color: var(--warning);
+.input.invalid {
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
 .footer-note {
   margin-right: auto;

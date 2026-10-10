@@ -49,21 +49,21 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   const taken = new Set(design.components.map((c) => c.name));
   const suggestions = SUGGESTED_COMPONENTS.filter((c) => !taken.has(c));
 
-  const problems = useMemo(() => {
-    const list: string[] = [];
-    const trimmedName = name.trim();
-    if (!trimmedName) list.push('Enter a component name.');
-    else if (isNew && taken.has(trimmedName)) list.push(`${trimmedName} already exists in this design — use Edit on its card.`);
-    if (rows.length === 0) list.push('Add at least one size.');
+  // Completely empty rows are ignored on save; in other rows a missing/duplicate Size or a missing
+  // Stitch is outlined in red (no message list).
+  const { filled, invalid, canSave } = useMemo(() => {
+    const filledRows = rows.filter((r) => r.size.trim() || r.stitch || r.laser || Object.values(r.consumption).some(Boolean));
+    const bad = new Map<number, { size: boolean; stitch: boolean }>();
     const seen = new Set<string>();
-    rows.forEach((row, i) => {
+    for (const row of filledRows) {
       const size = row.size.trim();
-      if (!size) list.push(`Row ${i + 1}: enter a size.`);
-      else if (seen.has(size)) list.push(`Size ${size} is listed twice.`);
+      const sizeBad = !size || seen.has(size);
       seen.add(size);
-      if (row.stitch === '') list.push(`${size || `Row ${i + 1}`}: Stitch is required.`);
-    });
-    return list;
+      if (sizeBad || row.stitch === '') bad.set(row.key, { size: sizeBad, stitch: row.stitch === '' });
+    }
+    const trimmedName = name.trim();
+    const nameOk = trimmedName !== '' && !(isNew && taken.has(trimmedName));
+    return { filled: filledRows, invalid: bad, canSave: nameOk && filledRows.length > 0 && bad.size === 0 };
   }, [name, rows, isNew, taken]);
 
   const update = (key: number, change: (row: Row) => Row) => {
@@ -84,8 +84,8 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   };
 
   const onSubmit = () => {
-    if (problems.length > 0) return;
-    const sizes: SizeRowBody[] = rows.map((row) => ({
+    if (!canSave) return;
+    const sizes: SizeRowBody[] = filled.map((row) => ({
       size: row.size.trim(),
       stitch: parseNumberInput(row.stitch) ?? 0,
       laser: parseNumberInput(row.laser),
@@ -111,7 +111,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
           <button type="button" className="btn btn-ghost" onClick={close}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={save.isPending || problems.length > 0}>
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || !canSave}>
             {save.isPending ? 'Saving…' : 'Save component'}
           </button>
         </>
@@ -195,7 +195,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                 <tr key={row.key}>
                   <td className="sticky-col">
                     <input
-                      className="input input-sm upper size-input"
+                      className={`input input-sm upper size-input ${invalid.get(row.key)?.size ? 'invalid' : ''}`}
                       aria-label="Size"
                       value={row.size}
                       onChange={(e) => update(row.key, (r) => ({ ...r, size: e.target.value.toUpperCase() }))}
@@ -203,7 +203,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                   </td>
                   <td>
                     <NumberInput
-                      className="input-sm"
+                      className={`input-sm ${invalid.get(row.key)?.stitch ? 'invalid' : ''}`}
                       aria-label={`${row.size} stitch`}
                       value={row.stitch}
                       onChange={(v) => update(row.key, (r) => ({ ...r, stitch: v }))}
@@ -264,13 +264,6 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
           </button>
         </div>
 
-        {dirty && problems.length > 0 && (
-          <ul className="problems">
-            {problems.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        )}
       </div>
     </Modal>
   );

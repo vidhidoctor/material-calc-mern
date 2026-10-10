@@ -1,9 +1,50 @@
 import { ADMIN_ROLE, DEPARTMENTS, ROLES } from '@app/shared';
 import { hashPassword } from '../lib/crypto.js';
 import { DepartmentModel } from '../modules/departments/department.model.js';
+import { MaterialModel, type Material } from '../modules/materials/material.model.js';
 import { RoleModel } from '../modules/roles/role.model.js';
 import { ensurePrimaryAdminEmail } from '../modules/settings/settings.service.js';
 import { UserModel } from '../modules/users/user.model.js';
+
+export interface StandardMaterial {
+  code: string;
+  name: string;
+  category: Material['category'];
+  seqPerCd?: number;
+  cdPerRoll?: number;
+  cdPerRound?: number;
+  pcsPerKg?: number;
+  denier?: number;
+}
+
+/**
+ * Optional (npm run seed:materials): adds the standard materials that are missing, after the
+ * existing ones. Existing materials — matched by code — are never changed.
+ */
+export async function seedMaterials(materials: readonly StandardMaterial[]): Promise<string[]> {
+  const log: string[] = [];
+  const last = await MaterialModel.findOne().sort({ sortOrder: -1 });
+  let sortOrder = last ? last.sortOrder + 1 : 0;
+  for (const m of materials) {
+    if (await MaterialModel.exists({ code: m.code })) {
+      log.push(`Material ${m.code}: exists (left unchanged)`);
+      continue;
+    }
+    await MaterialModel.create({
+      code: m.code,
+      name: m.name,
+      category: m.category,
+      sortOrder: sortOrder++,
+      seqPerCd: m.seqPerCd ?? null,
+      cdPerRoll: m.cdPerRoll ?? null,
+      cdPerRound: m.cdPerRound ?? null,
+      pcsPerKg: m.pcsPerKg ?? null,
+      denier: m.denier ?? null,
+    });
+    log.push(`Material ${m.code}: created`);
+  }
+  return log;
+}
 
 export interface SeedOptions {
   adminEmail: string;
