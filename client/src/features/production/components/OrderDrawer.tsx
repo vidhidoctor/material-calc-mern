@@ -79,7 +79,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                         </ul>
                       </div>
                     )}
-                    <OrderLinesTable summary={s} totalPieces={o.totalPieces} />
+                    <OrderLinesTable summary={s} />
                   </>
                 )}
               </QueryState>

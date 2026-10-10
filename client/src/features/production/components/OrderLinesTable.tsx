@@ -6,7 +6,7 @@ interface ComponentGroup {
   component: string;
   rows: OrderSummaryRowDto[];
   quantity: number;
-  /** materialCode → subtotal (display only; the grand total comes from the API). */
+  /** materialCode → subtotal for this component (display only). */
   subtotals: Record<string, number>;
 }
 
@@ -29,10 +29,10 @@ function groupByComponent(rows: OrderSummaryRowDto[]): ComponentGroup[] {
 
 /**
  * One clean table per order: Component (shown once) | Size | Qty | one column per material used,
- * a subtotal line under each component and the grand total at the bottom.
+ * and a total line under each component (no grand total).
  * Requirement = consumption per piece × quantity (from the API).
  */
-export function OrderLinesTable({ summary, totalPieces }: { summary: OrderSummaryDto; totalPieces: number }) {
+export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
   const used = summary.materials.filter((m) => summary.totals[m.code] !== undefined);
   const groups = groupByComponent(summary.rows);
   const cell = (value: number | string | undefined) => (value ? formatNumber(value) : <span className="muted">—</span>);
@@ -79,17 +79,6 @@ export function OrderLinesTable({ summary, totalPieces }: { summary: OrderSummar
             </Fragment>
           ))}
         </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={2}>Total</td>
-            <td className="align-right">{formatNumber(totalPieces, 0)}</td>
-            {used.map((m) => (
-              <td key={m.code} className="align-right">
-                {formatNumber(summary.totals[m.code])}
-              </td>
-            ))}
-          </tr>
-        </tfoot>
       </table>
     </div>
   );
