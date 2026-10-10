@@ -69,7 +69,7 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
               ))}
               <tr className="subtotal-row">
                 <td colSpan={2}>{group.component} total</td>
-                <td className="align-right">{formatNumber(group.quantity, 0)}</td>
+                <td className="align-right subtotal-qty">{formatNumber(group.quantity, 0)}</td>
                 {used.map((m) => (
                   <td key={m.code} className="align-right">
                     {cell(group.subtotals[m.code])}

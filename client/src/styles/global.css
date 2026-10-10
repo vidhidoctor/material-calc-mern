@@ -886,18 +886,21 @@ a {
 .clean-table tbody tr:hover td {
   background: transparent;
 }
-/* Per-component subtotal: tinted and semibold, lighter than the grand total. */
+/* Per-component total: subtle grey tint; the total quantity is bold. */
 .clean-table tbody tr.subtotal-row td {
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 .clean-table tbody tr.subtotal-row td:first-child {
   padding-left: 24px;
 }
+.clean-table tbody tr.subtotal-row td.subtotal-qty {
+  color: var(--text);
+  font-weight: 700;
+}
 .clean-table tbody tr.subtotal-row:hover td {
-  background: var(--primary-soft);
+  background: var(--surface-2);
 }
 .clean-table tfoot td {
   background: var(--surface);
