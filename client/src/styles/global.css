@@ -691,10 +691,6 @@ a {
 .drawer-note {
   margin: -4px 0 8px;
 }
-.rounded {
-  border-radius: var(--radius);
-  overflow: hidden;
-}
 .link-btn {
   padding: 0;
   border: none;
@@ -727,51 +723,24 @@ a {
 .bordered {
   border: 1px solid var(--border);
 }
-.cell-group {
-  vertical-align: top !important;
-  background: var(--surface-2);
-}
 
-/* Order requirement: collapsible component rows with subtotals, sizes indented below. */
-.table-tools {
-  display: flex;
-  justify-content: flex-end;
-  padding: 6px 10px 0;
+/* Clean table: plain header, thin row lines, components separated by a slightly stronger line. */
+.clean-table th {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
 }
-.req-group td {
-  background: var(--surface-2);
-  cursor: pointer;
+.clean-table td {
+  border-bottom-color: transparent;
 }
-.requirement-table tbody tr.req-group:hover td {
-  background: var(--primary-soft);
+.clean-table tbody tr.group-start td {
+  border-top: 1px solid var(--border);
 }
-.req-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
+.clean-table tbody tr:hover td {
+  background: transparent;
 }
-.req-toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
-  border-radius: 4px;
-}
-.chevron {
-  display: inline-block;
-  color: var(--text-muted);
-  transition: transform 0.15s;
-}
-.chevron-open {
-  transform: rotate(90deg);
-}
-.req-size td:first-child {
-  padding-left: 40px;
-  font-weight: 600;
+.clean-table tfoot td {
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
 }
 
 /* ---- Tables ---- */

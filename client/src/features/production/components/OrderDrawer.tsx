@@ -1,5 +1,4 @@
-import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderLineDto, type OrderStatus } from '@app/shared';
-import { Fragment } from 'react';
+import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderStatus } from '@app/shared';
 import { Link } from 'react-router';
 import { Drawer } from '../../../components/Drawer';
 import { ErrorAlert, QueryState } from '../../../components/ui';
@@ -7,13 +6,7 @@ import { useAuth } from '../../../lib/auth';
 import { formatDate, formatNumber } from '../../../lib/format';
 import { useOrder, useOrderSummary, useUpdateOrderStatus } from '../production.hooks';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { RequirementTable } from './RequirementTable';
-
-function groupLines(lines: OrderLineDto[]): [string, OrderLineDto[]][] {
-  const groups = new Map<string, OrderLineDto[]>();
-  for (const line of lines) groups.set(line.component, [...(groups.get(line.component) ?? []), line]);
-  return [...groups];
-}
+import { OrderLinesTable } from './OrderLinesTable';
 
 /** Everything about one order: stats, status, quantities and material requirement. */
 export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: () => void }) {
@@ -82,51 +75,13 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
             <ErrorAlert error={status.error} />
 
             <section>
-              <h3 className="drawer-subtitle">Component-wise quantity</h3>
-              <div className="table-wrap bordered">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Component</th>
-                      <th>Size</th>
-                      <th className="align-right">Qty</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupLines(o.lines).map(([component, lines]) => (
-                      <Fragment key={component}>
-                        {lines.map((line, i) => (
-                          <tr key={line.size}>
-                            {i === 0 && (
-                              <td rowSpan={lines.length} className="cell-group">
-                                <strong>{component}</strong>
-                              </td>
-                            )}
-                            <td>{line.size}</td>
-                            <td className="align-right">{formatNumber(line.quantity, 0)}</td>
-                          </tr>
-                        ))}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <td colSpan={2}>Total</td>
-                      <td className="align-right">{formatNumber(o.totalPieces, 0)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="drawer-subtitle">Material requirement</h3>
-              <p className="muted small drawer-note">Consumption per piece × quantity, from the design's current Punching values.</p>
+              <h3 className="drawer-subtitle">Quantities &amp; material requirement</h3>
+              <p className="muted small drawer-note">Requirement = consumption per piece × quantity (current Punching values).</p>
               <QueryState query={summary}>
                 {(s) => (
-                  <div className="bordered rounded">
+                  <>
                     {s.errors.length > 0 && (
-                      <div className="alert alert-error section-alert">
+                      <div className="alert alert-error">
                         <ul>
                           {s.errors.map((e) => (
                             <li key={e}>{e}</li>
@@ -134,8 +89,8 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                         </ul>
                       </div>
                     )}
-                    <RequirementTable summary={s} totalPieces={o.totalPieces} />
-                  </div>
+                    <OrderLinesTable summary={s} totalPieces={o.totalPieces} />
+                  </>
                 )}
               </QueryState>
             </section>
