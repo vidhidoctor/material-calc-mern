@@ -9,13 +9,14 @@ import { MaterialsPage } from '../features/materials/MaterialsPage';
 import { DesignSearchPage } from '../features/production/DesignSearchPage';
 import { OrderRedirect, OrdersPage } from '../features/production/OrdersPage';
 import { ProductionDesignPage } from '../features/production/ProductionDesignPage';
+import { PurchasePage } from '../features/purchase/PurchasePage';
 import { DesignPage } from '../features/punching/DesignPage';
 import { DesignsPage } from '../features/punching/DesignsPage';
 import { RolesPage } from '../features/roles/RolesPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { UsersPage } from '../features/users/UsersPage';
 import { RequireAuth, RequirePermission } from '../lib/auth';
-import { AppLayout, ComingSoon, HomeRedirect, NotFound } from './layout/AppLayout';
+import { AppLayout, HomeRedirect, NotFound } from './layout/AppLayout';
 import { navPermission } from './layout/nav';
 
 /** Guards a page with the same permission its nav item (and the API) uses. */
@@ -41,7 +42,7 @@ export const router = createBrowserRouter([
       { path: 'production/:designNo', element: guarded('/production', <ProductionDesignPage />) },
       { path: 'orders', element: guarded('/orders', <OrdersPage />) },
       { path: 'orders/:orderNo', element: guarded('/orders', <OrderRedirect />) },
-      { path: 'purchase', element: guarded('/purchase', <ComingSoon title="Purchase Requirements" />) },
+      { path: 'purchase', element: guarded('/purchase', <PurchasePage />) },
       { path: 'admin/users', element: guarded('/admin/users', <UsersPage />) },
       { path: 'admin/roles', element: guarded('/admin/roles', <RolesPage />) },
       { path: 'admin/departments', element: guarded('/admin/departments', <DepartmentsPage />) },

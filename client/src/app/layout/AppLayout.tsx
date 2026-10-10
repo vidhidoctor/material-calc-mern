@@ -88,11 +88,3 @@ export function NotFound() {
   );
 }
 
-/** Placeholder until step 3B builds the screen. */
-export function ComingSoon({ title }: { title: string }) {
-  return (
-    <div className="card">
-      <EmptyState title={title}>This screen is built in the next step.</EmptyState>
-    </div>
-  );
-}
