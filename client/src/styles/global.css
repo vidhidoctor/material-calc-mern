@@ -886,6 +886,19 @@ a {
 .clean-table tbody tr:hover td {
   background: transparent;
 }
+/* Per-component subtotal: tinted and semibold, lighter than the grand total. */
+.clean-table tbody tr.subtotal-row td {
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.clean-table tbody tr.subtotal-row td:first-child {
+  padding-left: 24px;
+}
+.clean-table tbody tr.subtotal-row:hover td {
+  background: var(--primary-soft);
+}
 .clean-table tfoot td {
   background: var(--surface);
   border-top: 1px solid var(--border-strong);
