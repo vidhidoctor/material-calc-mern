@@ -164,7 +164,7 @@ describe('production orders and purchase requirements', () => {
       const detail = await ctx.api.get('/api/production/designs/26-49').set(bearer(prod));
       assert.equal(detail.status, 200);
       assert.deepEqual(detail.body.previousOrders.map((o: { orderNo: number }) => o.orderNo), [3, 2, 1]);
-      assert.deepEqual(detail.body.previousOrders[1], { orderNo: 2, party: 'AB TRADERS', quantity: 10, totalPieces: 370, status: 'IN_PROGRESS', orderDate: '2026-10-01' });
+      assert.deepEqual(detail.body.previousOrders[1], { orderNo: 2, partyOrderNo: 1, party: 'AB TRADERS', quantity: 10, totalPieces: 370, status: 'IN_PROGRESS', orderDate: '2026-10-01' });
     });
   });
 
@@ -213,6 +213,44 @@ describe('production orders and purchase requirements', () => {
     });
   });
 
+  describe('per-party numbering (1, 2, 3 … per design + party)', () => {
+    it('each party of a design has its own series', async () => {
+      const post = (party: string) =>
+        ctx.api.post('/api/orders').set(bearer(prod)).send({ designNo: '26-49', party, lines: [{ component: 'BELT', size: 'ALL', quantity: 1 }] });
+      const fr2 = await post('FR');
+      const fr3 = await post('fr');
+      const cd2 = await post('CD');
+      const newParty = await post('NEW PARTY');
+      assert.deepEqual(
+        [fr2, fr3, cd2, newParty].map((r) => [r.body.party, r.body.partyOrderNo]),
+        [['FR', 2], ['FR', 3], ['CD', 2], ['NEW PARTY', 1]],
+      );
+      // The internal number keeps counting across all orders.
+      assert.ok(newParty.body.orderNo > cd2.body.orderNo);
+
+      const list = await ctx.api.get('/api/orders').set(bearer(prod));
+      const fr = list.body.filter((o: { party: string }) => o.party === 'FR').map((o: { partyOrderNo: number }) => o.partyOrderNo);
+      assert.deepEqual(fr, [3, 2, 1]);
+    });
+
+    it('older orders without a number are numbered per design + party, oldest first', async () => {
+      const { OrderModel, backfillPartyOrderNos, nextPartyOrderNo } = await import('../src/modules/orders/order.model.js');
+      const base = { designNo: '26-49', item: 'CHOLI', orderDate: new Date(), quantity: 1, status: 'PENDING', createdAt: new Date(), lines: [] };
+      await OrderModel.collection.insertMany([
+        { ...base, orderNo: 900, party: 'LEGACY' },
+        { ...base, orderNo: 901, party: 'LEGACY' },
+        { ...base, orderNo: 902, party: 'FR' },
+      ]);
+      assert.equal(await backfillPartyOrderNos(), 3);
+      const legacy = await OrderModel.find({ party: 'LEGACY' }).sort({ orderNo: 1 });
+      assert.deepEqual(legacy.map((o) => o.partyOrderNo), [1, 2]);
+      assert.equal((await OrderModel.findOne({ orderNo: 902 }))?.partyOrderNo, 4);
+      // Counters continue after the numbered ones; re-running does nothing.
+      assert.equal(await nextPartyOrderNo('26-49', 'LEGACY'), 3);
+      assert.equal(await backfillPartyOrderNos(), 0);
+    });
+  });
+
   describe('orders follow the design (§8)', () => {
     it('editing consumption changes an existing order\'s purchase figures', async () => {
       const before = await purchase({ orderNo: '1', components: 'BELT' });
@@ -233,20 +271,20 @@ describe('production orders and purchase requirements', () => {
       const withoutSize18 = kali.sizes.filter((s) => s.size !== '18').map((s) => ({ size: s.size, stitch: 0, consumption: s.consumption }));
       const res = await ctx.api.put('/api/designs/26-49/components/KALI').set(bearer(ctx.adminToken)).send({ sizes: withoutSize18 });
       assert.equal(res.status, 409);
-      assert.equal(res.body.error, 'KALI size 18 is used by order #1 and cannot be removed.');
+      assert.equal(res.body.error, 'KALI size 18 is used by order FR-1 and cannot be removed.');
 
       const del = await ctx.api.delete('/api/designs/26-49/components/GALISH').set(bearer(ctx.adminToken));
       assert.equal(del.status, 409);
-      assert.equal(del.body.error, 'GALISH is used by order #1 and cannot be removed.');
+      assert.equal(del.body.error, 'GALISH is used by order FR-1 and cannot be removed.');
     });
 
     it('a design with orders cannot be deleted or renumbered (product name can change)', async () => {
       const del = await ctx.api.delete('/api/designs/26-49').set(bearer(ctx.adminToken));
       assert.equal(del.status, 409);
-      assert.equal(del.body.error, 'Design 26-49 is used by order #1 and cannot be deleted.');
+      assert.equal(del.body.error, 'Design 26-49 is used by order FR-1 and cannot be deleted.');
       const rename = await ctx.api.patch('/api/designs/26-49').set(bearer(ctx.adminToken)).send({ designNo: '26-50' });
       assert.equal(rename.status, 409);
-      assert.equal(rename.body.error, 'Design 26-49 is used by order #1, so its number cannot be changed.');
+      assert.equal(rename.body.error, 'Design 26-49 is used by order FR-1, so its number cannot be changed.');
       const product = await ctx.api.patch('/api/designs/26-49').set(bearer(ctx.adminToken)).send({ designNo: '26-49', productName: 'CHOLI' });
       assert.equal(product.status, 200);
     });

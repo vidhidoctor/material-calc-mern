@@ -28,6 +28,7 @@ export async function getProductionDesign(designNo: string): Promise<ProductionD
     ...detail,
     previousOrders: orders.map((order) => ({
       orderNo: order.orderNo,
+      partyOrderNo: order.partyOrderNo,
       party: order.party,
       quantity: order.quantity ?? null,
       totalPieces: totalPieces(order.lines),

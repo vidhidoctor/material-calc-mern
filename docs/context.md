@@ -92,7 +92,9 @@ designs        { designNo (unique, e.g. "26-49"), productName (e.g. "Lehenga Cho
                                             consumption: { [materialCode]: qtyPerPiece (≥0, zeros omitted) } } ] } ] }
                  // component names unique within a design; sizes unique within a component
 
-orders         { orderNo (sequential int from a counters collection, shown as "#12"), designNo, item
+orders         { orderNo (sequential int from a counters collection; internal id used in links),
+                 partyOrderNo (1, 2, 3 … per design + party, from counter "party:<designNo>:<party>";
+                 shown as "ABC-1", or "#1" inside a party section), designNo, item
                  (= design.productName at creation), party, orderDate (date only), quantity (int | null —
                  null means "per row"), status: PENDING|IN_PROGRESS|COMPLETED|CANCELLED, createdAt,
                  lines: [ { component, size, quantity (int > 0) } ] }   // no consumption copy, see §8

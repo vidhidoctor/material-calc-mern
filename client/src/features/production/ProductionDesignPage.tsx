@@ -23,8 +23,9 @@ function groupByParty(orders: PreviousOrderDto[]): PartyGroup[] {
   for (const order of orders) groups.set(order.party, [...(groups.get(order.party) ?? []), order]);
   return [...groups]
     .map(([party, list]) => {
-      const sorted = [...list].sort((a, b) => b.orderDate.localeCompare(a.orderDate) || b.orderNo - a.orderNo);
-      return { party, orders: sorted, latest: sorted[0]!.orderDate };
+      const sorted = [...list].sort((a, b) => b.partyOrderNo - a.partyOrderNo);
+      const latest = sorted.reduce((max, o) => (o.orderDate > max ? o.orderDate : max), sorted[0]!.orderDate);
+      return { party, orders: sorted, latest };
     })
     .sort((a, b) => b.latest.localeCompare(a.latest) || a.party.localeCompare(b.party));
 }
@@ -98,7 +99,7 @@ export function ProductionDesignPage() {
                               className={`order-row ${selected === order.orderNo ? 'order-row-active' : ''}`}
                               onClick={() => setSelected(order.orderNo)}
                             >
-                              <strong className="order-no">#{order.orderNo}</strong>
+                              <strong className="order-no">#{order.partyOrderNo}</strong>
                               <OrderStatusBadge status={order.status} />
                               <span>{formatDate(order.orderDate)}</span>
                               <span className="muted small">{order.quantity === null ? 'Per row' : `${orderQuantityText(order.quantity)} each`}</span>

@@ -3,7 +3,7 @@ import { calculateRequirements, convertPurchase, toDecimalString, type CalcLine,
 import { consumptionLookup } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
 import { findAllMaterials, toMaterialColumn } from '../materials/materials.service.js';
-import { OrderModel } from '../orders/order.model.js';
+import { OrderModel, orderLabel } from '../orders/order.model.js';
 import { findOrder } from '../orders/orders.service.js';
 import type { PurchaseQuery } from './purchase.validation.js';
 
@@ -43,7 +43,7 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
         size,
         quantity,
         consumption: lookup(component, size),
-        label: `#${order.orderNo} ${component} ${size}`,
+        label: `${orderLabel(order)} ${component} ${size}`,
       }));
   });
 

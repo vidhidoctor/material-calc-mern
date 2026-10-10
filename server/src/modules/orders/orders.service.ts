@@ -4,7 +4,7 @@ import { AppError } from '../../lib/app-error.js';
 import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
 import { findAllMaterials, toMaterialColumn } from '../materials/materials.service.js';
-import { nextOrderNo, OrderModel, type Order, type OrderDocument, type OrderLine } from './order.model.js';
+import { nextOrderNo, nextPartyOrderNo, OrderModel, type Order, type OrderDocument, type OrderLine } from './order.model.js';
 import type { CreateOrderInput } from './orders.validation.js';
 
 export const ORDER_MESSAGES = {
@@ -30,6 +30,7 @@ export function totalPieces(lines: readonly OrderLine[]): number {
 export function toOrderListItem(order: Order): OrderListItemDto {
   return {
     orderNo: order.orderNo,
+    partyOrderNo: order.partyOrderNo,
     designNo: order.designNo,
     item: order.item,
     party: order.party,
@@ -71,6 +72,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
 
   const order = await OrderModel.create({
     orderNo: await nextOrderNo(),
+    partyOrderNo: await nextPartyOrderNo(design.designNo, input.party),
     designNo: design.designNo,
     item: design.productName,
     party: input.party,

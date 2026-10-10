@@ -151,7 +151,10 @@ export interface ProductionDesignListItemDto extends DesignListItemDto {
 }
 
 export interface PreviousOrderDto {
+  /** Internal id (links). */
   orderNo: number;
+  /** Per design + party: 1, 2, 3 … (shown as "ABC-1"). */
+  partyOrderNo: number;
   party: string;
   quantity: number | null;
   totalPieces: number;
@@ -171,7 +174,10 @@ export interface OrderLineDto {
 }
 
 export interface OrderListItemDto {
+  /** Internal id (links). */
   orderNo: number;
+  /** Per design + party: 1, 2, 3 … (shown as "ABC-1"). */
+  partyOrderNo: number;
   designNo: string;
   item: string;
   party: string;

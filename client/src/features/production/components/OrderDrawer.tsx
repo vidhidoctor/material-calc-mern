@@ -17,7 +17,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
       open
       title={
         <span className="drawer-title">
-          <span>Order #{orderNo}</span>
+          <span>Order {order.data ? `#${order.data.partyOrderNo}` : ''}</span>
           {order.data && <span className="badge badge-blue">{order.data.party}</span>}
         </span>
       }

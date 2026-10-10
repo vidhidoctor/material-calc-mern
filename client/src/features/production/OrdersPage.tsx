@@ -9,12 +9,12 @@ import { OrderStatusBadge, orderQuantityText } from './components/OrderStatusBad
 import { useOrders } from './production.hooks';
 import { useSelectedOrder } from './useSelectedOrder';
 
-/** Matches order #, design number (ignoring dashes/spaces) or party. */
+/** Matches the order label (ABC-1), design number (ignoring dashes/spaces) or party. */
 function matches(order: OrderListItemDto, search: string): boolean {
   const q = search.trim().toUpperCase().replace(/^#/, '');
   if (!q) return true;
   const key = q.replace(/[\s-]+/g, '');
-  return String(order.orderNo) === q || order.designNo.replace(/[\s-]+/g, '').includes(key) || order.party.includes(q);
+  return `${order.party}-${order.partyOrderNo}`.includes(q) || order.designNo.replace(/[\s-]+/g, '').includes(key) || order.party.includes(q);
 }
 
 export function OrdersPage() {
@@ -25,10 +25,10 @@ export function OrdersPage() {
   const columns: Column<OrderListItemDto>[] = [
     {
       key: 'orderNo',
-      header: '#',
+      header: 'Order',
       render: (o) => (
         <button type="button" className="link-btn strong-link" onClick={() => select(o.orderNo)}>
-          #{o.orderNo}
+          {o.party}-{o.partyOrderNo}
         </button>
       ),
     },
@@ -57,13 +57,13 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHeader title="All orders" subtitle="Newest first. Open an order to see its quantities, material requirement and status." />
+      <PageHeader title="All orders" subtitle="Newest first. Open an order to see its quantities and material requirement." />
       <section className="card">
         <div className="toolbar">
           <input
             className="input search"
             type="search"
-            placeholder="Search order #, design no. or party"
+            placeholder="Search order (e.g. ABC-1), design no. or party"
             aria-label="Search orders"
             value={search}
             onChange={(e) => setSearch(e.target.value)}

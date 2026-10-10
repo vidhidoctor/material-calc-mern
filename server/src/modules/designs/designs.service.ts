@@ -2,7 +2,7 @@ import type { Consumption, DesignDetailDto, DesignDto, DesignListItemDto } from 
 import { AppError } from '../../lib/app-error.js';
 import { listMaterialColumns } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
-import { OrderModel } from '../orders/order.model.js';
+import { OrderModel, orderLabel } from '../orders/order.model.js';
 import { DesignModel, type ConsumptionItem, type Design, type DesignDocument, type DesignSize } from './design.model.js';
 import type { CreateDesignInput, PutComponentInput, UpdateDesignInput } from './designs.validation.js';
 
@@ -11,14 +11,14 @@ export const DESIGN_MESSAGES = {
   exists: (designNo: string) => `Design ${designNo} already exists.`,
   componentNotFound: (name: string) => `Component ${name} not found in this design.`,
   unknownMaterial: (code: string) => `Unknown material ${code}.`,
-  sizeInUse: (component: string, size: string, orderNo: number) =>
-    `${component} size ${size} is used by order #${orderNo} and cannot be removed.`,
-  componentInUse: (component: string, orderNo: number) =>
-    `${component} is used by order #${orderNo} and cannot be removed.`,
-  designInUse: (designNo: string, orderNo: number) =>
-    `Design ${designNo} is used by order #${orderNo} and cannot be deleted.`,
-  renameInUse: (designNo: string, orderNo: number) =>
-    `Design ${designNo} is used by order #${orderNo}, so its number cannot be changed.`,
+  sizeInUse: (component: string, size: string, order: string) =>
+    `${component} size ${size} is used by order ${order} and cannot be removed.`,
+  componentInUse: (component: string, order: string) =>
+    `${component} is used by order ${order} and cannot be removed.`,
+  designInUse: (designNo: string, order: string) =>
+    `Design ${designNo} is used by order ${order} and cannot be deleted.`,
+  renameInUse: (designNo: string, order: string) =>
+    `Design ${designNo} is used by order ${order}, so its number cannot be changed.`,
 } as const;
 
 /** Upper-case, no spaces or dashes: "26 - 49" and "2649" both match "26-49". */
@@ -101,18 +101,18 @@ export async function getDesignDetail(designNo: string): Promise<DesignDetailDto
   return { ...toDesignDto(design), materials };
 }
 
-/** First order (lowest orderNo) for the design, if any. */
-async function firstOrderOf(designNo: string): Promise<number | null> {
-  const order = await OrderModel.findOne({ designNo }, { orderNo: 1 }).sort({ orderNo: 1 });
-  return order?.orderNo ?? null;
+/** Label (e.g. "ABC-1") of the first order for the design, if any. */
+async function firstOrderOf(designNo: string): Promise<string | null> {
+  const order = await OrderModel.findOne({ designNo }).sort({ orderNo: 1 });
+  return order ? orderLabel(order) : null;
 }
 
 /** Changes the product name and/or the design number (not while orders use the design). */
 export async function updateDesign(designNo: string, input: UpdateDesignInput): Promise<DesignDetailDto> {
   const design = await findDesign(designNo);
   if (input.designNo !== undefined && input.designNo !== design.designNo) {
-    const orderNo = await firstOrderOf(design.designNo);
-    if (orderNo !== null) throw new AppError(409, DESIGN_MESSAGES.renameInUse(design.designNo, orderNo));
+    const used = await firstOrderOf(design.designNo);
+    if (used !== null) throw new AppError(409, DESIGN_MESSAGES.renameInUse(design.designNo, used));
     if (await DesignModel.exists({ designNo: input.designNo })) throw new AppError(409, DESIGN_MESSAGES.exists(input.designNo));
     design.designNo = input.designNo;
     design.searchKey = toSearchKey(input.designNo);
@@ -125,18 +125,18 @@ export async function updateDesign(designNo: string, input: UpdateDesignInput): 
 /** Deletes the design and all its components (not while orders use it). */
 export async function deleteDesign(designNo: string): Promise<void> {
   const design = await findDesign(designNo);
-  const orderNo = await firstOrderOf(design.designNo);
-  if (orderNo !== null) throw new AppError(409, DESIGN_MESSAGES.designInUse(design.designNo, orderNo));
+  const used = await firstOrderOf(design.designNo);
+  if (used !== null) throw new AppError(409, DESIGN_MESSAGES.designInUse(design.designNo, used));
   await design.deleteOne();
 }
 
 /** First order (lowest orderNo) that uses the component, optionally only one of its sizes. */
-async function firstOrderUsing(designNo: string, component: string, sizes?: string[]): Promise<{ orderNo: number; size: string } | null> {
+async function firstOrderUsing(designNo: string, component: string, sizes?: string[]): Promise<{ order: string; size: string } | null> {
   const lineMatch = sizes ? { component, size: { $in: sizes } } : { component };
   const order = await OrderModel.findOne({ designNo, lines: { $elemMatch: lineMatch } }).sort({ orderNo: 1 });
   if (!order) return null;
   const line = order.lines.find((l) => l.component === component && (!sizes || sizes.includes(l.size)));
-  return { orderNo: order.orderNo, size: line?.size ?? '' };
+  return { order: orderLabel(order), size: line?.size ?? '' };
 }
 
 /**
@@ -163,7 +163,7 @@ export async function putComponent(designNo: string, name: string, input: PutCom
     const removed = existing.sizes.map((s) => s.size).filter((size) => !kept.has(size));
     if (removed.length > 0) {
       const used = await firstOrderUsing(designNo, name, removed);
-      if (used) throw new AppError(409, DESIGN_MESSAGES.sizeInUse(name, used.size, used.orderNo));
+      if (used) throw new AppError(409, DESIGN_MESSAGES.sizeInUse(name, used.size, used.order));
     }
     existing.sizes = sizes;
   } else {
@@ -178,7 +178,7 @@ export async function deleteComponent(designNo: string, name: string): Promise<D
   const index = design.components.findIndex((c) => c.name === name);
   if (index === -1) throw new AppError(404, DESIGN_MESSAGES.componentNotFound(name));
   const used = await firstOrderUsing(designNo, name);
-  if (used) throw new AppError(409, DESIGN_MESSAGES.componentInUse(name, used.orderNo));
+  if (used) throw new AppError(409, DESIGN_MESSAGES.componentInUse(name, used.order));
 
   design.components.splice(index, 1);
   await design.save();
