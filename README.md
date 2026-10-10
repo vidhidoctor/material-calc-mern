@@ -61,7 +61,8 @@ are decimal strings.
 | GET | `/designs` | `?q=` (ignores case, spaces, dashes) | PUNCHING_VIEW |
 | POST | `/designs` | `{ designNo, productName }` | PUNCHING_CREATE |
 | GET | `/designs/:designNo` | — (design + material columns) | PUNCHING_VIEW |
-| PATCH | `/designs/:designNo` | `{ productName }` | PUNCHING_UPDATE |
+| PATCH | `/designs/:designNo` | `{ designNo?, productName? }` (number only while no order uses it) | PUNCHING_UPDATE |
+| DELETE | `/designs/:designNo` | — (409 while an order uses it) | PUNCHING_UPDATE |
 | PUT | `/designs/:designNo/components/:name` | `{ sizes: [{ size, stitch, laser?, consumption: { CODE: qty } }] }` | PUNCHING_CREATE + PUNCHING_UPDATE |
 | DELETE | `/designs/:designNo/components/:name` | — (409 while an order uses it) | PUNCHING_UPDATE |
 | GET | `/production/designs` | `?q=` (designs with ≥1 component + counts) | PRODUCTION_VIEW |

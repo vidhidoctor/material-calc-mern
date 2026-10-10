@@ -49,9 +49,14 @@ export const createDesignBody = z.object({
   productName: upperText('Product name', 100),
 });
 
-export const updateDesignBody = z.object({
-  productName: upperText('Product name', 100),
-});
+export const updateDesignBody = z
+  .object({
+    designNo: designNo.optional(),
+    productName: upperText('Product name', 100).optional(),
+  })
+  .refine((v) => v.designNo !== undefined || v.productName !== undefined, 'Nothing to change.');
+
+export type UpdateDesignInput = z.infer<typeof updateDesignBody>;
 
 export const putComponentBody = z.object({
   sizes: z

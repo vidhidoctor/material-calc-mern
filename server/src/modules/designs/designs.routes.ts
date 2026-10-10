@@ -23,6 +23,7 @@ designsRoutes.patch(
   validate({ params: designParams, body: updateDesignBody }),
   controller.update,
 );
+designsRoutes.delete('/:designNo', guard('PUNCHING_UPDATE'), validate({ params: designParams }), controller.remove);
 designsRoutes.put(
   '/:designNo/components/:name',
   guard('PUNCHING_CREATE', 'PUNCHING_UPDATE'),

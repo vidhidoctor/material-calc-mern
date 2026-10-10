@@ -4,7 +4,7 @@ import { listMaterialColumns } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
 import { OrderModel } from '../orders/order.model.js';
 import { DesignModel, type ConsumptionItem, type Design, type DesignDocument, type DesignSize } from './design.model.js';
-import type { CreateDesignInput, PutComponentInput } from './designs.validation.js';
+import type { CreateDesignInput, PutComponentInput, UpdateDesignInput } from './designs.validation.js';
 
 export const DESIGN_MESSAGES = {
   notFound: (designNo: string) => `Design ${designNo} not found.`,
@@ -15,6 +15,10 @@ export const DESIGN_MESSAGES = {
     `${component} size ${size} is used by order #${orderNo} and cannot be removed.`,
   componentInUse: (component: string, orderNo: number) =>
     `${component} is used by order #${orderNo} and cannot be removed.`,
+  designInUse: (designNo: string, orderNo: number) =>
+    `Design ${designNo} is used by order #${orderNo} and cannot be deleted.`,
+  renameInUse: (designNo: string, orderNo: number) =>
+    `Design ${designNo} is used by order #${orderNo}, so its number cannot be changed.`,
 } as const;
 
 /** Upper-case, no spaces or dashes: "26 - 49" and "2649" both match "26-49". */
@@ -97,11 +101,33 @@ export async function getDesignDetail(designNo: string): Promise<DesignDetailDto
   return { ...toDesignDto(design), materials };
 }
 
-export async function updateProductName(designNo: string, productName: string): Promise<DesignDetailDto> {
+/** First order (lowest orderNo) for the design, if any. */
+async function firstOrderOf(designNo: string): Promise<number | null> {
+  const order = await OrderModel.findOne({ designNo }, { orderNo: 1 }).sort({ orderNo: 1 });
+  return order?.orderNo ?? null;
+}
+
+/** Changes the product name and/or the design number (not while orders use the design). */
+export async function updateDesign(designNo: string, input: UpdateDesignInput): Promise<DesignDetailDto> {
   const design = await findDesign(designNo);
-  design.productName = productName;
+  if (input.designNo !== undefined && input.designNo !== design.designNo) {
+    const orderNo = await firstOrderOf(design.designNo);
+    if (orderNo !== null) throw new AppError(409, DESIGN_MESSAGES.renameInUse(design.designNo, orderNo));
+    if (await DesignModel.exists({ designNo: input.designNo })) throw new AppError(409, DESIGN_MESSAGES.exists(input.designNo));
+    design.designNo = input.designNo;
+    design.searchKey = toSearchKey(input.designNo);
+  }
+  if (input.productName !== undefined) design.productName = input.productName;
   await design.save();
-  return getDesignDetail(designNo);
+  return getDesignDetail(design.designNo);
+}
+
+/** Deletes the design and all its components (not while orders use it). */
+export async function deleteDesign(designNo: string): Promise<void> {
+  const design = await findDesign(designNo);
+  const orderNo = await firstOrderOf(design.designNo);
+  if (orderNo !== null) throw new AppError(409, DESIGN_MESSAGES.designInUse(design.designNo, orderNo));
+  await design.deleteOne();
 }
 
 /** First order (lowest orderNo) that uses the component, optionally only one of its sizes. */

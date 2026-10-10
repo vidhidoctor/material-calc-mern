@@ -240,6 +240,17 @@ describe('production orders and purchase requirements', () => {
       assert.equal(del.body.error, 'GALISH is used by order #1 and cannot be removed.');
     });
 
+    it('a design with orders cannot be deleted or renumbered (product name can change)', async () => {
+      const del = await ctx.api.delete('/api/designs/26-49').set(bearer(ctx.adminToken));
+      assert.equal(del.status, 409);
+      assert.equal(del.body.error, 'Design 26-49 is used by order #1 and cannot be deleted.');
+      const rename = await ctx.api.patch('/api/designs/26-49').set(bearer(ctx.adminToken)).send({ designNo: '26-50' });
+      assert.equal(rename.status, 409);
+      assert.equal(rename.body.error, 'Design 26-49 is used by order #1, so its number cannot be changed.');
+      const product = await ctx.api.patch('/api/designs/26-49').set(bearer(ctx.adminToken)).send({ designNo: '26-49', productName: 'CHOLI' });
+      assert.equal(product.status, 200);
+    });
+
     it('a new size can still be added to a used component', async () => {
       const belt = [{ size: 'ALL', stitch: 0, consumption: { CORD: 20 } }, { size: 'XL', stitch: 0, consumption: { CORD: 25 } }];
       assert.equal((await ctx.api.put('/api/designs/26-49/components/BELT').set(bearer(ctx.adminToken)).send({ sizes: belt })).status, 200);

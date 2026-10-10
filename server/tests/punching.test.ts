@@ -110,6 +110,26 @@ describe('materials and designs (Punching)', () => {
       assert.equal(item.components[0]?.sizes.length, 12);
     });
 
+    it('renames and deletes a design that has no orders', async () => {
+      const created = await ctx.api.post('/api/designs').set(bearer(punching)).send({ designNo: '50-01', productName: 'Frock' });
+      assert.equal(created.status, 201);
+
+      const taken = await ctx.api.patch('/api/designs/50-01').set(bearer(punching)).send({ designNo: '26-49' });
+      assert.equal(taken.status, 409);
+      const renamed = await ctx.api.patch('/api/designs/50-01').set(bearer(punching)).send({ designNo: '50-02', productName: 'gown' });
+      assert.equal(renamed.status, 200);
+      assert.equal(renamed.body.designNo, '50-02');
+      assert.equal(renamed.body.productName, 'GOWN');
+      assert.equal((await ctx.api.get('/api/designs/50-01').set(bearer(punching))).status, 404);
+      const found = (await ctx.api.get('/api/designs').query({ q: '5002' }).set(bearer(punching))).body;
+      assert.deepEqual(found.map((d: { designNo: string }) => d.designNo), ['50-02']);
+
+      assert.equal((await ctx.api.patch('/api/designs/50-02').set(bearer(punching)).send({})).body.error, 'Nothing to change.');
+      assert.equal((await ctx.api.delete('/api/designs/50-02').set(bearer(production))).status, 403);
+      assert.equal((await ctx.api.delete('/api/designs/50-02').set(bearer(punching))).status, 204);
+      assert.equal((await ctx.api.get('/api/designs/50-02').set(bearer(punching))).status, 404);
+    });
+
     it('unknown design → 404', async () => {
       assert.equal((await ctx.api.get('/api/designs/99-99').set(bearer(punching))).status, 404);
     });

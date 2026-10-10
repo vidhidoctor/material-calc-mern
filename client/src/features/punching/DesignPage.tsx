@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { EmptyState, ErrorAlert, PageHeader, QueryState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDate } from '../../lib/format';
 import { ComponentCard } from './components/ComponentCard';
 import { ComponentEditor } from './components/ComponentEditor';
-import { EditProductNameModal } from './components/EditProductNameModal';
-import { useDeleteComponent, useDesign } from './punching.hooks';
+import { EditDesignModal } from './components/EditDesignModal';
+import { useDeleteComponent, useDeleteDesign, useDesign } from './punching.hooks';
 
 export function DesignPage() {
   const designNo = useParams().designNo ?? '';
   const auth = useAuth();
   const design = useDesign(designNo);
   const remove = useDeleteComponent(designNo);
+  const removeDesign = useDeleteDesign();
+  const navigate = useNavigate();
   // ?component=new | <NAME> opens the editor (survives refresh; "New design" lands here with =new).
   const [params, setParams] = useSearchParams();
   const editing = params.get('component');
@@ -26,6 +28,12 @@ export function DesignPage() {
 
   const onRemove = (name: string) => {
     if (window.confirm(`Remove ${name} and all its sizes from design ${designNo}?`)) remove.mutate(name);
+  };
+
+  const onDeleteDesign = () => {
+    if (window.confirm(`Delete design ${designNo} with all its components? This cannot be undone.`)) {
+      removeDesign.mutate(designNo, { onSuccess: () => navigate('/punching', { replace: true }) });
+    }
   };
 
   return (
@@ -46,9 +54,14 @@ export function DesignPage() {
               actions={
                 <>
                   {canUpdate && (
-                    <button type="button" className="btn" onClick={() => setRenaming(true)}>
-                      Edit product name
-                    </button>
+                    <>
+                      <button type="button" className="btn btn-danger-ghost" disabled={removeDesign.isPending} onClick={onDeleteDesign}>
+                        Delete design
+                      </button>
+                      <button type="button" className="btn" onClick={() => setRenaming(true)}>
+                        Edit design
+                      </button>
+                    </>
                   )}
                   {canEditComponents && d.components.length > 0 && (
                     <button type="button" className="btn btn-primary" onClick={() => openEditor('new')}>
@@ -58,7 +71,7 @@ export function DesignPage() {
                 </>
               }
             />
-            <ErrorAlert error={remove.error} />
+            <ErrorAlert error={remove.error ?? removeDesign.error} />
 
             {d.components.length === 0 ? (
               <section className="card">
@@ -100,7 +113,7 @@ export function DesignPage() {
                 onClose={closeEditor}
               />
             )}
-            {renaming && <EditProductNameModal designNo={d.designNo} productName={d.productName} onClose={() => setRenaming(false)} />}
+            {renaming && <EditDesignModal designNo={d.designNo} productName={d.productName} onClose={() => setRenaming(false)} />}
           </>
         )}
       </QueryState>

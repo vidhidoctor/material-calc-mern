@@ -2,48 +2,72 @@ import type { DesignListItemDto } from '@app/shared';
 import { useDeferredValue, useState } from 'react';
 import { Link } from 'react-router';
 import { DataGrid, type Column } from '../../components/DataGrid';
-import { EmptyState, PageHeader, QueryState } from '../../components/ui';
+import { EmptyState, ErrorAlert, PageHeader, QueryState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDate } from '../../lib/format';
 import { NewDesignModal } from './components/NewDesignModal';
-import { useDesigns } from './punching.hooks';
+import { useDeleteDesign, useDesigns } from './punching.hooks';
 
-const columns: Column<DesignListItemDto>[] = [
-  {
-    key: 'designNo',
-    header: 'Design No.',
-    render: (d) => (
-      <Link className="strong-link" to={`/punching/${encodeURIComponent(d.designNo)}`}>
-        {d.designNo}
-      </Link>
-    ),
-  },
-  { key: 'product', header: 'Product', render: (d) => d.productName },
-  {
-    key: 'components',
-    header: 'Components',
-    render: (d) =>
-      d.components.length === 0 ? (
-        <span className="muted small">No components yet</span>
-      ) : (
-        <div className="tags">
-          {d.components.map((c) => (
-            <span key={c.name} className="tag">
-              {c.name} · {c.sizes.length}
-            </span>
-          ))}
-        </div>
-      ),
-  },
-  { key: 'created', header: 'Created', render: (d) => formatDate(d.createdAt) },
-];
+const designUrl = (designNo: string) => `/punching/${encodeURIComponent(designNo)}`;
 
 export function DesignsPage() {
   const auth = useAuth();
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
   const designs = useDesigns(q);
+  const remove = useDeleteDesign();
   const [creating, setCreating] = useState(false);
+
+  const onDelete = (d: DesignListItemDto) => {
+    if (window.confirm(`Delete design ${d.designNo} with all its components? This cannot be undone.`)) remove.mutate(d.designNo);
+  };
+
+  const columns: Column<DesignListItemDto>[] = [
+    {
+      key: 'designNo',
+      header: 'Design No.',
+      render: (d) => (
+        <Link className="strong-link" to={designUrl(d.designNo)}>
+          {d.designNo}
+        </Link>
+      ),
+    },
+    { key: 'product', header: 'Product', render: (d) => d.productName },
+    {
+      key: 'components',
+      header: 'Components',
+      render: (d) =>
+        d.components.length === 0 ? (
+          <span className="muted small">No components yet</span>
+        ) : (
+          <div className="tags">
+            {d.components.map((c) => (
+              <span key={c.name} className="tag">
+                {c.name} · {c.sizes.length}
+              </span>
+            ))}
+          </div>
+        ),
+    },
+    { key: 'created', header: 'Created', render: (d) => formatDate(d.createdAt) },
+    {
+      key: 'actions',
+      header: '',
+      align: 'right',
+      render: (d) => (
+        <div className="row-actions">
+          <Link className="btn btn-sm" to={designUrl(d.designNo)}>
+            Open
+          </Link>
+          {auth.can('PUNCHING_UPDATE') && (
+            <button type="button" className="btn btn-sm btn-danger-ghost" disabled={remove.isPending} onClick={() => onDelete(d)}>
+              Delete
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <>
@@ -58,6 +82,7 @@ export function DesignsPage() {
           )
         }
       />
+      <ErrorAlert error={remove.error} />
       <section className="card">
         <div className="toolbar">
           <input

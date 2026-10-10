@@ -14,8 +14,9 @@ export const listDesigns = (q: string) => api<DesignListItemDto[]>('/designs', {
 export const getDesign = (designNo: string) => api<DesignDetailDto>(designPath(designNo));
 export const createDesign = (body: { designNo: string; productName: string }) =>
   api<DesignDetailDto>('/designs', { method: 'POST', body });
-export const updateProductName = (designNo: string, productName: string) =>
-  api<DesignDetailDto>(designPath(designNo), { method: 'PATCH', body: { productName } });
+export const updateDesign = (designNo: string, body: { designNo?: string; productName?: string }) =>
+  api<DesignDetailDto>(designPath(designNo), { method: 'PATCH', body });
+export const deleteDesign = (designNo: string) => api<void>(designPath(designNo), { method: 'DELETE' });
 export const putComponent = (designNo: string, name: string, sizes: SizeRowBody[]) =>
   api<DesignDetailDto>(`${designPath(designNo)}/components/${encodeURIComponent(name)}`, { method: 'PUT', body: { sizes } });
 export const deleteComponent = (designNo: string, name: string) =>

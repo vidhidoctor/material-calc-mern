@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import * as designsService from './designs.service.js';
-import type { CreateDesignInput, PutComponentInput } from './designs.validation.js';
+import type { CreateDesignInput, PutComponentInput, UpdateDesignInput } from './designs.validation.js';
 
 type DesignParams = { designNo: string };
 type ComponentParams = { designNo: string; name: string };
@@ -18,7 +18,12 @@ export async function get(req: Request<DesignParams>, res: Response): Promise<vo
 }
 
 export async function update(req: Request<DesignParams>, res: Response): Promise<void> {
-  res.json(await designsService.updateProductName(req.params.designNo, (req.body as { productName: string }).productName));
+  res.json(await designsService.updateDesign(req.params.designNo, req.body as UpdateDesignInput));
+}
+
+export async function remove(req: Request<DesignParams>, res: Response): Promise<void> {
+  await designsService.deleteDesign(req.params.designNo);
+  res.status(204).end();
 }
 
 export async function putComponent(req: Request<ComponentParams>, res: Response): Promise<void> {
