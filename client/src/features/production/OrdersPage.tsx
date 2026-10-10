@@ -5,7 +5,6 @@ import { DataGrid, type Column } from '../../components/DataGrid';
 import { EmptyState, PageHeader, QueryState } from '../../components/ui';
 import { formatDate, formatNumber } from '../../lib/format';
 import { OrderDrawer } from './components/OrderDrawer';
-import { OrderStatusBadge, orderQuantityText } from './components/OrderStatusBadge';
 import { useOrders } from './production.hooks';
 import { useSelectedOrder } from './useSelectedOrder';
 
@@ -40,9 +39,7 @@ export function OrdersPage() {
     { key: 'item', header: 'Item', render: (o) => o.item },
     { key: 'party', header: 'Party', render: (o) => o.party },
     { key: 'date', header: 'Date', render: (o) => formatDate(o.orderDate) },
-    { key: 'qty', header: 'Order Quantity', align: 'right', render: (o) => orderQuantityText(o.quantity) },
     { key: 'pieces', header: 'Total pieces', align: 'right', render: (o) => formatNumber(o.totalPieces, 0) },
-    { key: 'status', header: 'Status', render: (o) => <OrderStatusBadge status={o.status} /> },
     {
       key: 'open',
       header: '',
