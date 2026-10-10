@@ -679,15 +679,6 @@ a {
 .drawer-title .badge {
   font-size: 0.85rem;
 }
-.drawer-status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.drawer-status .input {
-  width: auto;
-  min-width: 160px;
-}
 .drawer-note {
   margin: -4px 0 8px;
 }

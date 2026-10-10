@@ -1,19 +1,16 @@
-import { ORDER_STATUS_LABELS, ORDER_STATUSES, type OrderStatus } from '@app/shared';
 import { Link } from 'react-router';
 import { Drawer } from '../../../components/Drawer';
-import { ErrorAlert, QueryState } from '../../../components/ui';
+import { QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
 import { formatDate, formatNumber } from '../../../lib/format';
-import { useOrder, useOrderSummary, useUpdateOrderStatus } from '../production.hooks';
-import { OrderStatusBadge } from './OrderStatusBadge';
+import { useOrder, useOrderSummary } from '../production.hooks';
 import { OrderLinesTable } from './OrderLinesTable';
 
-/** Everything about one order: stats, status, quantities and material requirement. */
+/** Everything about one order: stats, quantities and material requirement. */
 export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: () => void }) {
   const auth = useAuth();
   const order = useOrder(orderNo);
   const summary = useOrderSummary(orderNo);
-  const status = useUpdateOrderStatus(orderNo);
 
   return (
     <Drawer
@@ -52,27 +49,6 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
               </div>
             </div>
 
-            <div className="drawer-status">
-              <span className="muted small">Status</span>
-              {auth.can('PRODUCTION_UPDATE') ? (
-                <select
-                  className="input"
-                  aria-label="Order status"
-                  value={o.status}
-                  disabled={status.isPending}
-                  onChange={(e) => status.mutate(e.target.value as OrderStatus)}
-                >
-                  {ORDER_STATUSES.map((s) => (
-                    <option key={s} value={s}>
-                      {ORDER_STATUS_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <OrderStatusBadge status={o.status} />
-              )}
-            </div>
-            <ErrorAlert error={status.error} />
 
             <section>
               <h3 className="drawer-subtitle">Quantities &amp; material requirement</h3>
