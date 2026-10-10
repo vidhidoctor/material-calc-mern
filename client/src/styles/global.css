@@ -320,6 +320,145 @@ a {
   padding: 0 16px;
 }
 
+/* ---- Lists, tags, cards ---- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.input.search {
+  max-width: 420px;
+}
+.card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag-btn {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+}
+.tag-btn:hover {
+  border-color: var(--primary);
+}
+.tag-active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.strong-link {
+  font-weight: 700;
+  text-decoration: none;
+}
+.strong-link:hover {
+  text-decoration: underline;
+}
+.back-link {
+  align-self: flex-start;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.back-link:hover {
+  color: var(--primary);
+}
+.add-another {
+  align-self: flex-start;
+  border-style: dashed;
+}
+/* Previous results stay visible but dimmed while new ones load. */
+.is-stale {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+.th-unit {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.upper {
+  text-transform: uppercase;
+}
+
+/* ---- Component editor grid ---- */
+.editor-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+.editor-top .field {
+  flex: 0 1 260px;
+}
+.editor-top .tags {
+  padding-bottom: 6px;
+}
+.editor-grid {
+  max-height: 55vh;
+  border: 1px solid var(--border);
+}
+.editor-grid .table td {
+  padding: 4px 6px;
+}
+.editor-grid .table th {
+  padding: 8px 6px;
+}
+.input-sm {
+  padding: 5px 7px;
+  min-width: 76px;
+}
+.size-input {
+  width: 72px;
+  min-width: 72px;
+  font-weight: 600;
+}
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+.table th.sticky-col {
+  z-index: 3;
+  background: var(--surface-2);
+}
+.problems {
+  margin: 0;
+  padding: 10px 14px 10px 30px;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.footer-note {
+  margin-right: auto;
+}
+
 /* ---- Tables ---- */
 .table-wrap {
   overflow: auto;

@@ -6,6 +6,8 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { MaterialsPage } from '../features/materials/MaterialsPage';
+import { DesignPage } from '../features/punching/DesignPage';
+import { DesignsPage } from '../features/punching/DesignsPage';
 import { RolesPage } from '../features/roles/RolesPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { UsersPage } from '../features/users/UsersPage';
@@ -30,7 +32,8 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <HomeRedirect /> },
-      { path: 'punching/*', element: guarded('/punching', <ComingSoon title="Punching Master" />) },
+      { path: 'punching', element: guarded('/punching', <DesignsPage />) },
+      { path: 'punching/:designNo', element: guarded('/punching', <DesignPage />) },
       { path: 'production/*', element: guarded('/production', <ComingSoon title="Design search" />) },
       { path: 'orders/*', element: guarded('/orders', <ComingSoon title="All orders" />) },
       { path: 'purchase', element: guarded('/purchase', <ComingSoon title="Purchase Requirements" />) },
