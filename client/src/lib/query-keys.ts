@@ -6,4 +6,5 @@ export const queryKeys = {
   permissions: ['admin', 'permissions'] as const,
   departments: ['admin', 'departments'] as const,
   materials: ['materials'] as const,
+  settings: ['settings'] as const,
 };

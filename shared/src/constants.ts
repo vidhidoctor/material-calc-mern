@@ -17,6 +17,7 @@ export const PERMISSIONS = {
   ROLE_MANAGE: 'Create roles',
   PERMISSION_MANAGE: 'Change the permissions of a role',
   DEPARTMENT_MANAGE: 'Create departments',
+  SETTINGS_MANAGE: 'Manage global config (admin emails)',
 } as const;
 
 export type PermissionCode = keyof typeof PERMISSIONS;
@@ -30,6 +31,7 @@ export const PERMISSION_GROUPS: Record<string, readonly PermissionCode[]> = {
   'Material Master': ['MATERIAL_MASTER_VIEW', 'MATERIAL_MASTER_MANAGE'],
   Users: ['USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE'],
   'Roles & departments': ['ROLE_MANAGE', 'PERMISSION_MANAGE', 'DEPARTMENT_MANAGE'],
+  Settings: ['SETTINGS_MANAGE'],
 };
 
 export function permissionGroup(code: PermissionCode): string {

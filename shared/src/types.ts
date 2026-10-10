@@ -73,6 +73,23 @@ export interface DepartmentDto {
   userCount: number;
 }
 
+// ---- Global config ----
+
+export interface AdminEmailDto {
+  email: string;
+  name: string;
+  /** The Admin created by the seed from server/.env; cannot be removed here. */
+  primary: boolean;
+  /** Account status for this email (null = no account). */
+  account: { id: string; isActive: boolean; isAdmin: boolean } | null;
+  addedAt: string;
+  addedBy: string | null;
+}
+
+export interface SettingsDto {
+  adminEmails: AdminEmailDto[];
+}
+
 // ---- Materials ----
 
 export interface MaterialColumnDto {

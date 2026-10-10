@@ -9,6 +9,7 @@ import { materialsRoutes } from './modules/materials/materials.routes.js';
 import { ordersRoutes } from './modules/orders/orders.routes.js';
 import { productionRoutes } from './modules/production/production.routes.js';
 import { purchaseRoutes } from './modules/purchase/purchase.routes.js';
+import { settingsRoutes } from './modules/settings/settings.routes.js';
 
 export function createApp(): Express {
   const env = getEnv();
@@ -28,6 +29,7 @@ export function createApp(): Express {
   app.use('/api/production', productionRoutes);
   app.use('/api/orders', ordersRoutes);
   app.use('/api/purchase', purchaseRoutes);
+  app.use('/api/settings', settingsRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

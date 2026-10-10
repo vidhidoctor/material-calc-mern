@@ -35,6 +35,7 @@ export const NAV: NavSection[] = [
       { to: '/admin/roles', label: 'Roles & permissions', any: ['ROLE_MANAGE', 'PERMISSION_MANAGE'] },
       { to: '/admin/departments', label: 'Departments', any: ['DEPARTMENT_MANAGE'] },
       { to: '/admin/materials', label: 'Material Master', any: ['MATERIAL_MASTER_VIEW'] },
+      { to: '/admin/settings', label: 'Global config', any: ['SETTINGS_MANAGE'] },
     ],
   },
 ];

@@ -2,6 +2,7 @@ import { ADMIN_ROLE, DEPARTMENTS, ROLES } from '@app/shared';
 import { hashPassword } from '../lib/crypto.js';
 import { DepartmentModel } from '../modules/departments/department.model.js';
 import { RoleModel } from '../modules/roles/role.model.js';
+import { ensurePrimaryAdminEmail } from '../modules/settings/settings.service.js';
 import { UserModel } from '../modules/users/user.model.js';
 
 export interface SeedOptions {
@@ -50,6 +51,9 @@ export async function seedFoundation({ adminEmail, adminPassword }: SeedOptions)
     });
     log.push(`Admin user ${email}: created`);
   }
+
+  const added = await ensurePrimaryAdminEmail(email, 'Admin');
+  log.push(`Global config: ${email} ${added ? 'added as primary admin email' : 'already the primary admin email'}`);
 
   return log;
 }

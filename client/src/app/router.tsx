@@ -7,6 +7,7 @@ import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { MaterialsPage } from '../features/materials/MaterialsPage';
 import { RolesPage } from '../features/roles/RolesPage';
+import { SettingsPage } from '../features/settings/SettingsPage';
 import { UsersPage } from '../features/users/UsersPage';
 import { RequireAuth, RequirePermission } from '../lib/auth';
 import { AppLayout, ComingSoon, HomeRedirect, NotFound } from './layout/AppLayout';
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
       { path: 'admin/roles', element: guarded('/admin/roles', <RolesPage />) },
       { path: 'admin/departments', element: guarded('/admin/departments', <DepartmentsPage />) },
       { path: 'admin/materials', element: guarded('/admin/materials', <MaterialsPage />) },
+      { path: 'admin/settings', element: guarded('/admin/settings', <SettingsPage />) },
       { path: '*', element: <NotFound /> },
     ],
   },

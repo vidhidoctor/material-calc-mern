@@ -296,6 +296,30 @@ a {
   width: auto;
 }
 
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 4px;
+}
+.section-head {
+  padding: 16px 16px 0;
+}
+.section-head p {
+  margin-top: 6px;
+  max-width: 75ch;
+}
+.section > .alert {
+  margin: 0 16px;
+}
+.admin-email-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  align-items: end;
+  gap: 12px;
+  padding: 0 16px;
+}
+
 /* ---- Tables ---- */
 .table-wrap {
   overflow: auto;

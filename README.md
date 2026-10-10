@@ -51,6 +51,9 @@ are decimal strings.
 | GET | `/admin/permissions` | — | ROLE_MANAGE or PERMISSION_MANAGE |
 | GET | `/admin/departments` | — | DEPARTMENT_MANAGE or USER_VIEW |
 | POST | `/admin/departments` | `{ name }` | DEPARTMENT_MANAGE |
+| GET | `/settings` | — (global config: admin emails) | SETTINGS_MANAGE |
+| POST | `/settings/admin-emails` | `{ email, name, password? }` (creates an active Admin, or promotes an existing account) | SETTINGS_MANAGE + every Admin permission |
+| DELETE | `/settings/admin-emails/:email` | — (removes Admin role, deactivates, logs out; not the primary or yourself) | SETTINGS_MANAGE |
 | GET | `/materials` | — | MATERIAL_MASTER_VIEW |
 | POST | `/materials` | `{ code, name, category, seqPerCd?, cdPerRoll?, cdPerRound?, pcsPerKg?, denier? }` | MATERIAL_MASTER_MANAGE |
 | PUT | `/materials/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
