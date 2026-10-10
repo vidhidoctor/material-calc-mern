@@ -6,7 +6,8 @@ import { usePutComponent } from '../punching.hooks';
 import type { SizeRowBody } from '../punching.api';
 
 const SUGGESTED_COMPONENTS = ['FROCK', 'KALI', 'BLOUSE', 'BELT', 'GALISH'];
-const STANDARD_SIZES = ['18', '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40'];
+const OTHER = '__other__';
+const STANDARD_SIZES =['18', '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40'];
 
 interface Row {
   key: number;
@@ -40,6 +41,8 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   });
 
   const [name, setName] = useState(existing?.name ?? '');
+  /** "Other…" chosen in the dropdown: the name is typed instead. */
+  const [custom, setCustom] = useState(false);
   const [rows, setRows] = useState<Row[]>(() => (existing ? existing.sizes.map((s) => toRow(s)) : [toRow()]));
   const [dirty, setDirty] = useState(false);
 
@@ -118,41 +121,52 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
         <ErrorAlert error={save.error} />
 
         <div className="editor-top">
-          <Field label="Component" required hint={isNew ? 'Pick a suggestion or type a new name.' : 'The name cannot be changed.'}>
-            <input
-              className="input upper"
-              list="component-suggestions"
-              required
-              autoFocus={isNew}
-              disabled={!isNew}
-              value={name}
-              onChange={(e) => {
-                setDirty(true);
-                setName(e.target.value.toUpperCase());
-              }}
-            />
-            <datalist id="component-suggestions">
-              {suggestions.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
-          </Field>
-          {isNew && suggestions.length > 0 && (
-            <div className="tags">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className={`tag tag-btn ${name === s ? 'tag-active' : ''}`}
-                  onClick={() => {
+          {isNew ? (
+            <>
+              <Field label="Component" required>
+                <select
+                  className="input"
+                  required
+                  autoFocus
+                  value={custom ? OTHER : name}
+                  onChange={(e) => {
                     setDirty(true);
-                    setName(s);
+                    const value = e.target.value;
+                    setCustom(value === OTHER);
+                    setName(value === OTHER ? '' : value);
                   }}
                 >
-                  {s}
-                </button>
-              ))}
-            </div>
+                  <option value="" disabled>
+                    Select a component…
+                  </option>
+                  {suggestions.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                  <option value={OTHER}>Other…</option>
+                </select>
+              </Field>
+              {custom && (
+                <Field label="Component name" required>
+                  <input
+                    className="input upper"
+                    required
+                    autoFocus
+                    placeholder="e.g. DUPATTA"
+                    value={name}
+                    onChange={(e) => {
+                      setDirty(true);
+                      setName(e.target.value.toUpperCase());
+                    }}
+                  />
+                </Field>
+              )}
+            </>
+          ) : (
+            <Field label="Component" hint="The name cannot be changed.">
+              <input className="input" disabled value={name} />
+            </Field>
           )}
         </div>
 

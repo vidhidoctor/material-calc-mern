@@ -355,21 +355,6 @@ a {
   font-weight: 600;
   white-space: nowrap;
 }
-.tag-btn {
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text);
-  cursor: pointer;
-}
-.tag-btn:hover {
-  border-color: var(--primary);
-}
-.tag-active {
-  background: var(--primary-soft);
-  border-color: var(--primary);
-  color: var(--primary);
-}
 .strong-link {
   font-weight: 700;
   text-decoration: none;
@@ -408,16 +393,10 @@ a {
 
 /* ---- Component editor grid ---- */
 .editor-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 260px));
+  align-items: start;
   gap: 12px;
-}
-.editor-top .field {
-  flex: 0 1 260px;
-}
-.editor-top .tags {
-  padding-bottom: 6px;
 }
 .editor-grid {
   max-height: 55vh;
