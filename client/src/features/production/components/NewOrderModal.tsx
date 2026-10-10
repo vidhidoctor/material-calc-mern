@@ -130,9 +130,9 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
 
         {mode === 'rows' && (
           <div className="order-components">
-            {design.components.map((component, index) => (
-              // Accordion: click a component to show its sizes, one below the other.
-              <details key={component.name} className="order-component" open={index === 0}>
+            {design.components.map((component) => (
+              // Accordion (all collapsed at first): click a component to show its sizes, one below the other.
+              <details key={component.name} className="order-component">
                 <summary>
                   <strong>{component.name}</strong>
                   <span className="muted small">
