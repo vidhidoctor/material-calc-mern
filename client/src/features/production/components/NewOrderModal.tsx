@@ -130,30 +130,34 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
 
         {mode === 'rows' && (
           <div className="order-components">
-            {design.components.map((component) => {
-              return (
-                <div key={component.name} className="order-component">
-                  <strong className="order-component-name">{component.name}</strong>
-                  <div className="order-sizes">
-                    {component.sizes.map((s) => {
-                      const key = rowKey(component.name, s.size);
-                      return (
-                        <label key={s.size} className="order-size">
-                          <span>{s.size}</span>
-                          <NumberInput
-                            className="input-sm"
-                            aria-label={`${component.name} ${s.size} quantity`}
-                            placeholder="0"
-                            value={rowQty[key] ?? ''}
-                            onChange={(v) => setRowQty((q) => ({ ...q, [key]: v }))}
-                          />
-                        </label>
-                      );
-                    })}
-                  </div>
+            {design.components.map((component, index) => (
+              // Accordion: click a component to show its sizes, one below the other.
+              <details key={component.name} className="order-component" open={index === 0}>
+                <summary>
+                  <strong>{component.name}</strong>
+                  <span className="muted small">
+                    {component.sizes.length} size{component.sizes.length === 1 ? '' : 's'}
+                  </span>
+                </summary>
+                <div className="order-sizes">
+                  {component.sizes.map((s) => {
+                    const key = rowKey(component.name, s.size);
+                    return (
+                      <label key={s.size} className="order-size">
+                        <span>{s.size}</span>
+                        <NumberInput
+                          className="input-sm"
+                          aria-label={`${component.name} ${s.size} quantity`}
+                          placeholder="0"
+                          value={rowQty[key] ?? ''}
+                          onChange={(v) => setRowQty((q) => ({ ...q, [key]: v }))}
+                        />
+                      </label>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </details>
+            ))}
           </div>
         )}
       </div>
