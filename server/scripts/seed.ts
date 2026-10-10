@@ -1,5 +1,6 @@
 import { EnvError, getEnv, loadDotEnv } from '../src/config/env.js';
 import { connectDb, disconnectDb } from '../src/db/connect.js';
+import { runStartupMigrations } from '../src/db/migrations.js';
 import { seedFoundation } from '../src/db/seed.js';
 
 loadDotEnv();
@@ -11,6 +12,7 @@ try {
     process.exit(1);
   }
   await connectDb(env.MONGODB_URI);
+  for (const line of await runStartupMigrations()) console.info(line);
   const log = await seedFoundation({ adminEmail: env.ADMIN_EMAIL, adminPassword: env.ADMIN_PASSWORD });
   for (const line of log) console.info(line);
   console.info('Seed complete.');

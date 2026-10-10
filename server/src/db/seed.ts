@@ -1,7 +1,8 @@
 import { ADMIN_ROLE, DEPARTMENTS, ROLES } from '@app/shared';
 import { hashPassword } from '../lib/crypto.js';
 import { DepartmentModel } from '../modules/departments/department.model.js';
-import { MaterialModel, type Material } from '../modules/materials/material.model.js';
+import { MaterialModel } from '../modules/materials/material.model.js';
+import { legacyRules } from './default-categories.js';
 import { RoleModel } from '../modules/roles/role.model.js';
 import { ensurePrimaryAdminEmail } from '../modules/settings/settings.service.js';
 import { UserModel } from '../modules/users/user.model.js';
@@ -9,7 +10,8 @@ import { UserModel } from '../modules/users/user.model.js';
 export interface StandardMaterial {
   code: string;
   name: string;
-  category: Material['category'];
+  /** Category code, e.g. SEQUENCE, BEAD, CORD. */
+  category: string;
   seqPerCd?: number;
   cdPerRoll?: number;
   cdPerRound?: number;
@@ -35,11 +37,7 @@ export async function seedMaterials(materials: readonly StandardMaterial[]): Pro
       name: m.name,
       category: m.category,
       sortOrder: sortOrder++,
-      seqPerCd: m.seqPerCd ?? null,
-      cdPerRoll: m.cdPerRoll ?? null,
-      cdPerRound: m.cdPerRound ?? null,
-      pcsPerKg: m.pcsPerKg ?? null,
-      denier: m.denier ?? null,
+      rules: legacyRules(m),
     });
     log.push(`Material ${m.code}: created`);
   }

@@ -3,6 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { EnvError, getEnv, loadDotEnv } from '../src/config/env.js';
 import { connectDb, disconnectDb } from '../src/db/connect.js';
+import { runStartupMigrations } from '../src/db/migrations.js';
 import { seedMaterials, type StandardMaterial } from '../src/db/seed.js';
 
 loadDotEnv();
@@ -14,6 +15,7 @@ try {
   };
   const materials = [...fixture.materials].sort((a, b) => a.sortOrder - b.sortOrder);
   await connectDb(env.MONGODB_URI);
+  for (const line of await runStartupMigrations()) console.info(line);
   for (const line of await seedMaterials(materials)) console.info(line);
   console.info('Standard materials done.');
 } catch (error) {

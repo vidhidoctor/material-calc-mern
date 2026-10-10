@@ -3,6 +3,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
 import { connectDb, disconnectDb } from '../src/db/connect.js';
+import { runStartupMigrations } from '../src/db/migrations.js';
 import { seedFoundation } from '../src/db/seed.js';
 
 export const ADMIN = { email: 'admin@example.com', password: 'Admin#12345' };
@@ -24,6 +25,7 @@ export async function startTestApp(): Promise<TestContext> {
 
   await connectDb(process.env.MONGODB_URI);
   await seedFoundation({ adminEmail: ADMIN.email, adminPassword: ADMIN.password });
+  await runStartupMigrations();
   const api = request(createApp());
   const adminToken = await login(api, ADMIN.email, ADMIN.password);
 

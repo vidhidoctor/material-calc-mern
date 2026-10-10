@@ -1,133 +1,70 @@
-import { CORD_DIVISOR, type PurchaseTotalDto } from '@app/shared';
-import type { ReactNode } from 'react';
+import type { PurchaseCategoryDto, PurchaseTotalDto } from '@app/shared';
 import { formatNumber } from '../../../lib/format';
 
-function Section({ title, formulas, children }: { title: string; formulas: string[]; children: ReactNode }) {
+/** e.g. "Sequence per CD 31,600 · CD per roll 210" — the material's rule values, shown under its code. */
+function ruleText(category: PurchaseCategoryDto, row: PurchaseTotalDto): string {
+  return category.fields
+    .filter((f) => row.rules[f.key] !== undefined)
+    .map((f) => `${f.label} ${formatNumber(row.rules[f.key])}`)
+    .join(' · ');
+}
+
+/**
+ * One section per category: Material | Required (unit) | each formula step; the purchase step is
+ * emphasised, intermediate steps are muted. Formulas appear as small badges.
+ */
+export function CategorySection({ category, rows }: { category: PurchaseCategoryDto; rows: PurchaseTotalDto[] }) {
+  const isPurchase = (key: string) => key === category.purchaseStep;
+
   return (
     <section className="card">
       <header className="card-header">
-        <h2>{title}</h2>
+        <h2>{category.name}</h2>
         <div className="formulas">
-          {formulas.map((f) => (
-            <span key={f} className="formula">
-              {f}
+          {category.steps.map((s) => (
+            <span key={s.key} className={`formula ${isPurchase(s.key) ? 'formula-purchase' : ''}`}>
+              {s.key} = {s.formula}
             </span>
           ))}
         </div>
       </header>
       <div className="table-wrap">
-        <table className="table clean-table purchase-table">{children}</table>
+        <table className="table clean-table purchase-table">
+          <thead>
+            <tr>
+              <th>Material</th>
+              <th className="align-right">Required {category.unit}</th>
+              {category.steps.map((s) => (
+                <th key={s.key} className={`align-right ${isPurchase(s.key) ? 'purchase-col' : ''}`}>
+                  {isPurchase(s.key) ? `Purchase · ${s.label}` : s.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((m) => (
+              <tr key={m.code}>
+                <td>
+                  <strong>{m.code}</strong>
+                  {ruleText(category, m) && <span className="sub-figure">{ruleText(category, m)}</span>}
+                </td>
+                <td className="align-right">{formatNumber(m.total)}</td>
+                {m.values ? (
+                  category.steps.map((s) => (
+                    <td key={s.key} className={`align-right ${isPurchase(s.key) ? 'purchase-col' : 'muted'}`}>
+                      {formatNumber(m.values![s.key])}
+                    </td>
+                  ))
+                ) : (
+                  <td colSpan={category.steps.length} className="align-right">
+                    <span className="rule-error">{m.error}</span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
-  );
-}
-
-/** Shown instead of a purchase figure when the material has no conversion rule. */
-const RuleError = ({ message }: { message: string }) => <span className="rule-error">{message}</span>;
-
-export function SequenceSection({ rows }: { rows: PurchaseTotalDto[] }) {
-  return (
-    <Section title="Sequence Material Requirements" formulas={['CD = PCS ÷ Seq per CD', 'Rolls = CD ÷ CD per roll']}>
-      <thead>
-        <tr>
-          <th>Material</th>
-          <th className="align-right">Required PCS</th>
-          <th className="align-right">CD</th>
-          <th className="align-right purchase-col">Purchase · Rolls</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((m) => (
-          <tr key={m.code}>
-            <td>
-              <strong>{m.code}</strong>
-            </td>
-            <td className="align-right">{formatNumber(m.total)}</td>
-            {m.purchase?.kind === 'SEQUENCE' ? (
-              <>
-                <td className="align-right muted">{formatNumber(m.purchase.cds)}</td>
-                <td className="align-right purchase-col">{formatNumber(m.purchase.rolls)}</td>
-              </>
-            ) : (
-              <td colSpan={2} className="align-right">
-                <RuleError message={m.error ?? ''} />
-              </td>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </Section>
-  );
-}
-
-export function BeadSection({ rows }: { rows: PurchaseTotalDto[] }) {
-  return (
-    <Section title="Beads & Decorative Materials" formulas={['KG = PCS ÷ Pieces per KG']}>
-      <thead>
-        <tr>
-          <th>Material</th>
-          <th className="align-right">Required PCS</th>
-          <th className="align-right purchase-col">Purchase · KG</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((m) => (
-          <tr key={m.code}>
-            <td>
-              <strong>{m.code}</strong>
-            </td>
-            <td className="align-right">{formatNumber(m.total)}</td>
-            <td className="align-right purchase-col">
-              {m.purchase?.kind === 'BEAD' ? formatNumber(m.purchase.kg) : <RuleError message={m.error ?? ''} />}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </Section>
-  );
-}
-
-/** Denier read back from the API figures: grams × 9000 ÷ MTR. */
-function denierOf(m: PurchaseTotalDto): number | null {
-  if (m.purchase?.kind !== 'CORD' || Number(m.total) === 0) return null;
-  return (Number(m.purchase.grams) * CORD_DIVISOR) / Number(m.total);
-}
-
-export function CordSection({ rows }: { rows: PurchaseTotalDto[] }) {
-  return (
-    <Section title="Cord Requirement" formulas={[`grams = MTR × Denier ÷ ${CORD_DIVISOR}`, 'KG = grams ÷ 1000']}>
-      <thead>
-        <tr>
-          <th>Material</th>
-          <th className="align-right">Total MTR</th>
-          <th className="align-right">Denier</th>
-          <th className="align-right purchase-col">Purchase quantity · KG</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((m) => {
-          const denier = denierOf(m);
-          return (
-            <tr key={m.code}>
-              <td>
-                <strong>{m.code}</strong>
-              </td>
-              <td className="align-right">{formatNumber(m.total)}</td>
-              <td className="align-right muted">{denier === null ? '—' : formatNumber(denier, 0)}</td>
-              <td className="align-right purchase-col">
-                {m.purchase?.kind === 'CORD' ? (
-                  <>
-                    {formatNumber(m.purchase.kg)}
-                    <span className="sub-figure">{formatNumber(m.purchase.grams)} g</span>
-                  </>
-                ) : (
-                  <RuleError message={m.error ?? ''} />
-                )}
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </Section>
   );
 }

@@ -29,7 +29,7 @@ describe('materials and designs (Punching)', () => {
       assert.equal((await ctx.api.get('/api/orders').set(bearer(punching))).status, 403);
       assert.equal((await ctx.api.get('/api/purchase/requirements').set(bearer(punching))).status, 403);
       assert.equal((await ctx.api.get('/api/production/designs').set(bearer(punching))).status, 403);
-      assert.equal((await ctx.api.post('/api/materials').set(bearer(punching)).send({ code: 'X', name: 'X', category: 'BEAD', pcsPerKg: 1 })).status, 403);
+      assert.equal((await ctx.api.post('/api/materials').set(bearer(punching)).send({ code: 'X', name: 'X', category: 'BEAD', rules: { pcsPerKg: 1 } })).status, 403);
     });
 
     it('Punching sees material columns on the design page', async () => {
@@ -170,40 +170,42 @@ describe('materials and designs (Punching)', () => {
   describe('material master', () => {
     it('requires the rule fields of the category, > 0', async () => {
       const post = (body: object) => ctx.api.post('/api/materials').set(bearer(ctx.adminToken)).send(body);
-      assert.equal((await post({ code: 'SEQ-5MM', name: '5-MM Sequence', category: 'SEQUENCE', seqPerCd: 100 })).body.error,
+      assert.equal((await post({ code: 'SEQ-5MM', name: '5-MM Sequence', category: 'SEQUENCE', rules: { seqPerCd: 100 } })).body.error,
         'CD per roll is required for Sequence materials.');
-      assert.equal((await post({ code: 'B1', name: 'B', category: 'BEAD', pcsPerKg: 0 })).body.error, 'Pieces per KG must be greater than 0.');
+      assert.equal((await post({ code: 'B1', name: 'B', category: 'BEAD', rules: { pcsPerKg: 0 } })).body.error, 'Pieces per KG must be greater than 0.');
       assert.equal((await post({ code: 'C1', name: 'C', category: 'CORD' })).body.error, 'Denier is required for Cord materials.');
-      assert.equal((await post({ code: 'seq-3mm', name: 'Dup', category: 'BEAD', pcsPerKg: 1 })).status, 409);
+      assert.equal((await post({ code: 'Z1', category: 'NOPE', rules: {} })).body.error, 'Unknown category NOPE. Add it under Material Master → Categories first.');
+      assert.equal((await post({ code: 'seq-3mm', name: 'Dup', category: 'BEAD', rules: { pcsPerKg: 1 } })).status, 409);
     });
 
     it('adds a material last, clears other-category fields, keeps the code fixed', async () => {
       const created = await ctx.api
         .post('/api/materials')
         .set(bearer(ctx.adminToken))
-        .send({ code: 'moti-5mm', name: '5-MM Moti', category: 'BEAD', pcsPerKg: 30000, denier: 99 });
+        .send({ code: 'moti-5mm', name: '5-MM Moti', category: 'bead', rules: { pcsPerKg: 30000, denier: 99 } });
       assert.equal(created.status, 201);
       assert.equal(created.body.code, 'MOTI-5MM');
       assert.equal(created.body.sortOrder, 11);
-      assert.equal(created.body.denier, null);
+      assert.deepEqual(created.body.rules, { pcsPerKg: 30000 });
+      assert.equal(created.body.categoryName, 'Beads & decorative');
 
       const updated = await ctx.api
         .put('/api/materials/MOTI-5MM')
         .set(bearer(ctx.adminToken))
-        .send({ name: '5-MM Moti Gold', category: 'CORD', denier: 600, pcsPerKg: 30000 });
+        .send({ name: '5-MM Moti Gold', category: 'CORD', rules: { denier: 600, pcsPerKg: 30000 } });
       assert.equal(updated.status, 200);
       assert.equal(updated.body.code, 'MOTI-5MM');
-      assert.equal(updated.body.pcsPerKg, null);
+      assert.deepEqual(updated.body.rules, { denier: 600 });
       assert.equal(updated.body.unit, 'MTR');
     });
 
     it('the name is optional and falls back to the code', async () => {
-      const created = await ctx.api.post('/api/materials').set(bearer(ctx.adminToken)).send({ code: 'seq-5mm', category: 'SEQUENCE', seqPerCd: 9000, cdPerRoll: 60 });
+      const created = await ctx.api.post('/api/materials').set(bearer(ctx.adminToken)).send({ code: 'seq-5mm', category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
       assert.equal(created.status, 201, JSON.stringify(created.body));
       assert.equal(created.body.name, 'SEQ-5MM');
-      const named = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ name: '5-MM', category: 'SEQUENCE', seqPerCd: 9000, cdPerRoll: 60 });
+      const named = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ name: '5-MM', category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
       assert.equal(named.body.name, '5-MM');
-      const cleared = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ category: 'SEQUENCE', seqPerCd: 9000, cdPerRoll: 60 });
+      const cleared = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
       assert.equal(cleared.body.name, 'SEQ-5MM');
       assert.equal((await ctx.api.delete('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken))).status, 204);
     });

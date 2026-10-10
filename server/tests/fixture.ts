@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { Decimal } from '../src/calculation/engine.js';
+import { legacyRules } from '../src/db/default-categories.js';
 import { bearer, type Api } from './helpers.js';
 
 export interface Fixture {
-  materials: { code: string; name: string; category: 'SEQUENCE' | 'BEAD' | 'CORD'; [rule: string]: unknown }[];
+  materials: {
+    code: string;
+    name: string;
+    category: string;
+    sortOrder: number;
+    seqPerCd?: number;
+    cdPerRoll?: number;
+    cdPerRound?: number;
+    pcsPerKg?: number;
+    denier?: number;
+  }[];
   design: {
     designNo: string;
     productName: string;
@@ -23,8 +34,11 @@ export const fixture = JSON.parse(
 
 /** Loads the 11 materials and design 26-49 through the API (in-memory DB only; stitch 0 — not in the fixture). */
 export async function loadFixture(api: Api, token: string): Promise<void> {
-  for (const { sortOrder: _sortOrder, ...material } of fixture.materials) {
-    const res = await api.post('/api/materials').set(bearer(token)).send(material);
+  for (const m of fixture.materials) {
+    const res = await api
+      .post('/api/materials')
+      .set(bearer(token))
+      .send({ code: m.code, name: m.name, category: m.category, rules: legacyRules(m) });
     assert.equal(res.status, 201, JSON.stringify(res.body));
   }
   const { designNo, productName, components } = fixture.design;

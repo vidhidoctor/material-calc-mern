@@ -1,34 +1,32 @@
-import { MATERIAL_CATEGORY_LABELS, type MaterialDto } from '@app/shared';
+import type { MaterialCategoryDto, MaterialDto } from '@app/shared';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { DataGrid, type Column } from '../../components/DataGrid';
 import { EmptyState, ErrorAlert, PageHeader, QueryState, StatusBadge } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatNumber } from '../../lib/format';
+import { CategoriesTab } from './components/CategoriesTab';
 import { MaterialFormModal } from './components/MaterialFormModal';
-import { useDeleteMaterial, useMaterials } from './materials.hooks';
+import { useCategories, useDeleteMaterial, useMaterials } from './materials.hooks';
 
-function ruleText(m: MaterialDto): string {
-  switch (m.category) {
-    case 'SEQUENCE': {
-      const parts = [`${formatNumber(m.seqPerCd)} seq/CD`, `${formatNumber(m.cdPerRoll)} CD/roll`];
-      if (m.cdPerRound) parts.push(`${formatNumber(m.cdPerRound)} CD/round`);
-      return parts.join(' · ');
-    }
-    case 'BEAD':
-      return `${formatNumber(m.pcsPerKg)} pcs/KG`;
-    case 'CORD':
-      return `Denier ${formatNumber(m.denier)}`;
-  }
+const TONES = ['blue', 'amber', 'green', 'grey'] as const;
+
+/** e.g. "Sequence per CD 31,600 · CD per roll 210" from the category's field labels. */
+function ruleText(m: MaterialDto, category: MaterialCategoryDto | undefined): string {
+  if (!category) return Object.entries(m.rules).map(([k, v]) => `${k} ${formatNumber(v)}`).join(' · ');
+  const parts = category.fields.filter((f) => m.rules[f.key] !== undefined).map((f) => `${f.label} ${formatNumber(m.rules[f.key])}`);
+  return parts.length > 0 ? parts.join(' · ') : '—';
 }
 
-const TONES = { SEQUENCE: 'blue', BEAD: 'amber', CORD: 'green' } as const;
-
-export function MaterialsPage() {
+function MaterialsTab() {
   const auth = useAuth();
   const materials = useMaterials();
+  const categories = useCategories();
   const remove = useDeleteMaterial();
   const [editing, setEditing] = useState<MaterialDto | 'new' | null>(null);
   const canManage = auth.can('MATERIAL_MASTER_MANAGE');
+  const categoryList = categories.data ?? [];
+  const byCode = new Map(categoryList.map((c, i) => [c.code, { category: c, tone: TONES[i % TONES.length]! }]));
 
   const onDelete = (m: MaterialDto) => {
     if (window.confirm(`Remove ${m.code}? Only possible while no design uses it.`)) remove.mutate(m.code);
@@ -37,9 +35,13 @@ export function MaterialsPage() {
   const columns: Column<MaterialDto>[] = [
     { key: 'n', header: '#', align: 'right', width: '3rem', render: (_m, i) => i + 1 },
     { key: 'code', header: 'Material', render: (m) => <strong className="mono">{m.code}</strong> },
-    { key: 'category', header: 'Category', render: (m) => <StatusBadge tone={TONES[m.category]}>{MATERIAL_CATEGORY_LABELS[m.category]}</StatusBadge> },
+    {
+      key: 'category',
+      header: 'Category',
+      render: (m) => <StatusBadge tone={byCode.get(m.category)?.tone ?? 'grey'}>{m.categoryName}</StatusBadge>,
+    },
     { key: 'unit', header: 'Unit', render: (m) => m.unit },
-    { key: 'rule', header: 'Conversion rule', render: (m) => <span className="small">{ruleText(m)}</span> },
+    { key: 'rule', header: 'Conversion rule', render: (m) => <span className="small">{ruleText(m, byCode.get(m.category)?.category)}</span> },
   ];
   if (canManage) {
     columns.push({
@@ -61,17 +63,13 @@ export function MaterialsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Material Master"
-        subtitle="These materials are the consumption columns everywhere (Punching, orders, purchase)."
-        actions={
-          canManage && (
-            <button type="button" className="btn btn-primary" onClick={() => setEditing('new')}>
-              + New material
-            </button>
-          )
-        }
-      />
+      {canManage && (
+        <div className="tab-actions">
+          <button type="button" className="btn btn-primary" disabled={categoryList.length === 0} onClick={() => setEditing('new')}>
+            + New material
+          </button>
+        </div>
+      )}
       <ErrorAlert error={remove.error} />
       <QueryState query={materials}>
         {(list) => (
@@ -85,7 +83,35 @@ export function MaterialsPage() {
           </section>
         )}
       </QueryState>
-      {editing !== null && <MaterialFormModal material={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
+      {editing !== null && (
+        <MaterialFormModal material={editing === 'new' ? null : editing} categories={categoryList} onClose={() => setEditing(null)} />
+      )}
+    </>
+  );
+}
+
+export function MaterialsPage() {
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('tab') === 'categories' ? 'categories' : 'materials';
+
+  return (
+    <>
+      <PageHeader title="Material Master" subtitle="Materials are the consumption columns everywhere; categories decide how purchase quantities are calculated." />
+      <div className="segmented" role="tablist" aria-label="Material Master">
+        <button type="button" role="tab" aria-selected={tab === 'materials'} aria-pressed={tab === 'materials'} onClick={() => setParams({})}>
+          Materials
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'categories'}
+          aria-pressed={tab === 'categories'}
+          onClick={() => setParams({ tab: 'categories' })}
+        >
+          Categories
+        </button>
+      </div>
+      {tab === 'materials' ? <MaterialsTab /> : <CategoriesTab />}
     </>
   );
 }

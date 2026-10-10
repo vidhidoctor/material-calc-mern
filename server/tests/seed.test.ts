@@ -18,16 +18,16 @@ describe('seed:materials (optional standard materials)', () => {
     const own = await ctx.api
       .post('/api/materials')
       .set(bearer(ctx.adminToken))
-      .send({ code: 'SEQ-3MM', name: 'My 3mm', category: 'SEQUENCE', seqPerCd: 1, cdPerRoll: 1 });
+      .send({ code: 'SEQ-3MM', name: 'My 3mm', category: 'SEQUENCE', rules: { seqPerCd: 1, cdPerRoll: 1 } });
     assert.equal(own.status, 201);
 
     const standard = fixture.materials as unknown as StandardMaterial[];
     const log = await seedMaterials(standard);
     assert.equal(log.filter((l) => l.endsWith('created')).length, 10);
 
-    const list = (await ctx.api.get('/api/materials').set(bearer(ctx.adminToken))).body as { code: string; name: string; seqPerCd: number }[];
+    const list = (await ctx.api.get('/api/materials').set(bearer(ctx.adminToken))).body as { code: string; name: string; rules: Record<string, number> }[];
     assert.equal(list.length, 11);
-    assert.deepEqual([list[0]!.code, list[0]!.name, list[0]!.seqPerCd], ['SEQ-3MM', 'My 3mm', 1]);
+    assert.deepEqual([list[0]!.code, list[0]!.name, list[0]!.rules.seqPerCd], ['SEQ-3MM', 'My 3mm', 1]);
     assert.equal(list[1]!.code, 'SEQ-4MM');
 
     const again = await seedMaterials(standard);

@@ -3,7 +3,7 @@ import { calculateRequirements, toDecimalString } from '../../calculation/engine
 import { AppError } from '../../lib/app-error.js';
 import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
-import { findAllMaterials, toMaterialColumn } from '../materials/materials.service.js';
+import { loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
 import { nextOrderNo, nextPartyOrderNo, OrderModel, type Order, type OrderDocument, type OrderLine } from './order.model.js';
 import type { CreateOrderInput } from './orders.validation.js';
 
@@ -111,7 +111,10 @@ export async function updateStatus(orderNo: number, status: OrderStatus): Promis
 /** Requirement per row = the design's current consumption × quantity, plus totals. */
 export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto> {
   const order = await findOrder(orderNo);
-  const [design, materials] = await Promise.all([DesignModel.findOne({ designNo: order.designNo }), findAllMaterials()]);
+  const [design, { materials, categories }] = await Promise.all([
+    DesignModel.findOne({ designNo: order.designNo }),
+    loadMaterialsWithCategories(),
+  ]);
   const lookup = consumptionLookup(design);
   const codes = materials.map((m) => m.code);
   const result = calculateRequirements(
@@ -124,7 +127,7 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
 
   return {
     orderNo: order.orderNo,
-    materials: materials.map(toMaterialColumn),
+    materials: materials.map((m) => toMaterialColumn(m, categories)),
     rows: result.rows.map((row) => ({
       component: row.component,
       size: row.size,

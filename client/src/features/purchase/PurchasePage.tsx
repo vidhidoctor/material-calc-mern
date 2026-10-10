@@ -1,22 +1,16 @@
-import type { MaterialCategory, PurchaseTotalDto } from '@app/shared';
+import type { PurchaseTotalDto } from '@app/shared';
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { ComponentCard } from '../../components/ComponentCard';
 import { EmptyState, ErrorAlert, Loading, PageHeader } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDate, formatNumber } from '../../lib/format';
-import { BeadSection, CordSection, SequenceSection } from './components/MaterialSections';
+import { CategorySection } from './components/MaterialSections';
 import { OrderPicker } from './components/OrderPicker';
 import { useOrderDesign, usePickerOrders, usePurchaseRequirements, useSelectedOrderDetail } from './purchase.hooks';
 
-type CategoryFilter = 'ALL' | MaterialCategory;
-
-const CATEGORY_OPTIONS: { value: CategoryFilter; label: string }[] = [
-  { value: 'ALL', label: 'All' },
-  { value: 'SEQUENCE', label: 'Sequence' },
-  { value: 'BEAD', label: 'Beads & decorative' },
-  { value: 'CORD', label: 'Cord' },
-];
+/** 'ALL' or a category code. */
+type CategoryFilter = string;
 
 const sum = (rows: PurchaseTotalDto[], pick: (row: PurchaseTotalDto) => string | undefined) =>
   rows.reduce((total, row) => total + Number(pick(row) ?? 0), 0);
@@ -74,8 +68,8 @@ export function PurchasePage() {
       (!onlyRequired || Number(m.total) > 0) &&
       (!query || m.code.includes(query) || m.name.toUpperCase().includes(query)),
   );
-  const byCategory = (c: MaterialCategory) => visible.filter((m) => m.category === c);
-  const cord = totals.filter((m) => m.category === 'CORD');
+  const categoryList = data?.categories ?? [];
+  const byCategory = (code: string) => visible.filter((m) => m.category === code);
   const stale = requirements.isFetching && requirements.isPlaceholderData;
   const scope = orderNo === null ? 'All orders' : order.data ? `${order.data.party}-${order.data.partyOrderNo}` : `Order`;
 
@@ -129,9 +123,9 @@ export function PurchasePage() {
         <div className="filters-row">
           <span className="filter-label">Show</span>
           <div className="segmented" role="group" aria-label="Category">
-            {CATEGORY_OPTIONS.map((o) => (
-              <button key={o.value} type="button" aria-pressed={category === o.value} onClick={() => setCategory(o.value)}>
-                {o.label}
+            {[{ code: 'ALL', name: 'All' }, ...categoryList].map((o) => (
+              <button key={o.code} type="button" aria-pressed={category === o.code} onClick={() => setCategory(o.code)}>
+                {o.name}
               </button>
             ))}
           </div>
@@ -157,19 +151,21 @@ export function PurchasePage() {
       ) : (
         <div className={`stack ${stale ? 'is-stale' : ''}`}>
           <div className="summary-cards">
-            <div className="stat">
-              <span className="muted small">Sequence · rolls</span>
-              <strong>{formatNumber(sum(totals, (m) => (m.purchase?.kind === 'SEQUENCE' ? m.purchase.rolls : undefined)))}</strong>
-            </div>
-            <div className="stat">
-              <span className="muted small">Beads & decorative · KG</span>
-              <strong>{formatNumber(sum(totals, (m) => (m.purchase?.kind === 'BEAD' ? m.purchase.kg : undefined)))}</strong>
-            </div>
-            <div className="stat">
-              <span className="muted small">Cord · KG</span>
-              <strong>{formatNumber(sum(cord, (m) => (m.purchase?.kind === 'CORD' ? m.purchase.kg : undefined)))}</strong>
-              <span className="muted small">{formatNumber(sum(cord, (m) => m.total))} MTR</span>
-            </div>
+            {categoryList.map((c) => {
+              const rows = totals.filter((m) => m.category === c.code);
+              const step = c.steps.find((st) => st.key === c.purchaseStep);
+              return (
+                <div key={c.code} className="stat">
+                  <span className="muted small">
+                    {c.name} · {step?.label ?? c.purchaseStep}
+                  </span>
+                  <strong>{formatNumber(sum(rows, (m) => m.purchase ?? undefined))}</strong>
+                  <span className="muted small">
+                    {formatNumber(sum(rows, (m) => m.total))} {c.unit} required
+                  </span>
+                </div>
+              );
+            })}
             <div className="stat">
               <span className="muted small">Based on</span>
               <strong className="stat-text">{scope}</strong>
@@ -198,9 +194,9 @@ export function PurchasePage() {
             </section>
           ) : (
             <>
-              {byCategory('SEQUENCE').length > 0 && <SequenceSection rows={byCategory('SEQUENCE')} />}
-              {byCategory('BEAD').length > 0 && <BeadSection rows={byCategory('BEAD')} />}
-              {byCategory('CORD').length > 0 && <CordSection rows={byCategory('CORD')} />}
+              {categoryList.map((c) =>
+                byCategory(c.code).length > 0 ? <CategorySection key={c.code} category={c} rows={byCategory(c.code)} /> : null,
+              )}
             </>
           )}
 

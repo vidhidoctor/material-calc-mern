@@ -1,46 +1,34 @@
-import {
-  MATERIAL_CATEGORIES,
-  MATERIAL_CATEGORY_LABELS,
-  MATERIAL_UNITS,
-  RULE_FIELD_LABELS,
-  RULE_FIELDS,
-  type MaterialCategory,
-  type MaterialDto,
-  type MaterialRuleField,
-} from '@app/shared';
+import type { MaterialCategoryDto, MaterialDto } from '@app/shared';
 import { useState } from 'react';
 import { Modal } from '../../../components/Modal';
 import { ErrorAlert, Field, NumberInput, parseNumberInput } from '../../../components/ui';
 import type { MaterialBody } from '../materials.api';
 import { useSaveMaterial } from '../materials.hooks';
 
-const RULE_HINTS: Record<MaterialRuleField, string> = {
-  seqPerCd: 'CD = Required PCS ÷ Sequence per CD',
-  cdPerRoll: 'Rolls = CD ÷ CD per roll',
-  cdPerRound: 'Optional, for reference',
-  pcsPerKg: 'KG = Required PCS ÷ Pieces per KG',
-  denier: 'grams = MTR × Denier ÷ 9000',
-};
+interface Props {
+  material: MaterialDto | null;
+  categories: MaterialCategoryDto[];
+  onClose: () => void;
+}
 
-export function MaterialFormModal({ material, onClose }: { material: MaterialDto | null; onClose: () => void }) {
+/** Code + category; the rule fields come from the chosen category. */
+export function MaterialFormModal({ material, categories, onClose }: Props) {
   const save = useSaveMaterial();
   const [code, setCode] = useState(material?.code ?? '');
-  const [category, setCategory] = useState<MaterialCategory>(material?.category ?? 'SEQUENCE');
-  const [rules, setRules] = useState<Record<MaterialRuleField, string>>({
-    seqPerCd: material?.seqPerCd?.toString() ?? '',
-    cdPerRoll: material?.cdPerRoll?.toString() ?? '',
-    cdPerRound: material?.cdPerRound?.toString() ?? '',
-    pcsPerKg: material?.pcsPerKg?.toString() ?? '',
-    denier: material?.denier?.toString() ?? '',
-  });
+  const [categoryCode, setCategoryCode] = useState(material?.category ?? categories[0]?.code ?? '');
+  const [rules, setRules] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(material?.rules ?? {}).map(([k, v]) => [k, String(v)])),
+  );
 
-  const { required, optional } = RULE_FIELDS[category];
-  const fields = [...required, ...optional];
-  const missing = required.some((f) => !(parseNumberInput(rules[f]) ?? 0));
+  const category = categories.find((c) => c.code === categoryCode);
+  const missing = !category || category.fields.some((f) => f.required && !(parseNumberInput(rules[f.key] ?? '') ?? 0));
 
   const onSubmit = () => {
-    const body: MaterialBody = { category };
-    for (const field of fields) body[field] = parseNumberInput(rules[field]);
+    if (!category) return;
+    const body: MaterialBody = {
+      category: category.code,
+      rules: Object.fromEntries(category.fields.map((f) => [f.key, parseNumberInput(rules[f.key] ?? '')])),
+    };
     save.mutate({ code: code.trim().toUpperCase(), body, isNew: material === null }, { onSuccess: onClose });
   };
 
@@ -73,25 +61,39 @@ export function MaterialFormModal({ material, onClose }: { material: MaterialDto
             onChange={(e) => setCode(e.target.value.toUpperCase())}
           />
         </Field>
-        <Field label="Category" required hint={`Unit: ${MATERIAL_UNITS[category]}`}>
-          <select className="input" value={category} onChange={(e) => setCategory(e.target.value as MaterialCategory)}>
-            {MATERIAL_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {MATERIAL_CATEGORY_LABELS[c]}
+        <Field label="Category" required hint={category ? `Unit: ${category.unit}` : 'Add a category in the Categories tab first.'}>
+          <select className="input" value={categoryCode} onChange={(e) => setCategoryCode(e.target.value)}>
+            {categories.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}
               </option>
             ))}
           </select>
         </Field>
-        <fieldset className="fieldset">
-          <legend>Conversion rule</legend>
-          <div className="grid-2">
-            {fields.map((field) => (
-              <Field key={field} label={RULE_FIELD_LABELS[field]} required={required.includes(field)} hint={RULE_HINTS[field]}>
-                <NumberInput decimal value={rules[field]} onChange={(value) => setRules((r) => ({ ...r, [field]: value }))} />
-              </Field>
-            ))}
-          </div>
-        </fieldset>
+
+        {category && (
+          <fieldset className="fieldset">
+            <legend>Conversion rule</legend>
+            {category.fields.length === 0 ? (
+              <p className="muted small">This category has no fields to fill in.</p>
+            ) : (
+              <div className="grid-2">
+                {category.fields.map((field) => (
+                  <Field key={field.key} label={field.label} required={field.required} hint={field.required ? undefined : 'Optional'}>
+                    <NumberInput decimal value={rules[field.key] ?? ''} onChange={(value) => setRules((r) => ({ ...r, [field.key]: value }))} />
+                  </Field>
+                ))}
+              </div>
+            )}
+            <div className="formula-list">
+              {category.steps.map((s) => (
+                <span key={s.key} className={`formula ${s.key === category.purchaseStep ? 'formula-purchase' : ''}`}>
+                  {s.key} = {s.formula}
+                </span>
+              ))}
+            </div>
+          </fieldset>
+        )}
       </div>
     </Modal>
   );

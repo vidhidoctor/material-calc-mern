@@ -1,33 +1,24 @@
-import { MATERIAL_CATEGORIES, type MaterialCategory } from '@app/shared';
 import { model, Schema, type HydratedDocument } from 'mongoose';
 
 export interface Material {
   code: string;
   name: string;
-  category: MaterialCategory;
+  /** Material category code (see material-categories). */
+  category: string;
   sortOrder: number;
-  seqPerCd: number | null;
-  cdPerRoll: number | null;
-  cdPerRound: number | null;
-  pcsPerKg: number | null;
-  denier: number | null;
+  /** Values of the category's fields, e.g. { seqPerCd: 31600, cdPerRoll: 210 }. */
+  rules: Record<string, number>;
 }
-
-const rule = { type: Number, default: null };
 
 const materialSchema = new Schema<Material>(
   {
     code: { type: String, required: true, trim: true, uppercase: true, unique: true },
     name: { type: String, required: true, trim: true },
-    category: { type: String, required: true, enum: MATERIAL_CATEGORIES },
+    category: { type: String, required: true, index: true },
     sortOrder: { type: Number, required: true, default: 0 },
-    seqPerCd: rule,
-    cdPerRoll: rule,
-    cdPerRound: rule,
-    pcsPerKg: rule,
-    denier: rule,
+    rules: { type: Schema.Types.Mixed, default: () => ({}) },
   },
-  { versionKey: false },
+  { versionKey: false, minimize: false },
 );
 
 export const MaterialModel = model<Material>('Material', materialSchema, 'materials');

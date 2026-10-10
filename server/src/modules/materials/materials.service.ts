@@ -1,6 +1,7 @@
-import { MATERIAL_RULE_FIELDS, MATERIAL_UNITS, RULE_FIELDS, type MaterialColumnDto, type MaterialDto } from '@app/shared';
+import type { MaterialColumnDto, MaterialDto } from '@app/shared';
 import { AppError } from '../../lib/app-error.js';
 import { DesignModel } from '../designs/design.model.js';
+import { MaterialCategoryModel, type MaterialCategory } from '../material-categories/material-category.model.js';
 import { MaterialModel, type Material, type MaterialDocument } from './material.model.js';
 import type { CreateMaterialInput, UpdateMaterialInput } from './materials.validation.js';
 
@@ -8,35 +9,46 @@ export const MATERIAL_MESSAGES = {
   NOT_FOUND: 'Material not found.',
   CODE_TAKEN: 'A material with this code already exists.',
   IN_USE: 'This material is used by a design and cannot be removed.',
+  unknownCategory: (code: string) => `Unknown category ${code}. Add it under Material Master → Categories first.`,
+  required: (label: string, category: string) => `${label} is required for ${category} materials.`,
+  positive: (label: string) => `${label} must be greater than 0.`,
 } as const;
 
-export function toMaterialColumn(material: Material): MaterialColumnDto {
-  return { code: material.code, name: material.name, category: material.category, unit: MATERIAL_UNITS[material.category] };
+export type CategoryMap = Map<string, MaterialCategory>;
+
+export async function loadCategoryMap(): Promise<CategoryMap> {
+  return new Map((await MaterialCategoryModel.find()).map((c) => [c.code, c]));
 }
 
-function toMaterialDto(material: Material): MaterialDto {
+export function toMaterialColumn(material: Material, categories: CategoryMap): MaterialColumnDto {
+  return { code: material.code, name: material.name, category: material.category, unit: categories.get(material.category)?.unit ?? '' };
+}
+
+function toMaterialDto(material: Material, categories: CategoryMap): MaterialDto {
   return {
-    ...toMaterialColumn(material),
+    ...toMaterialColumn(material, categories),
+    categoryName: categories.get(material.category)?.name ?? material.category,
     sortOrder: material.sortOrder,
-    seqPerCd: material.seqPerCd ?? null,
-    cdPerRoll: material.cdPerRoll ?? null,
-    cdPerRound: material.cdPerRound ?? null,
-    pcsPerKg: material.pcsPerKg ?? null,
-    denier: material.denier ?? null,
+    rules: { ...(material.rules ?? {}) },
   };
 }
 
-/** Keeps only the rule fields of the material's category; the others are cleared. */
-function categoryRules(input: UpdateMaterialInput): Pick<Material, (typeof MATERIAL_RULE_FIELDS)[number]> {
-  const { required, optional } = RULE_FIELDS[input.category];
-  const allowed = new Set([...required, ...optional]);
-  return {
-    seqPerCd: allowed.has('seqPerCd') ? (input.seqPerCd ?? null) : null,
-    cdPerRoll: allowed.has('cdPerRoll') ? (input.cdPerRoll ?? null) : null,
-    cdPerRound: allowed.has('cdPerRound') ? (input.cdPerRound ?? null) : null,
-    pcsPerKg: allowed.has('pcsPerKg') ? (input.pcsPerKg ?? null) : null,
-    denier: allowed.has('denier') ? (input.denier ?? null) : null,
-  };
+/** Keeps only the category's fields; required ones must be present; all must be > 0. */
+async function categoryRules(input: UpdateMaterialInput): Promise<{ category: string; rules: Record<string, number> }> {
+  const category = await MaterialCategoryModel.findOne({ code: input.category });
+  if (!category) throw new AppError(400, MATERIAL_MESSAGES.unknownCategory(input.category));
+  const given = new Map(Object.entries(input.rules).map(([key, value]) => [key.toUpperCase(), value]));
+  const rules: Record<string, number> = {};
+  for (const field of category.fields) {
+    const value = given.get(field.key.toUpperCase());
+    if (value === undefined || value === null) {
+      if (field.required) throw new AppError(400, MATERIAL_MESSAGES.required(field.label, category.name));
+      continue;
+    }
+    if (!(value > 0)) throw new AppError(400, MATERIAL_MESSAGES.positive(field.label));
+    rules[field.key] = value;
+  }
+  return { category: category.code, rules };
 }
 
 /** All materials in display order — the material list IS the set of consumption columns. */
@@ -44,34 +56,45 @@ export async function findAllMaterials(): Promise<MaterialDocument[]> {
   return MaterialModel.find().sort({ sortOrder: 1, code: 1 });
 }
 
+/** Materials plus their categories (for units and purchase formulas). */
+export async function loadMaterialsWithCategories(): Promise<{ materials: MaterialDocument[]; categories: CategoryMap }> {
+  const [materials, categories] = await Promise.all([findAllMaterials(), loadCategoryMap()]);
+  return { materials, categories };
+}
+
 export async function listMaterials(): Promise<MaterialDto[]> {
-  return (await findAllMaterials()).map(toMaterialDto);
+  const { materials, categories } = await loadMaterialsWithCategories();
+  return materials.map((m) => toMaterialDto(m, categories));
 }
 
 export async function listMaterialColumns(): Promise<MaterialColumnDto[]> {
-  return (await findAllMaterials()).map(toMaterialColumn);
+  const { materials, categories } = await loadMaterialsWithCategories();
+  return materials.map((m) => toMaterialColumn(m, categories));
 }
 
 export async function createMaterial(input: CreateMaterialInput): Promise<MaterialDto> {
   if (await MaterialModel.exists({ code: input.code })) throw new AppError(409, MATERIAL_MESSAGES.CODE_TAKEN);
+  const { category, rules } = await categoryRules(input);
   const last = await MaterialModel.findOne().sort({ sortOrder: -1 });
   const material = await MaterialModel.create({
     code: input.code,
     name: input.name || input.code,
-    category: input.category,
+    category,
     sortOrder: last ? last.sortOrder + 1 : 0,
-    ...categoryRules(input),
+    rules,
   });
-  return toMaterialDto(material);
+  return toMaterialDto(material, await loadCategoryMap());
 }
 
 export async function updateMaterial(code: string, input: UpdateMaterialInput): Promise<MaterialDto> {
   const material = await MaterialModel.findOne({ code });
   if (!material) throw new AppError(404, MATERIAL_MESSAGES.NOT_FOUND);
+  const { category, rules } = await categoryRules(input);
   // The name is optional; without one the material is shown by its code.
-  material.set({ name: input.name || material.code, category: input.category, ...categoryRules(input) });
+  material.set({ name: input.name || material.code, category, rules });
+  material.markModified('rules');
   await material.save();
-  return toMaterialDto(material);
+  return toMaterialDto(material, await loadCategoryMap());
 }
 
 /** Refused while any design uses the material (orders read consumption from designs). */

@@ -116,10 +116,15 @@ For a set of order lines:
 
 1. **Row requirement** = consumption per piece × line quantity (per material).
 2. **Total requirement (Level 1)** = sum of row requirements per material. Unit: PCS, except CORD in MTR.
-3. **Purchase requirement (Level 2)**, by material category:
-   - SEQUENCE: `CD = total ÷ seqPerCd`, `Rolls = CD ÷ cdPerRoll`
-   - BEAD (beads, moti, pipe, zardoshi): `KG = total ÷ pcsPerKg`
-   - CORD: `grams = MTR × denier ÷ 9000`, `KG = grams ÷ 1000`
+3. **Purchase requirement (Level 2)**, by material category. Categories are configured by Admin
+   (Material Master → Categories, decided 2026-10-11): each has a unit, the fields every material
+   fills in, and ordered formula steps using `TOTAL` (the required quantity), the fields and earlier
+   steps (numbers, + − × ÷, brackets; parsed safely, never eval'd); one step is the purchase quantity.
+   The three defaults (created automatically, editable) reproduce the original rules:
+   - SEQUENCE: `CD = TOTAL / seqPerCd`, `ROLLS = CD / cdPerRoll` (purchase)
+   - BEAD: `KG = TOTAL / pcsPerKg` (purchase)
+   - CORD (unit MTR): `GRAMS = TOTAL * denier / 9000`, `KG = GRAMS / 1000` (purchase)
+   Materials store their values in `rules: { <fieldKey>: number }`; a category in use cannot be removed.
 4. A missing rule is reported, not crashed: "Material conversion rule is not configured." /
    "Please configure Cord Denier before calculating Cord KG."
 5. Use `decimal.js` for all of it; send numbers to the client as strings; display rounded to 2 decimals.

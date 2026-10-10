@@ -1,11 +1,24 @@
 import { MESSAGES } from '@app/shared';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { calculateRequirements, convertPurchase, Decimal, type CalcLine, type MaterialRule } from '../src/calculation/engine.js';
+import {
+  calculateRequirements,
+  compileCategory,
+  convertWithCategory,
+  Decimal,
+  validateCategory,
+  type CalcLine,
+  type CompiledCategory,
+} from '../src/calculation/engine.js';
+import { DEFAULT_CATEGORIES, legacyRules } from '../src/db/default-categories.js';
 import { fixture } from './fixture.js';
 
-const materials = fixture.materials as unknown as MaterialRule[];
+const categories = new Map<string, CompiledCategory>(DEFAULT_CATEGORIES.map((c) => [c.code, compileCategory(c)]));
+const materials = fixture.materials.map((m) => ({ code: m.code, category: m.category, rules: legacyRules(m) }));
 const codes = materials.map((m) => m.code);
+
+/** Fixture keys (cds, rolls, kg, grams) → step keys of the default categories. */
+const STEP_KEY: Record<string, string> = { cds: 'CD', rolls: 'ROLLS', kg: 'KG', grams: 'GRAMS' };
 
 function fixtureLines(): CalcLine[] {
   const index = new Map<string, Record<string, number>>();
@@ -13,8 +26,12 @@ function fixtureLines(): CalcLine[] {
   return fixture.order.lines.map((line) => ({ ...line, consumption: index.get(`${line.component} ${line.size}`) ?? null }));
 }
 
-describe('calculation engine (fixture 26-49)', () => {
+describe('calculation engine (fixture 26-49, default categories)', () => {
   const result = calculateRequirements(fixtureLines(), codes);
+  const convert = (code: string) => {
+    const m = materials.find((x) => x.code === code)!;
+    return convertWithCategory(categories.get(m.category)!, m.rules, result.totals.get(code)!);
+  };
 
   it('has 37 rows and no errors', () => {
     assert.equal(result.rows.length, 37);
@@ -27,28 +44,22 @@ describe('calculation engine (fixture 26-49)', () => {
     }
   });
 
-  it('reproduces every rounded Level 2 purchase value', () => {
-    for (const material of materials) {
-      const { purchase, error } = convertPurchase(material, result.totals.get(material.code)!);
-      assert.equal(error, undefined);
-      assert.ok(purchase);
-      const expected = fixture.expected.purchase[material.code]!;
-      const got = Object.fromEntries(
-        Object.entries(purchase).filter(([k]) => k !== 'kind').map(([k, v]) => [k, (v as Decimal).toDecimalPlaces(2).toNumber()]),
-      );
-      assert.deepEqual(got, expected, material.code);
+  it('reproduces every rounded Level 2 value through the category formulas', () => {
+    for (const m of materials) {
+      const { values, error } = convert(m.code);
+      assert.equal(error, undefined, m.code);
+      const expected = fixture.expected.purchase[m.code]!;
+      for (const [key, value] of Object.entries(expected)) {
+        assert.equal(values!.get(STEP_KEY[key]!)!.toDecimalPlaces(2).toNumber(), value, `${m.code}.${key}`);
+      }
     }
   });
 
   it('matches the headline figures from context §5', () => {
-    const seq = convertPurchase(materials.find((m) => m.code === 'SEQ-3MM')!, result.totals.get('SEQ-3MM')!).purchase;
-    assert.equal(seq?.kind, 'SEQUENCE');
-    if (seq?.kind === 'SEQUENCE') {
-      assert.equal(seq.cds.toDecimalPlaces(2).toString(), '280.43');
-      assert.equal(seq.rolls.toDecimalPlaces(2).toString(), '1.34');
-    }
-    const cord = convertPurchase(materials.find((m) => m.code === 'CORD')!, result.totals.get('CORD')!).purchase;
-    assert.equal(cord?.kind === 'CORD' && cord.kg.toDecimalPlaces(2).toString(), '38.56');
+    assert.equal(convert('SEQ-3MM').values!.get('CD')!.toDecimalPlaces(2).toString(), '280.43');
+    assert.equal(convert('SEQ-3MM').purchase!.toDecimalPlaces(2).toString(), '1.34');
+    assert.equal(convert('BEAD-2.5MM').purchase!.toDecimalPlaces(2).toString(), '21.94');
+    assert.equal(convert('CORD').purchase!.toDecimalPlaces(2).toString(), '38.56');
   });
 
   it('computes row requirement = consumption × quantity', () => {
@@ -69,10 +80,53 @@ describe('calculation engine (fixture 26-49)', () => {
     assert.ok(r.totals.get('SEQ-3MM')?.isZero());
   });
 
-  it('reports missing conversion rules', () => {
+  it('reports missing rule values (FRD messages), never throws', () => {
     const total = new Decimal(1000);
-    assert.equal(convertPurchase({ code: 'S', name: 'S', category: 'SEQUENCE', seqPerCd: 100 }, total).error, MESSAGES.CONVERSION_RULE_MISSING);
-    assert.equal(convertPurchase({ code: 'B', name: 'B', category: 'BEAD', pcsPerKg: 0 }, total).error, MESSAGES.CONVERSION_RULE_MISSING);
-    assert.equal(convertPurchase({ code: 'C', name: 'C', category: 'CORD', denier: null }, total).error, MESSAGES.CORD_DENIER_MISSING);
+    assert.equal(convertWithCategory(categories.get('SEQUENCE')!, { seqPerCd: 100 }, total).error, MESSAGES.CONVERSION_RULE_MISSING);
+    assert.equal(convertWithCategory(categories.get('BEAD')!, { pcsPerKg: 0 }, total).error, MESSAGES.CONVERSION_RULE_MISSING);
+    assert.equal(convertWithCategory(categories.get('CORD')!, {}, total).error, MESSAGES.CORD_DENIER_MISSING);
+  });
+});
+
+describe('custom category formulas', () => {
+  const zardoshi = compileCategory({
+    code: 'ZARDOSHI',
+    name: 'Zardoshi',
+    fields: [
+      { key: 'pcsPerKg', label: 'Pieces per KG', required: true },
+      { key: 'wastage', label: 'Wastage %', required: false },
+    ],
+    steps: [
+      { key: 'KG', label: 'KG', formula: 'TOTAL / pcsPerKg' },
+      { key: 'WITH_WASTAGE', label: 'KG + wastage', formula: 'KG * (1 + wastage / 100)' },
+    ],
+    purchaseStep: 'WITH_WASTAGE',
+  });
+
+  it('runs steps in order, later steps using earlier ones (names are case-insensitive)', () => {
+    const r = convertWithCategory(zardoshi, { PCSPERKG: 45000, wastage: 10 }, new Decimal(90000));
+    assert.equal(r.values!.get('KG')!.toString(), '2');
+    assert.equal(r.purchase!.toString(), '2.2');
+  });
+
+  it('an optional field used in a formula but not filled in is a missing rule', () => {
+    assert.equal(convertWithCategory(zardoshi, { pcsPerKg: 45000 }, new Decimal(9)).error, MESSAGES.CONVERSION_RULE_MISSING);
+  });
+
+  it('division by zero is reported', () => {
+    const c = compileCategory({ code: 'X', name: 'X', fields: [], steps: [{ key: 'A', label: 'A', formula: 'TOTAL / (2 - 2)' }], purchaseStep: 'A' });
+    assert.equal(convertWithCategory(c, {}, new Decimal(5)).error, 'A: division by zero.');
+  });
+
+  it('validates definitions with readable messages', () => {
+    const base = { code: 'X', name: 'X', fields: [{ key: 'rate', label: 'Rate', required: true }], purchaseStep: 'B' };
+    assert.deepEqual(validateCategory({ ...base, steps: [{ key: 'B', label: 'B', formula: 'TOTAL / rate' }] }), []);
+    assert.match(validateCategory({ ...base, steps: [{ key: 'B', label: 'B', formula: 'TOTAL / rat' }] })[0]!, /unknown name “RAT”/);
+    assert.match(validateCategory({ ...base, steps: [{ key: 'B', label: 'B', formula: 'C + 1' }, { key: 'C', label: 'C', formula: '1' }] })[0]!, /unknown name “C”/);
+    assert.match(validateCategory({ ...base, steps: [{ key: 'B', label: 'B', formula: 'TOTAL / (rate' }] })[0]!, /bracket is not closed/);
+    assert.match(validateCategory({ ...base, steps: [{ key: 'B', label: 'B', formula: 'TOTAL ^ 2' }] })[0]!, /Unexpected “\^”/);
+    assert.match(validateCategory({ ...base, steps: [{ key: 'TOTAL', label: 'T', formula: '1' }], purchaseStep: 'TOTAL' })[0]!, /reserved/);
+    assert.match(validateCategory({ ...base, steps: [{ key: 'A', label: 'A', formula: '1' }] })[0]!, /purchase quantity/);
+    assert.match(validateCategory({ ...base, steps: [] })[0]!, /at least one/);
   });
 });

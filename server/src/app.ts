@@ -5,6 +5,7 @@ import { errorHandler, notFound } from './middleware/error-handler.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { designsRoutes } from './modules/designs/designs.routes.js';
+import { materialCategoriesRoutes } from './modules/material-categories/material-categories.routes.js';
 import { materialsRoutes } from './modules/materials/materials.routes.js';
 import { ordersRoutes } from './modules/orders/orders.routes.js';
 import { productionRoutes } from './modules/production/production.routes.js';
@@ -25,6 +26,7 @@ export function createApp(): Express {
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
   app.use('/api/materials', materialsRoutes);
+  app.use('/api/material-categories', materialCategoriesRoutes);
   app.use('/api/designs', designsRoutes);
   app.use('/api/production', productionRoutes);
   app.use('/api/orders', ordersRoutes);

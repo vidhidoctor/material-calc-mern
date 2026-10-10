@@ -57,45 +57,6 @@ export const MESSAGES = {
   CORD_DENIER_MISSING: 'Please configure Cord Denier before calculating Cord KG.',
 } as const;
 
-export const MATERIAL_CATEGORIES = ['SEQUENCE', 'BEAD', 'CORD'] as const;
-export type MaterialCategory = (typeof MATERIAL_CATEGORIES)[number];
-
-export const MATERIAL_CATEGORY_LABELS: Record<MaterialCategory, string> = {
-  SEQUENCE: 'Sequence',
-  BEAD: 'Beads & decorative',
-  CORD: 'Cord',
-};
-
-export type MaterialUnit = 'PCS' | 'MTR';
-
-export const MATERIAL_UNITS: Record<MaterialCategory, MaterialUnit> = {
-  SEQUENCE: 'PCS',
-  BEAD: 'PCS',
-  CORD: 'MTR',
-};
-
-export type MaterialRuleField = 'seqPerCd' | 'cdPerRoll' | 'cdPerRound' | 'pcsPerKg' | 'denier';
-
-export const MATERIAL_RULE_FIELDS: readonly MaterialRuleField[] = ['seqPerCd', 'cdPerRoll', 'cdPerRound', 'pcsPerKg', 'denier'];
-
-/** Conversion-rule fields per category. Fields of other categories are cleared on save. */
-export const RULE_FIELDS: Record<MaterialCategory, { required: readonly MaterialRuleField[]; optional: readonly MaterialRuleField[] }> = {
-  SEQUENCE: { required: ['seqPerCd', 'cdPerRoll'], optional: ['cdPerRound'] },
-  BEAD: { required: ['pcsPerKg'], optional: [] },
-  CORD: { required: ['denier'], optional: [] },
-};
-
-export const RULE_FIELD_LABELS: Record<MaterialRuleField, string> = {
-  seqPerCd: 'Sequence per CD',
-  cdPerRoll: 'CD per roll',
-  cdPerRound: 'CD per round',
-  pcsPerKg: 'Pieces per KG',
-  denier: 'Denier',
-};
-
-/** Cord: grams = MTR × denier ÷ CORD_DIVISOR. */
-export const CORD_DIVISOR = 9000;
-
 export const ORDER_STATUSES = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 

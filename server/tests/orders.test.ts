@@ -8,7 +8,8 @@ import { createFixtureOrder, fixture, loadFixture, round2 } from './fixture.js';
 interface PurchaseTotal {
   code: string;
   total: string;
-  purchase: { kind: string; cds?: string; rolls?: string; kg?: string; grams?: string } | null;
+  values: Record<string, string> | null;
+  purchase: string | null;
   error?: string;
 }
 
@@ -38,9 +39,9 @@ describe('production orders and purchase requirements', () => {
     assert.equal(fixtureOrderNo, 1);
     const body = await purchase({ orderNo: String(fixtureOrderNo) });
     assert.deepEqual(body.errors, []);
-    assert.equal(round2(totalOf(body.totals, 'SEQ-3MM').purchase!.rolls!), 1.34);
-    assert.equal(round2(totalOf(body.totals, 'BEAD-2.5MM').purchase!.kg!), 21.94);
-    assert.equal(round2(totalOf(body.totals, 'CORD').purchase!.kg!), 38.56);
+    assert.equal(round2(totalOf(body.totals, 'SEQ-3MM').purchase!), 1.34);
+    assert.equal(round2(totalOf(body.totals, 'BEAD-2.5MM').purchase!), 21.94);
+    assert.equal(round2(totalOf(body.totals, 'CORD').purchase!), 38.56);
   });
 
   it('matches every expected total and purchase value of the fixture', async () => {
@@ -49,9 +50,10 @@ describe('production orders and purchase requirements', () => {
       assert.equal(Number(totalOf(body.totals, code).total), expected, code);
     }
     for (const [code, expected] of Object.entries(fixture.expected.purchase)) {
-      const got = totalOf(body.totals, code).purchase!;
+      const got = totalOf(body.totals, code).values!;
+      const stepKey: Record<string, string> = { cds: 'CD', rolls: 'ROLLS', kg: 'KG', grams: 'GRAMS' };
       for (const [key, value] of Object.entries(expected)) {
-        assert.equal(round2(got[key as 'kg']!), value, `${code}.${key}`);
+        assert.equal(round2(got[stepKey[key]!]!), value, `${code}.${key}`);
       }
     }
   });
@@ -197,18 +199,18 @@ describe('production orders and purchase requirements', () => {
 
     it('reports a missing conversion rule instead of crashing', async () => {
       // The API always requires rules; simulate legacy data with a rule missing in the DB.
-      await MaterialModel.updateOne({ code: 'CORD' }, { $set: { denier: null } });
-      await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $set: { pcsPerKg: null } });
+      await MaterialModel.updateOne({ code: 'CORD' }, { $unset: { 'rules.denier': '' } });
+      await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $unset: { 'rules.pcsPerKg': '' } });
       try {
         const body = await purchase({ orderNo: '1' });
         assert.equal(totalOf(body.totals, 'CORD').purchase, null);
         assert.equal(totalOf(body.totals, 'CORD').error, MESSAGES.CORD_DENIER_MISSING);
         assert.equal(totalOf(body.totals, 'PIPE-4MM').error, MESSAGES.CONVERSION_RULE_MISSING);
         // In material order: PIPE-4MM (sortOrder 8) before CORD (10).
-        assert.deepEqual(body.errors, [`4-MM Pipe: ${MESSAGES.CONVERSION_RULE_MISSING}`, `Cord: ${MESSAGES.CORD_DENIER_MISSING}`]);
+        assert.deepEqual(body.errors, [`PIPE-4MM: ${MESSAGES.CONVERSION_RULE_MISSING}`, `CORD: ${MESSAGES.CORD_DENIER_MISSING}`]);
       } finally {
-        await MaterialModel.updateOne({ code: 'CORD' }, { $set: { denier: 1200 } });
-        await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $set: { pcsPerKg: 35000 } });
+        await MaterialModel.updateOne({ code: 'CORD' }, { $set: { 'rules.denier': 1200 } });
+        await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $set: { 'rules.pcsPerKg': 35000 } });
       }
     });
   });

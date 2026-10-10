@@ -1,12 +1,30 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/query-keys';
-import { createMaterial, deleteMaterial, listMaterials, updateMaterial, type MaterialBody } from './materials.api';
+import {
+  createCategory,
+  createMaterial,
+  deleteCategory,
+  deleteMaterial,
+  listCategories,
+  listMaterials,
+  updateCategory,
+  updateMaterial,
+  type CategoryBody,
+  type MaterialBody,
+} from './materials.api';
 
 export const useMaterials = () => useQuery({ queryKey: queryKeys.materials, queryFn: listMaterials });
+export const useCategories = () => useQuery({ queryKey: queryKeys.materialCategories, queryFn: listCategories });
 
+/** Materials and categories feed every consumption column and every purchase figure. */
 function useInvalidateMaterials() {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: queryKeys.materials });
+  return () =>
+    Promise.all(
+      [queryKeys.materials, queryKeys.materialCategories, queryKeys.purchase, queryKeys.designs, queryKeys.production, queryKeys.orders].map(
+        (queryKey) => queryClient.invalidateQueries({ queryKey }),
+      ),
+    );
 }
 
 export function useSaveMaterial() {
@@ -21,4 +39,18 @@ export function useSaveMaterial() {
 export function useDeleteMaterial() {
   const invalidate = useInvalidateMaterials();
   return useMutation({ mutationFn: deleteMaterial, onSuccess: invalidate });
+}
+
+export function useSaveCategory() {
+  const invalidate = useInvalidateMaterials();
+  return useMutation({
+    mutationFn: ({ code, body, isNew }: { code: string; body: CategoryBody; isNew: boolean }) =>
+      isNew ? createCategory({ ...body, code }) : updateCategory(code, body),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteCategory() {
+  const invalidate = useInvalidateMaterials();
+  return useMutation({ mutationFn: deleteCategory, onSuccess: invalidate });
 }

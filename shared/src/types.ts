@@ -1,6 +1,6 @@
 // API response DTOs shared by client and server.
 // Calculated quantities are decimal strings (decimal.js on the server); display rounds to 2 decimals.
-import type { MaterialCategory, MaterialUnit, OrderStatus, PermissionCode } from './constants.js';
+import type { OrderStatus, PermissionCode } from './constants.js';
 
 export type DecimalString = string;
 
@@ -90,22 +90,52 @@ export interface SettingsDto {
   adminEmails: AdminEmailDto[];
 }
 
+// ---- Material categories (admin-configurable formulas) ----
+
+export interface CategoryFieldDto {
+  /** Name used in formulas, e.g. "seqPerCd". */
+  key: string;
+  label: string;
+  required: boolean;
+  missingMessage: string | null;
+}
+
+export interface CategoryStepDto {
+  /** Name of the result, usable in later steps, e.g. "CD". */
+  key: string;
+  label: string;
+  /** e.g. "TOTAL / seqPerCd" (TOTAL = the material's required quantity). */
+  formula: string;
+}
+
+export interface MaterialCategoryDto {
+  code: string;
+  name: string;
+  /** Unit of consumption and required quantity, e.g. PCS or MTR. */
+  unit: string;
+  sortOrder: number;
+  fields: CategoryFieldDto[];
+  steps: CategoryStepDto[];
+  /** Key of the step that is the quantity to purchase. */
+  purchaseStep: string;
+  materialCount: number;
+}
+
 // ---- Materials ----
 
 export interface MaterialColumnDto {
   code: string;
   name: string;
-  category: MaterialCategory;
-  unit: MaterialUnit;
+  /** Category code. */
+  category: string;
+  unit: string;
 }
 
 export interface MaterialDto extends MaterialColumnDto {
+  categoryName: string;
   sortOrder: number;
-  seqPerCd: number | null;
-  cdPerRoll: number | null;
-  cdPerRound: number | null;
-  pcsPerKg: number | null;
-  denier: number | null;
+  /** Values of the category's fields, e.g. { seqPerCd: 31600, cdPerRoll: 210 }. */
+  rules: Record<string, number>;
 }
 
 // ---- Designs (Punching) ----
@@ -210,20 +240,31 @@ export interface OrderSummaryDto {
 
 // ---- Purchase requirements ----
 
-export type PurchaseConversion =
-  | { kind: 'SEQUENCE'; cds: DecimalString; rolls: DecimalString }
-  | { kind: 'BEAD'; kg: DecimalString }
-  | { kind: 'CORD'; grams: DecimalString; kg: DecimalString };
-
 export interface PurchaseTotalDto extends MaterialColumnDto {
+  /** Required quantity in the category unit. */
   total: DecimalString;
-  purchase: PurchaseConversion | null;
+  rules: Record<string, number>;
+  /** Every formula step's value (step key → value); null when it could not be calculated. */
+  values: Record<string, DecimalString> | null;
+  /** The purchase step's value. */
+  purchase: DecimalString | null;
   error?: string;
+}
+
+export interface PurchaseCategoryDto {
+  code: string;
+  name: string;
+  unit: string;
+  fields: { key: string; label: string }[];
+  steps: CategoryStepDto[];
+  purchaseStep: string;
 }
 
 export interface PurchaseRequirementDto {
   orderNos: number[];
   components: string[];
+  /** Categories in display order (one section each). */
+  categories: PurchaseCategoryDto[];
   totals: PurchaseTotalDto[];
   errors: string[];
 }

@@ -55,9 +55,13 @@ are decimal strings.
 | POST | `/settings/admin-emails` | `{ email, name, password? }` (creates an active Admin, or promotes an existing account) | SETTINGS_MANAGE + every Admin permission |
 | DELETE | `/settings/admin-emails/:email` | — (removes Admin role, deactivates, logs out; not the primary or yourself) | SETTINGS_MANAGE |
 | GET | `/materials` | — | MATERIAL_MASTER_VIEW |
-| POST | `/materials` | `{ code, name, category, seqPerCd?, cdPerRoll?, cdPerRound?, pcsPerKg?, denier? }` | MATERIAL_MASTER_MANAGE |
+| POST | `/materials` | `{ code, name?, category, rules: { <field>: value } }` (fields come from the category) | MATERIAL_MASTER_MANAGE |
 | PUT | `/materials/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
 | DELETE | `/materials/:code` | — (409 while a design uses it) | MATERIAL_MASTER_MANAGE |
+| GET | `/material-categories` | — (categories with fields and formula steps) | MATERIAL_MASTER_VIEW |
+| POST | `/material-categories` | `{ code, name, unit, fields: [{ key, label, required }], steps: [{ key, label, formula }], purchaseStep }` | MATERIAL_MASTER_MANAGE |
+| PUT | `/material-categories/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
+| DELETE | `/material-categories/:code` | — (409 while a material uses it) | MATERIAL_MASTER_MANAGE |
 | GET | `/designs` | `?q=` (ignores case, spaces, dashes) | PUNCHING_VIEW |
 | POST | `/designs` | `{ designNo, productName }` | PUNCHING_CREATE |
 | GET | `/designs/:designNo` | — (design + material columns) | PUNCHING_VIEW |
