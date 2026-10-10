@@ -131,7 +131,6 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
         {mode === 'rows' && (
           <div className="order-components">
             {design.components.map((component) => {
-              const subtotal = component.sizes.reduce((sum, s) => sum + qtyOf(component.name, s.size), 0);
               return (
                 <div key={component.name} className="order-component">
                   <strong className="order-component-name">{component.name}</strong>
@@ -152,7 +151,6 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
                       );
                     })}
                   </div>
-                  <span className="order-component-total">{formatNumber(subtotal, 0)} pcs</span>
                 </div>
               );
             })}

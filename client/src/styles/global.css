@@ -482,7 +482,7 @@ a {
 }
 .order-component {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) auto;
+  grid-template-columns: 90px minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
@@ -496,6 +496,7 @@ a {
 .order-sizes {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px 16px;
 }
 .order-size {
@@ -507,20 +508,6 @@ a {
 .order-size .input {
   width: 80px;
   min-width: 80px;
-}
-.order-component-total {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-@media (max-width: 600px) {
-  .order-component {
-    grid-template-columns: 1fr auto;
-  }
-  .order-sizes {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
 }
 .order-count {
   font-variant-numeric: tabular-nums;
