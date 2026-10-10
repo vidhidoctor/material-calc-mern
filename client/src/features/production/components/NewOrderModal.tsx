@@ -33,7 +33,6 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
   const [mode, setMode] = useState<Mode>('same');
   const [quantity, setQuantity] = useState('');
   const [rowQty, setRowQty] = useState<Record<string, string>>({});
-  const [fill, setFill] = useState<Record<string, string>>({});
 
   const rows = useMemo(
     () => design.components.flatMap((c) => c.sizes.map((s) => ({ component: c.name, size: s.size }))),
@@ -48,14 +47,7 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
   const quantities = rows.map((r) => qtyOf(r.component, r.size));
   const ordered = quantities.filter((q) => q > 0).length;
   const pieces = quantities.reduce((sum, q) => sum + q, 0);
-
   const canCreate = party.trim() !== '' && orderDate !== '' && ordered > 0;
-
-  const fillAll = (component: string) => {
-    const value = fill[component] ?? '';
-    const sizes = design.components.find((c) => c.name === component)?.sizes ?? [];
-    setRowQty((q) => ({ ...q, ...Object.fromEntries(sizes.map((s) => [rowKey(component, s.size), value])) }));
-  };
 
   const onSubmit = () => {
     if (!canCreate) return;
@@ -66,7 +58,7 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
         : {
             ...base,
             lines: rows
-              .map<OrderLineBody>((r) => ({ ...r, quantity: parseNumberInput(rowQty[rowKey(r.component, r.size)] ?? '') ?? 0 }))
+              .map<OrderLineBody>((r) => ({ ...r, quantity: qtyOf(r.component, r.size) }))
               .filter((line) => line.quantity > 0),
           };
     create.mutate(body, { onSuccess: (order) => navigate(`/orders/${order.orderNo}`) });
@@ -75,7 +67,7 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
   return (
     <Modal
       open
-      wide
+      wide={mode === 'rows'}
       title={`New order — ${design.designNo} · ${design.productName}`}
       onClose={onClose}
       onSubmit={onSubmit}
@@ -118,8 +110,13 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
           <Field label="Order date" required>
             <input className="input" type="date" required value={orderDate} onChange={(e) => setOrderDate(e.target.value)} />
           </Field>
-          <Field label="Order Quantity" required={mode === 'same'} hint={mode === 'rows' ? 'Set per row below.' : 'Used for every component + size.'}>
-            <NumberInput value={mode === 'same' ? quantity : ''} disabled={mode === 'rows'} placeholder={mode === 'rows' ? '—' : '0'} onChange={setQuantity} />
+          <Field label="Order Quantity" required={mode === 'same'}>
+            <NumberInput
+              value={mode === 'same' ? quantity : ''}
+              disabled={mode === 'rows'}
+              placeholder={mode === 'rows' ? 'Per row' : '0'}
+              onChange={setQuantity}
+            />
           </Field>
         </div>
 
@@ -132,98 +129,36 @@ export function NewOrderModal({ design, parties, onClose }: Props) {
           </button>
         </div>
 
-        <p className="hint-box">
-          {mode === 'same'
-            ? 'Every component + size below is ordered at the Order Quantity. Switch to “Different per row” to enter a quantity per size.'
-            : 'Enter how many pieces to make for each component + size. Leave blank (or 0) for sizes you are not ordering. “Fill all sizes” copies one quantity to every size of a component.'}
-        </p>
-
-        <div className="table-wrap order-lines">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Size</th>
-                <th className="align-right">Stitch</th>
-                <th>Material per piece</th>
-                <th className="align-right">Order Quantity</th>
-                <th className="align-right">Pieces</th>
-              </tr>
-            </thead>
+        {mode === 'rows' && (
+          <div className="order-components">
             {design.components.map((component) => {
-              const lineQty = component.sizes.map((s) => qtyOf(component.name, s.size));
-              const orderedSizes = lineQty.filter((q) => q > 0).length;
-              const subtotal = lineQty.reduce((sum, q) => sum + q, 0);
+              const subtotal = component.sizes.reduce((sum, s) => sum + qtyOf(component.name, s.size), 0);
               return (
-                <tbody key={component.name}>
-                  <tr className="group-head">
-                    <td colSpan={5}>
-                      <div className="group-head-inner">
-                        <strong>{component.name}</strong>
-                        <span className="muted small">
-                          {orderedSizes} of {component.sizes.length} size{component.sizes.length === 1 ? '' : 's'} · {formatNumber(subtotal, 0)} pcs
-                        </span>
-                        {mode === 'rows' && component.sizes.length > 1 && (
-                          <div className="fill-all">
-                            <NumberInput
-                              className="input-sm"
-                              aria-label={`Quantity to fill for all ${component.name} sizes`}
-                              placeholder="Qty"
-                              value={fill[component.name] ?? ''}
-                              onChange={(v) => setFill((f) => ({ ...f, [component.name]: v }))}
-                            />
-                            <button type="button" className="btn btn-sm" onClick={() => fillAll(component.name)}>
-                              Fill all sizes
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                  {component.sizes.map((s, i) => {
-                    const key = rowKey(component.name, s.size);
-                    const used = Object.entries(s.consumption);
-                    return (
-                      <tr key={s.size} className={lineQty[i]! > 0 ? undefined : 'row-muted'}>
-                        <td>
-                          <strong>{s.size}</strong>
-                        </td>
-                        <td className="align-right">{formatNumber(s.stitch, 0)}</td>
-                        <td>
-                          {used.length === 0 ? (
-                            <span className="muted small">No materials punched</span>
-                          ) : (
-                            <span className="consumption-list" title={used.map(([code, qty]) => `${code} ${qty}`).join(' · ')}>
-                              {used.slice(0, 3).map(([code, qty]) => (
-                                <span key={code} className="tag">
-                                  {code} {formatNumber(qty, 4)}
-                                </span>
-                              ))}
-                              {used.length > 3 && <span className="muted small">+{used.length - 3} more</span>}
-                            </span>
-                          )}
-                        </td>
-                        <td className="align-right qty-col">
-                          {mode === 'rows' ? (
-                            <NumberInput
-                              className="input-sm"
-                              aria-label={`${component.name} ${s.size} quantity`}
-                              placeholder="0"
-                              value={rowQty[key] ?? ''}
-                              onChange={(v) => setRowQty((q) => ({ ...q, [key]: v }))}
-                            />
-                          ) : (
-                            formatNumber(lineQty[i]!, 0)
-                          )}
-                        </td>
-                        <td className="align-right">{lineQty[i]! > 0 ? formatNumber(lineQty[i]!, 0) : <span className="muted">—</span>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
+                <div key={component.name} className="order-component">
+                  <strong className="order-component-name">{component.name}</strong>
+                  <div className="order-sizes">
+                    {component.sizes.map((s) => {
+                      const key = rowKey(component.name, s.size);
+                      return (
+                        <label key={s.size} className="order-size">
+                          <span>{s.size}</span>
+                          <NumberInput
+                            className="input-sm"
+                            aria-label={`${component.name} ${s.size} quantity`}
+                            placeholder="0"
+                            value={rowQty[key] ?? ''}
+                            onChange={(v) => setRowQty((q) => ({ ...q, [key]: v }))}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <span className="order-component-total">{formatNumber(subtotal, 0)} pcs</span>
+                </div>
               );
             })}
-          </table>
-        </div>
+          </div>
+        )}
       </div>
     </Modal>
   );
