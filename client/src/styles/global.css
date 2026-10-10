@@ -185,7 +185,9 @@ a {
   color: var(--text-muted);
 }
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 7px 10px;
   border-radius: 6px;
   color: var(--text);
@@ -193,6 +195,13 @@ a {
 }
 .nav-link:hover {
   background: var(--surface-2);
+}
+.nav-link .icon {
+  flex: none;
+  color: var(--text-muted);
+}
+.nav-link.active .icon {
+  color: var(--primary);
 }
 .nav-link.active {
   background: var(--primary-soft);

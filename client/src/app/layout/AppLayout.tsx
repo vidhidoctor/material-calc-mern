@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Icon } from '../../components/Icon';
 import { EmptyState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { allowedNav } from './nav';
@@ -51,7 +52,8 @@ export function AppLayout() {
             <div className="nav-title">{section.title}</div>
             {section.items.map((item) => (
               <NavLink key={item.to} to={item.to} className="nav-link">
-                {item.label}
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
               </NavLink>
             ))}
           </div>

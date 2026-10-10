@@ -1,8 +1,10 @@
 import type { PermissionCode } from '@app/shared';
+import type { IconName } from '../../components/Icon';
 
 export interface NavItem {
   to: string;
   label: string;
+  icon: IconName;
   /** Visible when the user holds ANY of these — the same permission the API checks. */
   any: PermissionCode[];
 }
@@ -15,24 +17,24 @@ export interface NavSection {
 export const NAV: NavSection[] = [
   {
     title: 'Punching',
-    items: [{ to: '/punching', label: 'Design Master', any: ['PUNCHING_VIEW'] }],
+    items: [{ to: '/punching', label: 'Design Master', icon: 'layers', any: ['PUNCHING_VIEW'] }],
   },
   {
     title: 'Production',
     items: [
-      { to: '/production', label: 'Design & Order Lookup', any: ['PRODUCTION_VIEW'] },
-      { to: '/orders', label: 'Production Orders', any: ['PRODUCTION_VIEW'] },
-      { to: '/purchase', label: 'Procurement Planning', any: ['PURCHASE_REQUIREMENT_VIEW'] },
+      { to: '/production', label: 'Design & Order Lookup', icon: 'search', any: ['PRODUCTION_VIEW'] },
+      { to: '/orders', label: 'Production Orders', icon: 'clipboard', any: ['PRODUCTION_VIEW'] },
+      { to: '/purchase', label: 'Procurement Planning', icon: 'cart', any: ['PURCHASE_REQUIREMENT_VIEW'] },
     ],
   },
   {
     title: 'Administration',
     items: [
-      { to: '/admin/users', label: 'User Management', any: ['USER_VIEW'] },
-      { to: '/admin/roles', label: 'Roles & permissions', any: ['ROLE_MANAGE', 'PERMISSION_MANAGE'] },
-      { to: '/admin/departments', label: 'Departments', any: ['DEPARTMENT_MANAGE'] },
-      { to: '/admin/materials', label: 'Material Master', any: ['MATERIAL_MASTER_VIEW'] },
-      { to: '/admin/settings', label: 'Global config', any: ['SETTINGS_MANAGE'] },
+      { to: '/admin/users', label: 'User Management', icon: 'users', any: ['USER_VIEW'] },
+      { to: '/admin/roles', label: 'Roles & permissions', icon: 'shield', any: ['ROLE_MANAGE', 'PERMISSION_MANAGE'] },
+      { to: '/admin/departments', label: 'Departments', icon: 'building', any: ['DEPARTMENT_MANAGE'] },
+      { to: '/admin/materials', label: 'Material Master', icon: 'package', any: ['MATERIAL_MASTER_VIEW'] },
+      { to: '/admin/settings', label: 'Global config', icon: 'sliders', any: ['SETTINGS_MANAGE'] },
     ],
   },
 ];
