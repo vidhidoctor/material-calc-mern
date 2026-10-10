@@ -28,7 +28,7 @@ function groupByParty(orders: PreviousOrderDto[]): PartyGroup[] {
     .sort((a, b) => b.latest.localeCompare(a.latest) || a.party.localeCompare(b.party));
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`;
 
 export function ProductionDesignPage() {
   const designNo = useParams().designNo ?? '';
@@ -55,7 +55,7 @@ export function ProductionDesignPage() {
                 title={`Design ${d.designNo}`}
                 subtitle={
                   <>
-                    <strong>{d.productName}</strong> · {plural(d.previousOrders.length, 'order')} · {plural(groups.length, 'party')}
+                    <strong>{d.productName}</strong> · {plural(d.previousOrders.length, 'order')} · {plural(groups.length, 'party', 'parties')}
                   </>
                 }
                 actions={
