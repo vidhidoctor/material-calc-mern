@@ -17,12 +17,21 @@ export const useDesigns = (q: string) =>
 
 export const useDesign = (designNo: string) => useQuery({ queryKey: queryKeys.design(designNo), queryFn: () => getDesign(designNo) });
 
-/** Store the fresh design returned by a mutation and refresh every design list. */
+/** Orders follow the design, so design changes also refresh Production, order figures and Purchase. */
+function invalidateDesignDependents(queryClient: ReturnType<typeof useQueryClient>) {
+  return Promise.all(
+    [queryKeys.designs, queryKeys.production, queryKeys.orders, queryKeys.purchase].map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey, refetchType: 'active' }),
+    ),
+  );
+}
+
+/** Store the fresh design returned by a mutation and refresh everything that depends on it. */
 function useDesignSaved() {
   const queryClient = useQueryClient();
   return (design: DesignDetailDto) => {
     queryClient.setQueryData(queryKeys.design(design.designNo), design);
-    return queryClient.invalidateQueries({ queryKey: queryKeys.designs, refetchType: 'active' });
+    return invalidateDesignDependents(queryClient);
   };
 }
 
@@ -50,7 +59,7 @@ export function useDeleteDesign() {
     mutationFn: deleteDesign,
     onSuccess: (_result, designNo) => {
       queryClient.removeQueries({ queryKey: queryKeys.design(designNo) });
-      return queryClient.invalidateQueries({ queryKey: queryKeys.designs });
+      return invalidateDesignDependents(queryClient);
     },
   });
 }

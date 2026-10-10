@@ -11,4 +11,13 @@ export const queryKeys = {
   designs: ['designs'] as const,
   designList: (q: string) => ['designs', 'list', q] as const,
   design: (designNo: string) => ['designs', 'detail', designNo] as const,
+  /** Prefix for Production's design queries. */
+  production: ['production'] as const,
+  productionDesigns: (q: string) => ['production', 'designs', q] as const,
+  productionDesign: (designNo: string) => ['production', 'design', designNo] as const,
+  /** Prefix for every order query (list, detail, summary). */
+  orders: ['orders'] as const,
+  order: (orderNo: number) => ['orders', 'detail', orderNo] as const,
+  orderSummary: (orderNo: number) => ['orders', 'summary', orderNo] as const,
+  purchase: ['purchase'] as const,
 };

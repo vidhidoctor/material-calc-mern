@@ -435,6 +435,111 @@ a {
   margin-right: auto;
 }
 
+/* ---- Production ---- */
+.nested-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+.order-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.segmented button {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: var(--shadow), 0 0 0 1px var(--border);
+}
+.qty-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.qty-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.fill-all {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.fill-all .input {
+  width: 90px;
+}
+.qty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+.qty-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.order-count {
+  font-variant-numeric: tabular-nums;
+}
+.status-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-select .input {
+  width: auto;
+}
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.stat strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.section-alert {
+  margin: 12px;
+}
+
 /* ---- Tables ---- */
 .table-wrap {
   overflow: auto;

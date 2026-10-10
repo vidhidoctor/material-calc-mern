@@ -6,6 +6,10 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { MaterialsPage } from '../features/materials/MaterialsPage';
+import { DesignSearchPage } from '../features/production/DesignSearchPage';
+import { OrderPage } from '../features/production/OrderPage';
+import { OrdersPage } from '../features/production/OrdersPage';
+import { ProductionDesignPage } from '../features/production/ProductionDesignPage';
 import { DesignPage } from '../features/punching/DesignPage';
 import { DesignsPage } from '../features/punching/DesignsPage';
 import { RolesPage } from '../features/roles/RolesPage';
@@ -34,8 +38,10 @@ export const router = createBrowserRouter([
       { index: true, element: <HomeRedirect /> },
       { path: 'punching', element: guarded('/punching', <DesignsPage />) },
       { path: 'punching/:designNo', element: guarded('/punching', <DesignPage />) },
-      { path: 'production/*', element: guarded('/production', <ComingSoon title="Design search" />) },
-      { path: 'orders/*', element: guarded('/orders', <ComingSoon title="All orders" />) },
+      { path: 'production', element: guarded('/production', <DesignSearchPage />) },
+      { path: 'production/:designNo', element: guarded('/production', <ProductionDesignPage />) },
+      { path: 'orders', element: guarded('/orders', <OrdersPage />) },
+      { path: 'orders/:orderNo', element: guarded('/orders', <OrderPage />) },
       { path: 'purchase', element: guarded('/purchase', <ComingSoon title="Purchase Requirements" />) },
       { path: 'admin/users', element: guarded('/admin/users', <UsersPage />) },
       { path: 'admin/roles', element: guarded('/admin/roles', <RolesPage />) },

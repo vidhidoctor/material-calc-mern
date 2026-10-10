@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { EmptyState, ErrorAlert, PageHeader, QueryState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDate } from '../../lib/format';
-import { ComponentCard } from './components/ComponentCard';
+import { ComponentCard } from '../../components/ComponentCard';
 import { ComponentEditor } from './components/ComponentEditor';
 import { EditDesignModal } from './components/EditDesignModal';
 import { useDeleteComponent, useDeleteDesign, useDesign } from './punching.hooks';

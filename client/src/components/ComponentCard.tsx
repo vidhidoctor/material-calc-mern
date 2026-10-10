@@ -1,6 +1,6 @@
 import type { DesignComponentDto, DesignSizeDto, MaterialColumnDto } from '@app/shared';
-import { DataGrid, type Column } from '../../../components/DataGrid';
-import { formatNumber } from '../../../lib/format';
+import { DataGrid, type Column } from './DataGrid';
+import { formatNumber } from '../lib/format';
 
 interface Props {
   component: DesignComponentDto;
