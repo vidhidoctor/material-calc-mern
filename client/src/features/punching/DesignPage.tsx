@@ -97,11 +97,6 @@ export function DesignPage() {
                     removing={remove.isPending}
                   />
                 ))}
-                {canEditComponents && (
-                  <button type="button" className="btn add-another" onClick={() => openEditor('new')}>
-                    + Add Another Component
-                  </button>
-                )}
               </>
             )}
 
