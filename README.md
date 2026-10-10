@@ -70,6 +70,7 @@ are decimal strings.
 | GET | `/orders` | — (newest first) | PRODUCTION_VIEW |
 | POST | `/orders` | `{ designNo, party, orderDate?, quantity }` or `{ designNo, party, orderDate?, lines: [{ component, size, quantity }] }` | PRODUCTION_CREATE |
 | GET | `/orders/:orderNo` | — | PRODUCTION_VIEW |
+| DELETE | `/orders/:orderNo` | — (number is not reused) | PRODUCTION_UPDATE |
 | PATCH | `/orders/:orderNo/status` | `{ status }` | PRODUCTION_UPDATE |
 | GET | `/orders/:orderNo/summary` | — (requirement per row + totals) | PRODUCTION_VIEW |
 | GET | `/purchase/requirements` | `?orderNo=&components=KALI,GALISH` (no order = all except CANCELLED) | PURCHASE_REQUIREMENT_VIEW |

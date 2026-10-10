@@ -251,6 +251,31 @@ describe('production orders and purchase requirements', () => {
     });
   });
 
+  describe('deleting an order', () => {
+    it('removes it from lists and purchase; numbers are not reused', async () => {
+      const created = await ctx.api
+        .post('/api/orders')
+        .set(bearer(prod))
+        .send({ designNo: '26-49', party: 'DEL', lines: [{ component: 'BELT', size: 'ALL', quantity: 5 }] });
+      assert.equal(created.status, 201);
+      const { orderNo } = created.body;
+
+      const punchingUser = await createActiveUser(ctx, { email: 'punch-del@example.com', roleName: 'Punching Employee', departmentName: 'Punching' });
+      assert.equal((await ctx.api.delete(`/api/orders/${orderNo}`).set(bearer(punchingUser.token))).status, 403);
+
+      assert.equal((await ctx.api.delete(`/api/orders/${orderNo}`).set(bearer(prod))).status, 204);
+      assert.equal((await ctx.api.get(`/api/orders/${orderNo}`).set(bearer(prod))).status, 404);
+      assert.equal((await ctx.api.delete(`/api/orders/${orderNo}`).set(bearer(prod))).status, 404);
+      assert.equal((await purchase()).orderNos.includes(orderNo), false);
+
+      const next = await ctx.api
+        .post('/api/orders')
+        .set(bearer(prod))
+        .send({ designNo: '26-49', party: 'DEL', lines: [{ component: 'BELT', size: 'ALL', quantity: 5 }] });
+      assert.equal(next.body.partyOrderNo, 2);
+    });
+  });
+
   describe('orders follow the design (§8)', () => {
     it('editing consumption changes an existing order\'s purchase figures', async () => {
       const before = await purchase({ orderNo: '1', components: 'BELT' });

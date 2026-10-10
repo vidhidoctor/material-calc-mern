@@ -10,6 +10,7 @@ export const ordersRoutes = Router();
 ordersRoutes.get('/', guard('PRODUCTION_VIEW'), controller.list);
 ordersRoutes.post('/', guard('PRODUCTION_CREATE'), validate({ body: createOrderBody }), controller.create);
 ordersRoutes.get('/:orderNo', guard('PRODUCTION_VIEW'), validate({ params: orderParams }), controller.get);
+ordersRoutes.delete('/:orderNo', guard('PRODUCTION_UPDATE'), validate({ params: orderParams }), controller.remove);
 ordersRoutes.patch(
   '/:orderNo/status',
   guard('PRODUCTION_UPDATE'),

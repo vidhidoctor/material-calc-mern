@@ -92,6 +92,15 @@ export async function getOrder(orderNo: number): Promise<OrderDto> {
   return toOrderDto(await findOrder(orderNo));
 }
 
+/**
+ * Deletes an order entered by mistake. Its number is not reused (the series continues), so labels
+ * of other orders never change.
+ */
+export async function deleteOrder(orderNo: number): Promise<void> {
+  const order = await findOrder(orderNo);
+  await order.deleteOne();
+}
+
 export async function updateStatus(orderNo: number, status: OrderStatus): Promise<OrderDto> {
   const order = await findOrder(orderNo);
   order.status = status;

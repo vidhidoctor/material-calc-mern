@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { queryKeys } from '../../lib/query-keys';
 import {
   createOrder,
+  deleteOrder,
   getOrder,
   getOrderSummary,
   getProductionDesign,
@@ -37,6 +38,19 @@ function useInvalidateOrders() {
 export function useCreateOrder() {
   const invalidate = useInvalidateOrders();
   return useMutation({ mutationFn: (body: CreateOrderBody) => createOrder(body), onSuccess: invalidate });
+}
+
+export function useDeleteOrder() {
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateOrders();
+  return useMutation({
+    mutationFn: deleteOrder,
+    onSuccess: (_result, orderNo) => {
+      queryClient.removeQueries({ queryKey: queryKeys.order(orderNo) });
+      queryClient.removeQueries({ queryKey: queryKeys.orderSummary(orderNo) });
+      return invalidate();
+    },
+  });
 }
 
 export function useUpdateOrderStatus(orderNo: number) {

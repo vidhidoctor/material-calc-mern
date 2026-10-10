@@ -22,6 +22,11 @@ export async function updateStatus(req: Request, res: Response): Promise<void> {
   res.json(await ordersService.updateStatus(orderNoOf(req), (req.body as { status: OrderStatus }).status));
 }
 
+export async function remove(req: Request, res: Response): Promise<void> {
+  await ordersService.deleteOrder(orderNoOf(req));
+  res.status(204).end();
+}
+
 export async function summary(req: Request, res: Response): Promise<void> {
   res.json(await ordersService.getOrderSummary(orderNoOf(req)));
 }

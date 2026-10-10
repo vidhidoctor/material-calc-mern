@@ -1,9 +1,9 @@
 import { Link } from 'react-router';
 import { Drawer } from '../../../components/Drawer';
-import { QueryState } from '../../../components/ui';
+import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
 import { formatDate, formatNumber } from '../../../lib/format';
-import { useOrder, useOrderSummary } from '../production.hooks';
+import { useDeleteOrder, useOrder, useOrderSummary } from '../production.hooks';
 import { OrderLinesTable } from './OrderLinesTable';
 
 /** Everything about one order: stats, quantities and material requirement. */
@@ -11,6 +11,14 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   const auth = useAuth();
   const order = useOrder(orderNo);
   const summary = useOrderSummary(orderNo);
+  const remove = useDeleteOrder();
+
+  const onDelete = () => {
+    const label = order.data ? `${order.data.party}-${order.data.partyOrderNo}` : `this order`;
+    if (window.confirm(`Delete order ${label}? It is removed from all lists and purchase requirements. This cannot be undone.`)) {
+      remove.mutate(orderNo, { onSuccess: onClose });
+    }
+  };
 
   return (
     <Drawer
@@ -24,6 +32,11 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
       onClose={onClose}
       footer={
         <>
+          {auth.can('PRODUCTION_UPDATE') && (
+            <button type="button" className="btn btn-danger-ghost" disabled={remove.isPending} onClick={onDelete}>
+              Delete order
+            </button>
+          )}
           {auth.can('PURCHASE_REQUIREMENT_VIEW') && (
             <Link className="btn footer-note" to={`/purchase?orderNo=${orderNo}`}>
               Purchase requirement
@@ -38,6 +51,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
       <QueryState query={order}>
         {(o) => (
           <div className="stack">
+            <ErrorAlert error={remove.error} />
             <div className="stat-row">
               <div className="stat">
                 <span className="muted small">Total pieces</span>

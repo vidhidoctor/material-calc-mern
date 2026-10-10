@@ -28,5 +28,6 @@ export const listOrders = () => api<OrderListItemDto[]>('/orders');
 export const getOrder = (orderNo: number) => api<OrderDto>(`/orders/${orderNo}`);
 export const getOrderSummary = (orderNo: number) => api<OrderSummaryDto>(`/orders/${orderNo}/summary`);
 export const createOrder = (body: CreateOrderBody) => api<OrderDto>('/orders', { method: 'POST', body });
+export const deleteOrder = (orderNo: number) => api<void>(`/orders/${orderNo}`, { method: 'DELETE' });
 export const updateOrderStatus = (orderNo: number, status: OrderStatus) =>
   api<OrderDto>(`/orders/${orderNo}/status`, { method: 'PATCH', body: { status } });
