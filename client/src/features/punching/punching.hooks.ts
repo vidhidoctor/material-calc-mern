@@ -6,6 +6,7 @@ import {
   deleteComponent,
   deleteDesign,
   getDesign,
+  getDesignCost,
   listDesigns,
   putComponent,
   updateDesign,
@@ -17,10 +18,14 @@ export const useDesigns = (q: string) =>
 
 export const useDesign = (designNo: string) => useQuery({ queryKey: queryKeys.design(designNo), queryFn: () => getDesign(designNo) });
 
+/** Only fetched for users who may see costs. */
+export const useDesignCost = (designNo: string, enabled: boolean) =>
+  useQuery({ queryKey: queryKeys.designCost(designNo), queryFn: () => getDesignCost(designNo), enabled });
+
 /** Orders follow the design, so design changes also refresh Production, order figures and Purchase. */
 function invalidateDesignDependents(queryClient: ReturnType<typeof useQueryClient>) {
   return Promise.all(
-    [queryKeys.designs, queryKeys.production, queryKeys.orders, queryKeys.purchase].map((queryKey) =>
+    [queryKeys.designs, queryKeys.production, queryKeys.orders, queryKeys.purchase, queryKeys.costing].map((queryKey) =>
       queryClient.invalidateQueries({ queryKey, refetchType: 'active' }),
     ),
   );

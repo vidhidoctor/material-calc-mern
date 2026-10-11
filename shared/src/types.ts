@@ -282,3 +282,54 @@ export interface PurchaseRequirementDto {
   totals: PurchaseTotalDto[];
   errors: string[];
 }
+
+// ---- Costing (₹, Admin only: COST_VIEW) ----
+
+export interface MaterialRateDto {
+  /** Variant key: material code, or "CODE|COLOUR" for a colour-specific rate. */
+  key: string;
+  code: string;
+  color: string | null;
+  /** Consumption unit (PCS, MTR …). */
+  unit: string;
+  /** What the rate is per, from the category purchase step (e.g. "KG", "Rolls"). */
+  purchaseUnit: string;
+  /** Rate entered for this key; null when not set. */
+  basicRate: number | null;
+  gstPercent: number | null;
+  /** True when a colour has no rate of its own and uses its material rate. */
+  inherited: boolean;
+  rateInclGst: DecimalString | null;
+  /** Cost of one consumption unit (one piece, one metre …). */
+  costPerUnit: DecimalString | null;
+  error?: string;
+}
+
+export interface DesignCostSizeDto {
+  size: string;
+  /** Column key → cost per piece (quantity × cost per unit). */
+  costs: Record<string, DecimalString>;
+  /** Total material cost of one piece of this size. */
+  total: DecimalString;
+}
+
+export interface DesignCostDto {
+  designNo: string;
+  /** Column key → current cost per unit (null = no rate). */
+  unitCosts: Record<string, DecimalString | null>;
+  components: { name: string; sizes: DesignCostSizeDto[] }[];
+  errors: string[];
+}
+
+export interface OrderCostDto {
+  orderNo: number;
+  /** Total material cost of the order. */
+  total: DecimalString;
+  /** Average material cost per piece (total ÷ pieces). */
+  perPiece: DecimalString;
+  components: { component: string; quantity: number; cost: DecimalString }[];
+  rows: { component: string; size: string; quantity: number; cost: DecimalString }[];
+  /** True when some rates were not saved with the order (older orders): current rates were used. */
+  usesCurrentRates: boolean;
+  errors: string[];
+}

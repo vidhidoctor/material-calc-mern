@@ -21,7 +21,7 @@ function useInvalidateMaterials() {
   const queryClient = useQueryClient();
   return () =>
     Promise.all(
-      [queryKeys.materials, queryKeys.materialCategories, queryKeys.purchase, queryKeys.designs, queryKeys.production, queryKeys.orders].map(
+      [queryKeys.materials, queryKeys.materialCategories, queryKeys.purchase, queryKeys.designs, queryKeys.production, queryKeys.orders, queryKeys.costing].map(
         (queryKey) => queryClient.invalidateQueries({ queryKey }),
       ),
     );

@@ -23,6 +23,11 @@ export interface Order {
   status: OrderStatus;
   createdAt: Date;
   lines: OrderLine[];
+  /**
+   * Cost of one consumption unit per column key, saved when the order is created, so later rate
+   * changes do not alter this order. Missing on older orders (then today's rates are used).
+   */
+  unitCosts?: Record<string, string>;
 }
 
 const lineSchema = new Schema<OrderLine>(
@@ -46,6 +51,7 @@ const orderSchema = new Schema<Order>(
     status: { type: String, enum: ORDER_STATUSES, default: 'PENDING' },
     createdAt: { type: Date, default: () => new Date() },
     lines: { type: [lineSchema], default: [] },
+    unitCosts: { type: Schema.Types.Mixed, default: undefined },
   },
   { versionKey: false },
 );

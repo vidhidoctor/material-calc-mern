@@ -6,12 +6,13 @@ import { formatDate } from '../../lib/format';
 import { ComponentCard } from '../../components/ComponentCard';
 import { ComponentEditor } from './components/ComponentEditor';
 import { EditDesignModal } from './components/EditDesignModal';
-import { useDeleteComponent, useDeleteDesign, useDesign } from './punching.hooks';
+import { useDeleteComponent, useDeleteDesign, useDesign, useDesignCost } from './punching.hooks';
 
 export function DesignPage() {
   const designNo = useParams().designNo ?? '';
   const auth = useAuth();
   const design = useDesign(designNo);
+  const cost = useDesignCost(designNo, auth.can('COST_VIEW'));
   const remove = useDeleteComponent(designNo);
   const removeDesign = useDeleteDesign();
   const navigate = useNavigate();
@@ -72,6 +73,16 @@ export function DesignPage() {
               }
             />
             <ErrorAlert error={remove.error ?? removeDesign.error} />
+            {cost.data && cost.data.errors.length > 0 && (
+              <div className="alert alert-info">
+                <strong>Cost is incomplete:</strong>
+                <ul>
+                  {cost.data.errors.map((e) => (
+                    <li key={e}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {d.components.length === 0 ? (
               <section className="card">
@@ -95,6 +106,7 @@ export function DesignPage() {
                     onEdit={canEditComponents ? () => openEditor(component.name) : undefined}
                     onRemove={canUpdate ? () => onRemove(component.name) : undefined}
                     removing={remove.isPending}
+                    costs={cost.data?.components.find((c) => c.name === component.name)?.sizes}
                   />
                 ))}
               </>

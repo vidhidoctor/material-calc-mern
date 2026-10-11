@@ -1,5 +1,6 @@
 import type {
   OrderDto,
+  OrderCostDto,
   OrderListItemDto,
   OrderStatus,
   OrderSummaryDto,
@@ -23,6 +24,9 @@ export type CreateOrderBody = { designNo: string; party: string; orderDate: stri
 export const listProductionDesigns = (q: string) => api<ProductionDesignListItemDto[]>('/production/designs', { query: { q } });
 export const getProductionDesign = (designNo: string) =>
   api<ProductionDesignDetailDto>(`/production/designs/${encodeURIComponent(designNo)}`);
+
+/** ₹ material cost of an order, with the rates saved when it was created (Admin only). */
+export const getOrderCost = (orderNo: number) => api<OrderCostDto>(`/costing/orders/${orderNo}`);
 
 export const listOrders = () => api<OrderListItemDto[]>('/orders');
 export const getOrder = (orderNo: number) => api<OrderDto>(`/orders/${orderNo}`);

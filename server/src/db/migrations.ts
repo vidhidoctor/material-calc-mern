@@ -1,3 +1,5 @@
+import { ADMIN_ROLE, PERMISSION_CODES } from '@app/shared';
+import { RoleModel } from '../modules/roles/role.model.js';
 import { MaterialCategoryModel } from '../modules/material-categories/material-category.model.js';
 import { MaterialModel } from '../modules/materials/material.model.js';
 import { backfillPartyOrderNos } from '../modules/orders/order.model.js';
@@ -42,9 +44,16 @@ export async function migrateMaterialRules(): Promise<number> {
   return old.length;
 }
 
+/** Admin always holds every permission, including ones added in later versions (e.g. COST_VIEW). */
+export async function grantAdminAllPermissions(): Promise<number> {
+  const result = await RoleModel.updateOne({ name: ADMIN_ROLE }, { $addToSet: { permissions: { $each: [...PERMISSION_CODES] } } });
+  return result.modifiedCount;
+}
+
 /** Safe to run on every start; returns a line per change made. */
 export async function runStartupMigrations(): Promise<string[]> {
   const log: string[] = [];
+  if ((await grantAdminAllPermissions()) > 0) log.push('Admin role: new permissions granted.');
   const categories = await ensureDefaultCategories();
   if (categories > 0) log.push(`Created ${categories} default material categor${categories === 1 ? 'y' : 'ies'}.`);
   const materials = await migrateMaterialRules();

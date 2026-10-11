@@ -26,3 +26,9 @@ export function formatDate(value: string | null | undefined): string {
   const date = new Date(value.length === 10 ? `${value}T00:00:00Z` : value);
   return Number.isNaN(date.getTime()) ? value : dateFormat.format(date);
 }
+
+/** ₹ amount, Indian grouping; small unit costs keep more decimals (₹0.0126). */
+export function formatMoney(value: number | string | null | undefined, maxDecimals = 2): string {
+  if (value === null || value === undefined || value === '') return '—';
+  return `₹${formatNumber(value, maxDecimals)}`;
+}

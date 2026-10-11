@@ -2,8 +2,8 @@ import { Link } from 'react-router';
 import { Drawer } from '../../../components/Drawer';
 import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
-import { formatDate, formatNumber } from '../../../lib/format';
-import { useDeleteOrder, useOrder, useOrderSummary } from '../production.hooks';
+import { formatDate, formatMoney, formatNumber } from '../../../lib/format';
+import { useDeleteOrder, useOrder, useOrderCost, useOrderSummary } from '../production.hooks';
 import { OrderLinesTable } from './OrderLinesTable';
 
 /** Everything about one order: stats, quantities and material requirement. */
@@ -11,6 +11,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   const auth = useAuth();
   const order = useOrder(orderNo);
   const summary = useOrderSummary(orderNo);
+  const cost = useOrderCost(orderNo, auth.can('COST_VIEW'));
   const remove = useDeleteOrder();
 
   const onDelete = () => {
@@ -61,7 +62,26 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                 <span className="muted small">Order date</span>
                 <strong>{formatDate(o.orderDate)}</strong>
               </div>
+              {cost.data && (
+                <div className="stat stat-cost">
+                  <span className="muted small">Material cost</span>
+                  <strong>{formatMoney(cost.data.total)}</strong>
+                  <span className="muted small">{formatMoney(cost.data.perPiece)} per piece</span>
+                </div>
+              )}
             </div>
+            {cost.data && (cost.data.errors.length > 0 || cost.data.usesCurrentRates) && (
+              <div className="alert alert-info small">
+                {cost.data.usesCurrentRates && <p>Some rates were not saved with this order, so today's rates are used for them.</p>}
+                {cost.data.errors.length > 0 && (
+                  <ul>
+                    {cost.data.errors.map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
 
             <section>
@@ -79,7 +99,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                         </ul>
                       </div>
                     )}
-                    <OrderLinesTable summary={s} />
+                    <OrderLinesTable summary={s} cost={cost.data} />
                   </>
                 )}
               </QueryState>

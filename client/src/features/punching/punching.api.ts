@@ -1,4 +1,4 @@
-import type { Consumption, DesignDetailDto, DesignListItemDto } from '@app/shared';
+import type { Consumption, DesignCostDto, DesignDetailDto, DesignListItemDto } from '@app/shared';
 import { api } from '../../api/client';
 
 export interface SizeRowBody {
@@ -21,3 +21,6 @@ export const putComponent = (designNo: string, name: string, columns: string[], 
   api<DesignDetailDto>(`${designPath(designNo)}/components/${encodeURIComponent(name)}`, { method: 'PUT', body: { columns, sizes } });
 export const deleteComponent = (designNo: string, name: string) =>
   api<DesignDetailDto>(`${designPath(designNo)}/components/${encodeURIComponent(name)}`, { method: 'DELETE' });
+
+/** ₹ cost per piece by component and size (Admin only). */
+export const getDesignCost = (designNo: string) => api<DesignCostDto>(`/costing/designs/${encodeURIComponent(designNo)}`);

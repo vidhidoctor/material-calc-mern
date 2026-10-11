@@ -144,6 +144,18 @@ expected results. The engine MUST reproduce them, e.g. 3-MM Sequence 8,861,475 P
 
 ---
 
+## 5b. Material costing (decided 2026-10-11, Admin only: permission COST_VIEW)
+
+- Admin sets per material (or per colour, key `CODE|COLOUR`) a **basic rate per purchase unit** and **GST %**
+  (Material Master → Rates & costs). A colour without its own rate uses its material's rate.
+- Rate incl. GST = basic × (1 + GST ÷ 100). **Cost per consumption unit** = the category formula run with
+  `TOTAL = 1` (purchase units in one piece/metre) × rate incl. GST. E.g. 2 MM bead ₹900 + 12% = ₹1,008/KG,
+  80,000 pcs/KG → ₹0.0126 per bead. decimal.js throughout; no rounding before display.
+- Design cost per piece (per component and size) = Σ quantity per piece × cost per unit, at today's rates.
+- Each order saves the cost per unit of every column it uses when it is created (`order.unitCosts`), so
+  later rate changes do not change its cost. Older orders without saved rates use today's rates (flagged).
+- Material cost is kept separate from labour/punching charges (not modelled yet).
+
 ## 6. Screens and behaviour (final)
 
 Sidebar shows only pages the user may open; the first one is their landing page.

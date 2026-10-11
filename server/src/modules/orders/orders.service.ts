@@ -1,6 +1,7 @@
 import { MESSAGES, parseVariantKey, sortVariantKeys, type OrderDto, type OrderListItemDto, type OrderStatus, type OrderSummaryDto } from '@app/shared';
 import { calculateRequirements, toDecimalString } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
+import { currentUnitCosts } from '../costing/costing.service.js';
 import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
 import { loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
@@ -70,6 +71,10 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
     if (missing.length > 0) throw new AppError(400, MESSAGES.CONSUMPTION_MISSING, { missing });
   }
 
+  // Save today's material rates with the order (its cost must not change when rates change later).
+  const lookup = consumptionLookup(design);
+  const unitCosts = await currentUnitCosts(lines.flatMap((l) => Object.keys(lookup(l.component, l.size) ?? {})));
+
   const order = await OrderModel.create({
     orderNo: await nextOrderNo(),
     partyOrderNo: await nextPartyOrderNo(design.designNo, input.party),
@@ -80,6 +85,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
     quantity: input.lines === undefined ? input.quantity : null,
     status: 'PENDING',
     lines,
+    unitCosts,
   });
   return toOrderDto(order);
 }

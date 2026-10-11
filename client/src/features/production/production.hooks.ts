@@ -5,6 +5,7 @@ import {
   createOrder,
   deleteOrder,
   getOrder,
+  getOrderCost,
   getOrderSummary,
   getProductionDesign,
   listOrders,
@@ -21,6 +22,10 @@ export const useProductionDesign = (designNo: string) =>
 
 export const useOrders = () => useQuery({ queryKey: queryKeys.orders, queryFn: listOrders });
 export const useOrder = (orderNo: number) => useQuery({ queryKey: queryKeys.order(orderNo), queryFn: () => getOrder(orderNo) });
+/** Only fetched for users who may see costs. */
+export const useOrderCost = (orderNo: number, enabled: boolean) =>
+  useQuery({ queryKey: queryKeys.orderCost(orderNo), queryFn: () => getOrderCost(orderNo), enabled });
+
 export const useOrderSummary = (orderNo: number) =>
   useQuery({ queryKey: queryKeys.orderSummary(orderNo), queryFn: () => getOrderSummary(orderNo) });
 
@@ -32,6 +37,7 @@ function useInvalidateOrders() {
       queryClient.invalidateQueries({ queryKey: queryKeys.orders }),
       queryClient.invalidateQueries({ queryKey: queryKeys.production }),
       queryClient.invalidateQueries({ queryKey: queryKeys.purchase }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.costing }),
     ]);
 }
 

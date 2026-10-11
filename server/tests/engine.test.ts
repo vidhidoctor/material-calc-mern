@@ -6,6 +6,7 @@ import {
   compileCategory,
   convertWithCategory,
   Decimal,
+  unitCost,
   validateCategory,
   type CalcLine,
   type CompiledCategory,
@@ -85,6 +86,42 @@ describe('calculation engine (fixture 26-49, default categories)', () => {
     assert.equal(convertWithCategory(categories.get('SEQUENCE')!, { seqPerCd: 100 }, total).error, MESSAGES.CONVERSION_RULE_MISSING);
     assert.equal(convertWithCategory(categories.get('BEAD')!, { pcsPerKg: 0 }, total).error, MESSAGES.CONVERSION_RULE_MISSING);
     assert.equal(convertWithCategory(categories.get('CORD')!, {}, total).error, MESSAGES.CORD_DENIER_MISSING);
+  });
+});
+
+describe('unit cost (rate incl. GST → cost per piece/metre)', () => {
+  it('matches the KHATLI rate sheet (2 MM bead, 2.5 MM bead, 3 MM moti, pipe, zardoshi)', () => {
+    const bead = categories.get('BEAD')!;
+    const rows: [number, number, string, string][] = [
+      // basic ₹/KG, pcs/KG, rate incl. 12% GST, cost per piece (rounded to 3 like the sheet)
+      [900, 80000, '1008', '0.013'],
+      [650, 70000, '728', '0.010'],
+      [1100, 45000, '1232', '0.027'],
+      [600, 35000, '672', '0.019'],
+      [3500, 45000, '3920', '0.087'],
+    ];
+    for (const [basic, pcsPerKg, incl, perPiece] of rows) {
+      const r = unitCost(bead, { pcsPerKg }, basic, 12);
+      assert.equal(r.rateInclGst.toString(), incl);
+      assert.equal(r.perUnit!.toDecimalPlaces(3).toFixed(3), perPiece, `${basic}/${pcsPerKg}`);
+    }
+    // No premature rounding: ₹1,008 ÷ 80,000 is exactly 0.0126.
+    assert.equal(unitCost(bead, { pcsPerKg: 80000 }, 900, 12).perUnit!.toString(), '0.0126');
+  });
+
+  it('works for rolls (sequence) and metres (cord) through their formulas', () => {
+    // ₹2,000 per roll, 31,600 seq/CD, 210 CD/roll → per sequence = 2,000 ÷ 6,636,000
+    const seq = unitCost(categories.get('SEQUENCE')!, { seqPerCd: 31600, cdPerRoll: 210 }, 2000, 0);
+    assert.equal(seq.perUnit!.toDecimalPlaces(8).toString(), '0.00030139');
+    // Cord ₹500/KG + 5%: 1 MTR × 1200 denier ÷ 9000 ÷ 1000 KG × ₹525
+    const cord = unitCost(categories.get('CORD')!, { denier: 1200 }, 500, 5);
+    assert.equal(cord.perUnit!.toDecimalPlaces(8).toString(), '0.07');
+  });
+
+  it('reports a missing conversion rule instead of a cost', () => {
+    const r = unitCost(categories.get('BEAD')!, {}, 900, 12);
+    assert.equal(r.perUnit, null);
+    assert.equal(r.error, MESSAGES.CONVERSION_RULE_MISSING);
   });
 });
 

@@ -1,4 +1,5 @@
 import type { MaterialColumnDto, MaterialDto } from '@app/shared';
+import { compileCategory, type CompiledCategory } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
 import { DesignModel } from '../designs/design.model.js';
 import { MaterialCategoryModel, type MaterialCategory } from '../material-categories/material-category.model.js';
@@ -15,6 +16,28 @@ export const MATERIAL_MESSAGES = {
 } as const;
 
 export type CategoryMap = Map<string, MaterialCategory>;
+
+/** Compiled formulas per category code; a category that does not compile maps to null (reported, never thrown). */
+export function compileCategories(categories: CategoryMap): Map<string, CompiledCategory | null> {
+  const compiled = new Map<string, CompiledCategory | null>();
+  for (const [code, c] of categories) {
+    try {
+      compiled.set(
+        code,
+        compileCategory({
+          code: c.code,
+          name: c.name,
+          fields: c.fields.map((f) => ({ key: f.key, label: f.label, required: f.required, missingMessage: f.missingMessage })),
+          steps: c.steps.map((s) => ({ key: s.key, label: s.label, formula: s.formula })),
+          purchaseStep: c.purchaseStep,
+        }),
+      );
+    } catch {
+      compiled.set(code, null);
+    }
+  }
+  return compiled;
+}
 
 export async function loadCategoryMap(): Promise<CategoryMap> {
   return new Map((await MaterialCategoryModel.find()).map((c) => [c.code, c]));

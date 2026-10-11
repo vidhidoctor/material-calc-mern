@@ -51,6 +51,11 @@ are decimal strings.
 | GET | `/admin/permissions` | — | ROLE_MANAGE or PERMISSION_MANAGE |
 | GET | `/admin/departments` | — | DEPARTMENT_MANAGE or USER_VIEW |
 | POST | `/admin/departments` | `{ name }` | DEPARTMENT_MANAGE |
+| GET | `/costing/rates` | — (every material + colours used in designs: rate, GST, rate incl. GST, cost per unit) | COST_VIEW |
+| PUT | `/costing/rates/:key` | `{ basicRate, gstPercent }` — key = material code or `CODE|COLOUR` | COST_VIEW |
+| DELETE | `/costing/rates/:key` | — (a colour then uses its material rate) | COST_VIEW |
+| GET | `/costing/designs/:designNo` | — (₹ per piece by component and size, today rates) | COST_VIEW |
+| GET | `/costing/orders/:orderNo` | — (₹ for the order with the rates saved when it was created) | COST_VIEW |
 | GET | `/settings` | — (global config: admin emails) | SETTINGS_MANAGE |
 | POST | `/settings/admin-emails` | `{ email, name, password? }` (creates an active Admin, or promotes an existing account) | SETTINGS_MANAGE + every Admin permission |
 | DELETE | `/settings/admin-emails/:email` | — (removes Admin role, deactivates, logs out; not the primary or yourself) | SETTINGS_MANAGE |

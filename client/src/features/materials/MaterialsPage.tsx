@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/auth';
 import { formatNumber } from '../../lib/format';
 import { CategoriesTab } from './components/CategoriesTab';
 import { MaterialFormModal } from './components/MaterialFormModal';
+import { RatesTab } from './components/RatesTab';
 import { useCategories, useDeleteMaterial, useMaterials } from './materials.hooks';
 
 const TONES = ['blue', 'amber', 'green', 'grey'] as const;
@@ -90,28 +91,39 @@ function MaterialsTab() {
   );
 }
 
+type Tab = 'materials' | 'categories' | 'rates';
+
 export function MaterialsPage() {
+  const auth = useAuth();
+  const canCost = auth.can('COST_VIEW');
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'categories' ? 'categories' : 'materials';
+  const requested = params.get('tab');
+  const tab: Tab = requested === 'categories' ? 'categories' : requested === 'rates' && canCost ? 'rates' : 'materials';
+
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'materials', label: 'Materials' },
+    { id: 'categories', label: 'Categories' },
+    ...(canCost ? [{ id: 'rates' as const, label: 'Rates & costs' }] : []),
+  ];
 
   return (
     <>
       <PageHeader title="Material Master" subtitle="Materials are the consumption columns everywhere; categories decide how purchase quantities are calculated." />
       <div className="segmented" role="tablist" aria-label="Material Master">
-        <button type="button" role="tab" aria-selected={tab === 'materials'} aria-pressed={tab === 'materials'} onClick={() => setParams({})}>
-          Materials
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'categories'}
-          aria-pressed={tab === 'categories'}
-          onClick={() => setParams({ tab: 'categories' })}
-        >
-          Categories
-        </button>
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-pressed={tab === t.id}
+            onClick={() => setParams(t.id === 'materials' ? {} : { tab: t.id })}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
-      {tab === 'materials' ? <MaterialsTab /> : <CategoriesTab />}
+      {tab === 'materials' ? <MaterialsTab /> : tab === 'categories' ? <CategoriesTab /> : <RatesTab />}
     </>
   );
 }

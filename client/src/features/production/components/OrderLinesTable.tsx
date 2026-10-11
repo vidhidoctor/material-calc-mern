@@ -1,6 +1,6 @@
-import { variantLabel, type OrderSummaryDto, type OrderSummaryRowDto } from '@app/shared';
+import { variantLabel, type OrderCostDto, type OrderSummaryDto, type OrderSummaryRowDto } from '@app/shared';
 import { Fragment } from 'react';
-import { formatNumber } from '../../../lib/format';
+import { formatMoney, formatNumber } from '../../../lib/format';
 
 interface ComponentGroup {
   component: string;
@@ -32,8 +32,11 @@ function groupByComponent(rows: OrderSummaryRowDto[]): ComponentGroup[] {
  * and a total line under each component (no grand total).
  * Requirement = consumption per piece × quantity (from the API).
  */
-export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
+/** `cost` (Admin only) adds a ₹ column: material cost per row and per component. */
+export function OrderLinesTable({ summary, cost }: { summary: OrderSummaryDto; cost?: OrderCostDto }) {
   const used = summary.columns;
+  const rowCost = new Map(cost?.rows.map((r) => [`${r.component}\u0000${r.size}`, r.cost]) ?? []);
+  const componentCost = new Map(cost?.components.map((c) => [c.component, c.cost]) ?? []);
   const groups = groupByComponent(summary.rows);
   const cell = (value: number | string | undefined) => (value ? formatNumber(value) : <span className="muted">—</span>);
 
@@ -51,6 +54,7 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
                 {m.color && <span className="th-unit">{m.color}</span>}
               </th>
             ))}
+            {cost && <th className="align-right cost-col">Cost ₹</th>}
           </tr>
         </thead>
         <tbody>
@@ -66,6 +70,7 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
                       {cell(row.requirements[m.key])}
                     </td>
                   ))}
+                  {cost && <td className="align-right cost-col">{formatMoney(rowCost.get(`${group.component}\u0000${row.size}`) ?? null)}</td>}
                 </tr>
               ))}
               <tr className="subtotal-row">
@@ -76,6 +81,7 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
                     {cell(group.subtotals[m.key])}
                   </td>
                 ))}
+                {cost && <td className="align-right cost-col subtotal-qty">{formatMoney(componentCost.get(group.component) ?? null)}</td>}
               </tr>
             </Fragment>
           ))}

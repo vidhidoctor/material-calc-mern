@@ -18,6 +18,7 @@ export const PERMISSIONS = {
   PERMISSION_MANAGE: 'Change the permissions of a role',
   DEPARTMENT_MANAGE: 'Create departments',
   SETTINGS_MANAGE: 'Manage global config (admin emails)',
+  COST_VIEW: 'See and set material rates and costs (₹)',
 } as const;
 
 export type PermissionCode = keyof typeof PERMISSIONS;
@@ -32,6 +33,7 @@ export const PERMISSION_GROUPS: Record<string, readonly PermissionCode[]> = {
   Users: ['USER_VIEW', 'USER_CREATE', 'USER_UPDATE', 'USER_DELETE'],
   'Roles & departments': ['ROLE_MANAGE', 'PERMISSION_MANAGE', 'DEPARTMENT_MANAGE'],
   Settings: ['SETTINGS_MANAGE'],
+  Costing: ['COST_VIEW'],
 };
 
 export function permissionGroup(code: PermissionCode): string {

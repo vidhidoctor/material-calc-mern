@@ -181,7 +181,34 @@ export function convertWithCategory(
   return { values, purchase: values.get(upper(category.purchaseStep)) ?? null };
 }
 
-/** Transport format: plain decimal string, 6 decimal places max (display rounds to 2). */
-export function toDecimalString(value: Decimal): string {
-  return value.toDecimalPlaces(6).toString();
+// ---- Costing ----
+
+export interface UnitCostResult {
+  /** Basic rate × (1 + GST ÷ 100), per purchase unit (e.g. per KG, per roll). */
+  rateInclGst: Decimal;
+  /** Cost of one consumption unit (one piece, one metre …); null when it cannot be worked out. */
+  perUnit: Decimal | null;
+  error?: string;
+}
+
+/**
+ * Cost of ONE consumption unit = the category formula run with TOTAL = 1 (how many purchase units
+ * one piece/metre is) × the rate incl. GST per purchase unit. E.g. 2 MM bead: 1 ÷ 80,000 KG × ₹1,008
+ * = ₹0.0126. No rounding until display.
+ */
+export function unitCost(
+  category: CompiledCategory,
+  rules: Readonly<Record<string, number | null | undefined>>,
+  basicRate: number,
+  gstPercent: number,
+): UnitCostResult {
+  const rateInclGst = new Decimal(basicRate).times(new Decimal(gstPercent).dividedBy(100).plus(1));
+  const conversion = convertWithCategory(category, rules, new Decimal(1));
+  if (!conversion.purchase) return { rateInclGst, perUnit: null, error: conversion.error ?? MESSAGES.CONVERSION_RULE_MISSING };
+  return { rateInclGst, perUnit: conversion.purchase.times(rateInclGst) };
+}
+
+/** Transport format: plain decimal string, 6 decimal places by default (display rounds to 2). */
+export function toDecimalString(value: Decimal, places = 6): string {
+  return value.toDecimalPlaces(places).toString();
 }

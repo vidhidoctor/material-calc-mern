@@ -4,6 +4,7 @@ import { getEnv } from './config/env.js';
 import { errorHandler, notFound } from './middleware/error-handler.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
+import { costingRoutes } from './modules/costing/costing.routes.js';
 import { designsRoutes } from './modules/designs/designs.routes.js';
 import { materialCategoriesRoutes } from './modules/material-categories/material-categories.routes.js';
 import { materialsRoutes } from './modules/materials/materials.routes.js';
@@ -32,6 +33,7 @@ export function createApp(): Express {
   app.use('/api/orders', ordersRoutes);
   app.use('/api/purchase', purchaseRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/costing', costingRoutes);
 
   app.use(notFound);
   app.use(errorHandler);

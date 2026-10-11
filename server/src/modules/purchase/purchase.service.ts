@@ -1,15 +1,13 @@
 import { parseVariantKey, sortVariantKeys, type PurchaseCategoryDto, type PurchaseRequirementDto, type PurchaseTotalDto } from '@app/shared';
 import {
   calculateRequirements,
-  compileCategory,
   convertWithCategory,
   toDecimalString,
   type CalcLine,
-  type CompiledCategory,
 } from '../../calculation/engine.js';
 import { consumptionLookup } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
-import { loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
+import { compileCategories, loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
 import { OrderModel, orderLabel } from '../orders/order.model.js';
 import { findOrder } from '../orders/orders.service.js';
 import type { PurchaseQuery } from './purchase.validation.js';
@@ -49,23 +47,7 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
   });
 
   // Categories are validated when saved; a broken one is reported per material, never thrown.
-  const compiled = new Map<string, CompiledCategory | null>();
-  for (const [code, category] of categories) {
-    try {
-      compiled.set(
-        code,
-        compileCategory({
-          code: category.code,
-          name: category.name,
-          fields: category.fields.map((f) => ({ key: f.key, label: f.label, required: f.required, missingMessage: f.missingMessage })),
-          steps: category.steps.map((s) => ({ key: s.key, label: s.label, formula: s.formula })),
-          purchaseStep: category.purchaseStep,
-        }),
-      );
-    } catch {
-      compiled.set(code, null);
-    }
-  }
+  const compiled = compileCategories(categories);
 
   // Every material (plain) plus every colour variant the lines use; colours are bought separately.
   const codes = materials.map((m) => m.code);

@@ -1036,6 +1036,34 @@ a {
   width: 100%;
 }
 
+/* ---- Costing (Admin only) ---- */
+.cost-figure {
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+.cost-col {
+  color: var(--success);
+  font-weight: 600;
+}
+.stat-cost strong {
+  color: var(--success);
+}
+.rate-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.rate-preview strong {
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.row-variant td:first-child {
+  padding-left: 28px;
+}
+
 /* Clean table: plain header, thin row lines, components separated by a slightly stronger line. */
 .clean-table th {
   background: var(--surface);
