@@ -478,8 +478,30 @@ a {
   font-size: 0.72rem;
   font-weight: 700;
 }
-.add-column {
+/* Material, colour and button side by side on one line (wraps only on narrow screens). */
+.material-picker-row.add-column {
+  display: grid;
+  grid-template-columns: minmax(160px, 240px) minmax(140px, 220px) auto;
+  justify-content: start;
+  align-items: center;
+  gap: 8px;
   padding-top: 2px;
+}
+.material-picker-row.add-column .input {
+  width: 100%;
+  min-width: 0;
+}
+.material-picker-row.add-column > span {
+  grid-column: 1 / -1;
+}
+@media (max-width: 560px) {
+  .material-picker-row.add-column {
+    grid-template-columns: 1fr 1fr;
+  }
+  .material-picker-row.add-column .btn {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }
 .color-input {
   width: 170px;
