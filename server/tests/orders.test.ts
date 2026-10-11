@@ -6,6 +6,8 @@ import { bearer, createActiveUser, startTestApp, type TestContext } from './help
 import { createFixtureOrder, fixture, loadFixture, round2 } from './fixture.js';
 
 interface PurchaseTotal {
+  key: string;
+  color: string | null;
   code: string;
   total: string;
   values: Record<string, string> | null;
@@ -23,7 +25,8 @@ describe('production orders and purchase requirements', () => {
     assert.equal(res.status, 200, JSON.stringify(res.body));
     return res.body as { orderNos: number[]; components: string[]; totals: PurchaseTotal[]; errors: string[] };
   };
-  const totalOf = (totals: PurchaseTotal[], code: string) => totals.find((t) => t.code === code)!;
+  /** Row by variant key: a plain material code, or "CODE|COLOR". */
+  const totalOf = (totals: PurchaseTotal[], key: string) => totals.find((t) => t.key === key)!;
 
   before(async () => {
     ctx = await startTestApp();
@@ -212,6 +215,40 @@ describe('production orders and purchase requirements', () => {
         await MaterialModel.updateOne({ code: 'CORD' }, { $set: { 'rules.denier': 1200 } });
         await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $set: { 'rules.pcsPerKg': 35000 } });
       }
+    });
+  });
+
+  describe('colour variants', () => {
+    it('order summary and purchase keep each colour separate', async () => {
+      await ctx.api.post('/api/designs').set(bearer(ctx.adminToken)).send({ designNo: 'BL-102', productName: 'Blouse' });
+      const put = await ctx.api
+        .put('/api/designs/BL-102/components/BLOUSE')
+        .set(bearer(ctx.adminToken))
+        .send({ sizes: [{ size: '18', stitch: 1, consumption: { 'SEQ-3MM|WHITE': 120, 'SEQ-3MM|LIGHT PINK': 80, 'SEQ-3MM|DARK PINK': 60 } }] });
+      assert.equal(put.status, 200, JSON.stringify(put.body));
+      const order = await ctx.api.post('/api/orders').set(bearer(prod)).send({ designNo: 'BL-102', party: 'COLOR', quantity: 200 });
+      assert.equal(order.status, 201, JSON.stringify(order.body));
+
+      const summary = await ctx.api.get(`/api/orders/${order.body.orderNo}/summary`).set(bearer(prod));
+      assert.deepEqual(
+        summary.body.columns.map((c: { key: string; color: string | null; unit: string }) => [c.key, c.color, c.unit]),
+        [
+          ['SEQ-3MM|WHITE', 'WHITE', 'PCS'],
+          ['SEQ-3MM|LIGHT PINK', 'LIGHT PINK', 'PCS'],
+          ['SEQ-3MM|DARK PINK', 'DARK PINK', 'PCS'],
+        ],
+      );
+      assert.deepEqual(summary.body.totals, { 'SEQ-3MM|WHITE': '24000', 'SEQ-3MM|LIGHT PINK': '16000', 'SEQ-3MM|DARK PINK': '12000' });
+
+      const body = await purchase({ orderNo: String(order.body.orderNo) });
+      const white = totalOf(body.totals, 'SEQ-3MM|WHITE');
+      assert.deepEqual([white.code, white.color, white.total], ['SEQ-3MM', 'WHITE', '24000']);
+      // Each colour is converted on its own: 24,000 ÷ 31,600 = 0.76 CD of white.
+      assert.equal(round2(white.values!.CD!), 0.76);
+      assert.equal(round2(totalOf(body.totals, 'SEQ-3MM|DARK PINK').values!.CD!), 0.38);
+      // The plain SEQ-3MM row is separate (nothing ordered without a colour).
+      assert.equal(totalOf(body.totals, 'SEQ-3MM').total, '0');
+      assert.equal((await ctx.api.delete(`/api/orders/${order.body.orderNo}`).set(bearer(prod))).status, 204);
     });
   });
 

@@ -43,7 +43,9 @@ Imports in server/ and shared/ end in `.js` (NodeNext ESM).
 - Every route is validated with Zod and guarded by a permission (checked by permission code, never role name).
 - Never commit `.env` — only `server/.env.example` with placeholders.
 - Orders follow the design (context §8): no consumption copy on order lines; sizes/components used by
-  an order cannot be removed. Design consumption is stored as `[{ material, qty }]` (codes may contain dots).
+  an order cannot be removed. Design consumption is stored as `[{ material, color, qty }]` (codes may contain dots).
+- Colour variants are entered in Punching, not Admin: a column key is `CODE` or `CODE|COLOUR` (shared/src/variants.ts).
+  Each component stores its chosen columns; requirements and purchase are computed per material + colour.
 - Don't seed sample data (fixture 26-49) into Atlas; the fixture is for tests only. The user enters real data.
 
 ## Git

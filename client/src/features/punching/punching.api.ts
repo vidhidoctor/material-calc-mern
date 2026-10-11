@@ -17,7 +17,7 @@ export const createDesign = (body: { designNo: string; productName: string }) =>
 export const updateDesign = (designNo: string, body: { designNo?: string; productName?: string }) =>
   api<DesignDetailDto>(designPath(designNo), { method: 'PATCH', body });
 export const deleteDesign = (designNo: string) => api<void>(designPath(designNo), { method: 'DELETE' });
-export const putComponent = (designNo: string, name: string, materials: string[], sizes: SizeRowBody[]) =>
-  api<DesignDetailDto>(`${designPath(designNo)}/components/${encodeURIComponent(name)}`, { method: 'PUT', body: { materials, sizes } });
+export const putComponent = (designNo: string, name: string, columns: string[], sizes: SizeRowBody[]) =>
+  api<DesignDetailDto>(`${designPath(designNo)}/components/${encodeURIComponent(name)}`, { method: 'PUT', body: { columns, sizes } });
 export const deleteComponent = (designNo: string, name: string) =>
   api<DesignDetailDto>(`${designPath(designNo)}/components/${encodeURIComponent(name)}`, { method: 'DELETE' });

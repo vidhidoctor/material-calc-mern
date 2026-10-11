@@ -89,7 +89,8 @@ materials      { code (unique, e.g. "SEQ-3MM"), name, category: SEQUENCE|BEAD|CO
 designs        { designNo (unique, e.g. "26-49"), productName (e.g. "Lehenga Choli"), createdAt,
                  components: [ { name ("KALI"),
                                  sizes: [ { size ("18"), stitch (int ≥0, required), laser (int ≥0, optional),
-                                            consumption: { [materialCode]: qtyPerPiece (≥0, zeros omitted) } } ] } ] }
+                                            consumption: [{ material, color (null or e.g. "WHITE"), qty (>0) }] } ],
+                                 materials: ["SEQ-3MM", "SEQ-3MM|WHITE", …] (columns chosen for the component) } ] }
                  // component names unique within a design; sizes unique within a component
 
 orders         { orderNo (sequential int from a counters collection; internal id used in links),

@@ -1,4 +1,13 @@
-import type { Consumption, DesignDetailDto, DesignDto, DesignListItemDto } from '@app/shared';
+import {
+  COLOR_PATTERN,
+  parseVariantKey,
+  sortVariantKeys,
+  variantKey,
+  type Consumption,
+  type DesignDetailDto,
+  type DesignDto,
+  type DesignListItemDto,
+} from '@app/shared';
 import { AppError } from '../../lib/app-error.js';
 import { listMaterialColumns } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
@@ -18,6 +27,7 @@ export const DESIGN_MESSAGES = {
   exists: (designNo: string) => `Design ${designNo} already exists.`,
   componentNotFound: (name: string) => `Component ${name} not found in this design.`,
   unknownMaterial: (code: string) => `Unknown material ${code}.`,
+  badColor: (color: string) => `Colour “${color}” may only contain letters, numbers, spaces, dots, dashes, & and /.`,
   sizeInUse: (component: string, size: string, order: string) =>
     `${component} size ${size} is used by order ${order} and cannot be removed.`,
   componentInUse: (component: string, order: string) =>
@@ -37,15 +47,21 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/** Consumption keyed by variant key ("SEQ-3MM" or "SEQ-3MM|WHITE"). */
 export function toConsumption(items: readonly ConsumptionItem[]): Consumption {
-  return Object.fromEntries(items.map((item) => [item.material, item.qty]));
+  return Object.fromEntries(items.map((item) => [variantKey(item.material, item.color), item.qty]));
 }
 
-/** The component's chosen material columns; older components fall back to the materials they use. */
-export function selectedMaterials(component: DesignComponent): string[] {
+/** The component's chosen columns; older components fall back to the columns they use. */
+export function selectedColumns(component: DesignComponent): string[] {
   if (component.materials) return [...component.materials];
   const used: string[] = [];
-  for (const size of component.sizes) for (const item of size.consumption) if (!used.includes(item.material)) used.push(item.material);
+  for (const size of component.sizes) {
+    for (const item of size.consumption) {
+      const key = variantKey(item.material, item.color);
+      if (!used.includes(key)) used.push(key);
+    }
+  }
   return used;
 }
 
@@ -56,7 +72,7 @@ export function toDesignDto(design: Design): DesignDto {
     createdAt: design.createdAt.toISOString(),
     components: design.components.map((component) => ({
       name: component.name,
-      materials: selectedMaterials(component),
+      columns: selectedColumns(component),
       sizes: component.sizes.map((size) => ({
         size: size.size,
         stitch: size.stitch,
@@ -164,22 +180,28 @@ export async function putComponent(designNo: string, name: string, input: PutCom
 
   const ordered = (await MaterialModel.find({}, { code: 1 }).sort({ sortOrder: 1, code: 1 })).map((m) => m.code);
   const knownCodes = new Set(ordered);
-  for (const code of input.materials ?? []) {
+  /** "seq-3mm|white" → { code: SEQ-3MM, color: WHITE, key }, checked against Material Master. */
+  const checkKey = (raw: string) => {
+    const { code, color } = parseVariantKey(raw);
     if (!knownCodes.has(code)) throw new AppError(400, DESIGN_MESSAGES.unknownMaterial(code));
-  }
+    if (color !== null && (color.length > 30 || !COLOR_PATTERN.test(color))) throw new AppError(400, DESIGN_MESSAGES.badColor(color));
+    return { code, color, key: variantKey(code, color) };
+  };
+  const chosenColumns = (input.columns ?? []).map((raw) => checkKey(raw).key);
   const sizes: DesignSize[] = input.sizes.map((row) => {
     const consumption: ConsumptionItem[] = [];
-    for (const [rawCode, qty] of Object.entries(row.consumption)) {
-      const code = rawCode.trim().toUpperCase();
-      if (!knownCodes.has(code)) throw new AppError(400, DESIGN_MESSAGES.unknownMaterial(code));
-      if (qty > 0) consumption.push({ material: code, qty });
+    for (const [rawKey, qty] of Object.entries(row.consumption)) {
+      const { code, color } = checkKey(rawKey);
+      if (qty > 0) consumption.push({ material: code, color, qty });
     }
     return { size: row.size, stitch: row.stitch, laser: row.laser ?? null, consumption };
   });
 
-  // Chosen columns + every material that has a quantity, in Material Master order.
-  const chosen = new Set([...(input.materials ?? []), ...sizes.flatMap((s) => s.consumption.map((c) => c.material))]);
-  const materials = ordered.filter((code) => chosen.has(code));
+  // Chosen columns + every column that has a quantity; by material (Material Master order), then colour.
+  const materials = sortVariantKeys(
+    [...chosenColumns, ...sizes.flatMap((s) => s.consumption.map((c) => variantKey(c.material, c.color)))],
+    ordered,
+  );
 
   const existing = design.components.find((c) => c.name === name);
   if (existing) {

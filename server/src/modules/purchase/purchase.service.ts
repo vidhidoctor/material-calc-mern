@@ -1,4 +1,4 @@
-import type { PurchaseCategoryDto, PurchaseRequirementDto, PurchaseTotalDto } from '@app/shared';
+import { parseVariantKey, sortVariantKeys, type PurchaseCategoryDto, type PurchaseRequirementDto, type PurchaseTotalDto } from '@app/shared';
 import {
   calculateRequirements,
   compileCategory,
@@ -67,17 +67,27 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
     }
   }
 
-  const result = calculateRequirements(lines, materials.map((m) => m.code));
+  // Every material (plain) plus every colour variant the lines use; colours are bought separately.
+  const codes = materials.map((m) => m.code);
+  const byCode = new Map(materials.map((m) => [m.code, m]));
+  const keys = sortVariantKeys([...codes, ...lines.flatMap((l) => Object.keys(l.consumption ?? {}))], codes).filter((key) =>
+    byCode.has(parseVariantKey(key).code),
+  );
+  const result = calculateRequirements(lines, keys);
   const errors = [...result.errors];
-  const totals: PurchaseTotalDto[] = materials.map((material) => {
-    const total = result.totals.get(material.code)!;
+  const totals: PurchaseTotalDto[] = keys.map((key) => {
+    const { code, color } = parseVariantKey(key);
+    const material = byCode.get(code)!;
+    const total = result.totals.get(key)!;
     const category = compiled.get(material.category) ?? null;
     const conversion = category
       ? convertWithCategory(category, material.rules ?? {}, total)
       : { values: null, purchase: null, error: CATEGORY_MISSING };
-    if (conversion.error && !total.isZero()) errors.push(`${material.code}: ${conversion.error}`);
+    if (conversion.error && !total.isZero()) errors.push(`${color ? `${code} · ${color}` : code}: ${conversion.error}`);
     return {
       ...toMaterialColumn(material, categories),
+      key,
+      color,
       total: toDecimalString(total),
       rules: { ...(material.rules ?? {}) },
       values: conversion.values ? Object.fromEntries([...conversion.values].map(([k, v]) => [k, toDecimalString(v)])) : null,

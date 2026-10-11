@@ -43,9 +43,10 @@ export function CategorySection({ category, rows }: { category: PurchaseCategory
           </thead>
           <tbody>
             {rows.map((m) => (
-              <tr key={m.code}>
+              <tr key={m.key}>
                 <td>
                   <strong>{m.code}</strong>
+                  {m.color && <span className="badge badge-blue color-badge">{m.color}</span>}
                   {ruleText(category, m) && <span className="sub-figure">{ruleText(category, m)}</span>}
                 </td>
                 <td className="align-right">{formatNumber(m.total)}</td>

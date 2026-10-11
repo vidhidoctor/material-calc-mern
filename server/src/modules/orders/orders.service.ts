@@ -1,4 +1,4 @@
-import { MESSAGES, type OrderDto, type OrderListItemDto, type OrderStatus, type OrderSummaryDto } from '@app/shared';
+import { MESSAGES, parseVariantKey, sortVariantKeys, type OrderDto, type OrderListItemDto, type OrderStatus, type OrderSummaryDto } from '@app/shared';
 import { calculateRequirements, toDecimalString } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
 import { consumptionLookup, findDesign } from '../designs/designs.service.js';
@@ -116,18 +116,26 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
     loadMaterialsWithCategories(),
   ]);
   const lookup = consumptionLookup(design);
-  const codes = materials.map((m) => m.code);
-  const result = calculateRequirements(
-    order.lines.map(({ component, size, quantity }) => ({ component, size, quantity, consumption: lookup(component, size) })),
-    codes,
+  const lines = order.lines.map(({ component, size, quantity }) => ({ component, size, quantity, consumption: lookup(component, size) }));
+  // Columns = material + colour variants the order's lines use, in Material Master order.
+  const keys = sortVariantKeys(
+    lines.flatMap((l) => Object.keys(l.consumption ?? {})),
+    materials.map((m) => m.code),
   );
+  const result = calculateRequirements(lines, keys);
 
   const totals: Record<string, string> = {};
   for (const [code, total] of result.totals) if (!total.isZero()) totals[code] = toDecimalString(total);
 
   return {
     orderNo: order.orderNo,
-    materials: materials.map((m) => toMaterialColumn(m, categories)),
+    columns: keys
+      .filter((key) => totals[key] !== undefined)
+      .map((key) => {
+        const { code, color } = parseVariantKey(key);
+        const material = materials.find((m) => m.code === code);
+        return { key, code, color, unit: material ? toMaterialColumn(material, categories).unit : '' };
+      }),
     rows: result.rows.map((row) => ({
       component: row.component,
       size: row.size,

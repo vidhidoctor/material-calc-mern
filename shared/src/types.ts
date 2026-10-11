@@ -140,8 +140,16 @@ export interface MaterialDto extends MaterialColumnDto {
 
 // ---- Designs (Punching) ----
 
-/** materialCode → quantity per piece (zeros omitted). */
+/** Variant key (material code, or "CODE|COLOR") → quantity per piece (zeros omitted). */
 export type Consumption = Record<string, number>;
+
+/** A consumption column: a material, optionally in a colour (key "SEQ-3MM|WHITE", see variants.ts). */
+export interface VariantColumnDto {
+  key: string;
+  code: string;
+  color: string | null;
+  unit: string;
+}
 
 export interface DesignSizeDto {
   size: string;
@@ -152,8 +160,8 @@ export interface DesignSizeDto {
 
 export interface DesignComponentDto {
   name: string;
-  /** Material columns chosen for this component (shared by its sizes), in Material Master order. */
-  materials: string[];
+  /** Columns chosen for this component (shared by its sizes): variant keys such as "SEQ-3MM|WHITE". */
+  columns: string[];
   sizes: DesignSizeDto[];
 }
 
@@ -234,7 +242,8 @@ export interface OrderSummaryRowDto {
 
 export interface OrderSummaryDto {
   orderNo: number;
-  materials: MaterialColumnDto[];
+  /** Material + colour columns that this order requires. */
+  columns: VariantColumnDto[];
   rows: OrderSummaryRowDto[];
   totals: Record<string, DecimalString>;
   errors: string[];
@@ -243,6 +252,9 @@ export interface OrderSummaryDto {
 // ---- Purchase requirements ----
 
 export interface PurchaseTotalDto extends MaterialColumnDto {
+  /** Variant key: the material code, or "CODE|COLOR". */
+  key: string;
+  color: string | null;
   /** Required quantity in the category unit. */
   total: DecimalString;
   rules: Record<string, number>;

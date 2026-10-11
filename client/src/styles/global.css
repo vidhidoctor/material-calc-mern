@@ -470,6 +470,24 @@ a {
 .tag-remove:hover {
   background: var(--surface);
 }
+.tag-color {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-family: var(--font);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.add-column {
+  padding-top: 2px;
+}
+.color-input {
+  width: 170px;
+}
+.color-badge {
+  margin-left: 6px;
+  font-size: 0.7rem;
+}
 .material-add {
   width: auto;
   min-width: 160px;

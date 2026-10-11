@@ -1,4 +1,4 @@
-import type { DesignDetailDto, DesignSizeDto } from '@app/shared';
+import { COLOR_PATTERN, normalizeColor, parseVariantKey, sortVariantKeys, variantKey, variantLabel, type DesignDetailDto, type DesignSizeDto } from '@app/shared';
 import { useMemo, useRef, useState } from 'react';
 import { Modal } from '../../../components/Modal';
 import { ErrorAlert, Field, NumberInput, parseNumberInput } from '../../../components/ui';
@@ -7,7 +7,9 @@ import type { SizeRowBody } from '../punching.api';
 
 const SUGGESTED_COMPONENTS = ['FROCK', 'KALI', 'BLOUSE', 'BELT', 'GALISH'];
 const OTHER = '__other__';
-const STANDARD_SIZES =['18', '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40'];
+/** Suggested colours; any other colour can be typed. */
+const COMMON_COLORS = ['WHITE', 'BLACK', 'RED', 'GOLD', 'SILVER', 'COPPER', 'LIGHT PINK', 'DARK PINK', 'MAROON', 'GREEN', 'BLUE', 'CREAM'];
+const STANDARD_SIZES = ['18', '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40'];
 
 interface Row {
   key: number;
@@ -26,8 +28,9 @@ interface Props {
 }
 
 /**
- * Grid editor: one row per size with Size, Stitch, Laser and one input per material chosen for this
- * component (shared by all its sizes). Saving replaces the sizes.
+ * Grid editor: one row per size with Size, Stitch, Laser and one input per column chosen for this
+ * component (shared by all its sizes). A column is a material, optionally in a colour (SEQ-3MM · WHITE).
+ * Saving replaces the sizes.
  */
 export function ComponentEditor({ design, componentName, onClose }: Props) {
   const save = usePutComponent(design.designNo);
@@ -48,25 +51,36 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   const [custom, setCustom] = useState(false);
   const [rows, setRows] = useState<Row[]>(() => (existing ? existing.sizes.map((s) => toRow(s)) : [toRow()]));
   const [dirty, setDirty] = useState(false);
-  /** Material columns chosen for this component, kept in Material Master order. */
-  const [selected, setSelected] = useState<string[]>(() => existing?.materials ?? []);
-  const columns = design.materials.filter((m) => selected.includes(m.code));
-  const available = design.materials.filter((m) => !selected.includes(m.code));
+  /** Columns chosen for this component (variant keys such as "SEQ-3MM|WHITE"), by material then colour. */
+  const [selected, setSelected] = useState<string[]>(() => existing?.columns ?? []);
+  const materialOrder = design.materials.map((m) => m.code);
+  const materialByCode = new Map(design.materials.map((m) => [m.code, m]));
+  const columns = selected.map((key) => ({ key, ...parseVariantKey(key), unit: materialByCode.get(parseVariantKey(key).code)?.unit ?? '' }));
 
-  const addMaterial = (code: string) => {
-    if (!code) return;
+  // "Add column": a material, optionally with a colour.
+  const [newMaterial, setNewMaterial] = useState('');
+  const [newColor, setNewColor] = useState('');
+  const newKey = newMaterial ? variantKey(newMaterial, newColor) : '';
+  const colorOk = !normalizeColor(newColor) || COLOR_PATTERN.test(normalizeColor(newColor)!);
+  const canAddColumn = newKey !== '' && colorOk && !selected.includes(newKey);
+  const usedColors = [...new Set(design.components.flatMap((c) => c.columns.map((k) => parseVariantKey(k).color)).filter(Boolean))] as string[];
+  const colorSuggestions = [...new Set([...usedColors, ...COMMON_COLORS])];
+
+  const addColumn = () => {
+    if (!canAddColumn) return;
     setDirty(true);
-    setSelected((current) => design.materials.map((m) => m.code).filter((c) => c === code || current.includes(c)));
+    setSelected((current) => sortVariantKeys([...current, newKey], materialOrder));
+    setNewColor('');
   };
 
-  const removeMaterial = (code: string) => {
-    const hasValues = rows.some((r) => (parseNumberInput(r.consumption[code] ?? '') ?? 0) > 0);
-    if (hasValues && !window.confirm(`Remove ${code} from this component? Its quantities in every size will be cleared.`)) return;
+  const removeColumn = (key: string) => {
+    const hasValues = rows.some((r) => (parseNumberInput(r.consumption[key] ?? '') ?? 0) > 0);
+    if (hasValues && !window.confirm(`Remove ${variantLabel(key)} from this component? Its quantities in every size will be cleared.`)) return;
     setDirty(true);
-    setSelected((current) => current.filter((c) => c !== code));
+    setSelected((current) => current.filter((c) => c !== key));
     setRows((rs) =>
       rs.map((r) => {
-        const { [code]: _removed, ...rest } = r.consumption;
+        const { [key]: _removed, ...rest } = r.consumption;
         return { ...r, consumption: rest };
       }),
     );
@@ -122,7 +136,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
           .filter(([, qty]) => qty > 0),
       ),
     }));
-    save.mutate({ name: name.trim(), materials: selected, sizes }, { onSuccess: onClose });
+    save.mutate({ name: name.trim(), columns: selected, sizes }, { onSuccess: onClose });
   };
 
   return (
@@ -203,36 +217,55 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
           <div className="material-picker">
             <span className="field-label">Materials used by this component</span>
             <div className="material-picker-row">
-              {columns.length === 0 && <span className="muted small">None yet — add the materials this component consumes.</span>}
-              {columns.map((m) => (
-                <span key={m.code} className="tag material-tag">
-                  {m.code}
-                  <button type="button" className="tag-remove" aria-label={`Remove ${m.code}`} onClick={() => removeMaterial(m.code)}>
+              {columns.length === 0 && <span className="muted small">None yet — add the materials (and colours) this component consumes.</span>}
+              {columns.map((c) => (
+                <span key={c.key} className="tag material-tag">
+                  {c.code}
+                  {c.color && <span className="tag-color">{c.color}</span>}
+                  <button type="button" className="tag-remove" aria-label={`Remove ${variantLabel(c.key)}`} onClick={() => removeColumn(c.key)}>
                     ✕
                   </button>
                 </span>
               ))}
-              {available.length > 0 && (
-                <select
-                  className="input input-sm material-add"
-                  aria-label="Add material"
-                  value=""
-                  onChange={(e) => addMaterial(e.target.value)}
-                >
-                  <option value="">+ Add material</option>
-                  {[...new Set(available.map((m) => m.category))].map((category) => (
-                    <optgroup key={category} label={category}>
-                      {available
-                        .filter((m) => m.category === category)
-                        .map((m) => (
-                          <option key={m.code} value={m.code}>
-                            {m.code} ({m.unit})
-                          </option>
-                        ))}
-                    </optgroup>
-                  ))}
-                </select>
-              )}
+            </div>
+            <div className="material-picker-row add-column">
+              <select className="input input-sm material-add" aria-label="Material" value={newMaterial} onChange={(e) => setNewMaterial(e.target.value)}>
+                <option value="">Material…</option>
+                {[...new Set(design.materials.map((m) => m.category))].map((category) => (
+                  <optgroup key={category} label={category}>
+                    {design.materials
+                      .filter((m) => m.category === category)
+                      .map((m) => (
+                        <option key={m.code} value={m.code}>
+                          {m.code} ({m.unit})
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              </select>
+              <input
+                className={`input input-sm upper color-input ${colorOk ? '' : 'invalid'}`}
+                aria-label="Colour (optional)"
+                placeholder="Colour (optional)"
+                list="color-suggestions"
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addColumn();
+                  }
+                }}
+              />
+              <datalist id="color-suggestions">
+                {colorSuggestions.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <button type="button" className="btn btn-sm" disabled={!canAddColumn} onClick={addColumn}>
+                + Add column
+              </button>
+              {newKey && selected.includes(newKey) && <span className="muted small">{variantLabel(newKey)} is already a column.</span>}
             </div>
           </div>
         )}
@@ -244,10 +277,10 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                 <th className="sticky-col">Size</th>
                 <th className="align-right">Stitch *</th>
                 <th className="align-right">Laser</th>
-                {columns.map((m) => (
-                  <th key={m.code} className="align-right" title={`${m.code} — ${m.unit} per piece`}>
-                    {m.code}
-                    <span className="th-unit">{m.unit}</span>
+                {columns.map((c) => (
+                  <th key={c.key} className="align-right" title={`${variantLabel(c.key)} — ${c.unit} per piece`}>
+                    {c.code}
+                    <span className="th-unit">{c.color ? `${c.color} · ${c.unit}` : c.unit}</span>
                   </th>
                 ))}
                 <th aria-label="Remove" />
@@ -280,15 +313,15 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                       onChange={(v) => update(row.key, (r) => ({ ...r, laser: v }))}
                     />
                   </td>
-                  {columns.map((m) => (
-                    <td key={m.code}>
+                  {columns.map((c) => (
+                    <td key={c.key}>
                       <NumberInput
                         decimal
                         className="input-sm"
-                        aria-label={`${row.size} ${m.code}`}
+                        aria-label={`${row.size} ${variantLabel(c.key)}`}
                         placeholder="0"
-                        value={row.consumption[m.code] ?? ''}
-                        onChange={(v) => update(row.key, (r) => ({ ...r, consumption: { ...r.consumption, [m.code]: v } }))}
+                        value={row.consumption[c.key] ?? ''}
+                        onChange={(v) => update(row.key, (r) => ({ ...r, consumption: { ...r.consumption, [c.key]: v } }))}
                       />
                     </td>
                   ))}

@@ -1,4 +1,4 @@
-import type { OrderSummaryDto, OrderSummaryRowDto } from '@app/shared';
+import { variantLabel, type OrderSummaryDto, type OrderSummaryRowDto } from '@app/shared';
 import { Fragment } from 'react';
 import { formatNumber } from '../../../lib/format';
 
@@ -33,7 +33,7 @@ function groupByComponent(rows: OrderSummaryRowDto[]): ComponentGroup[] {
  * Requirement = consumption per piece × quantity (from the API).
  */
 export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
-  const used = summary.materials.filter((m) => summary.totals[m.code] !== undefined);
+  const used = summary.columns;
   const groups = groupByComponent(summary.rows);
   const cell = (value: number | string | undefined) => (value ? formatNumber(value) : <span className="muted">—</span>);
 
@@ -46,8 +46,9 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
             <th>Size</th>
             <th className="align-right">Qty</th>
             {used.map((m) => (
-              <th key={m.code} className="align-right" title={`${m.code} (${m.unit})`}>
+              <th key={m.key} className="align-right" title={`${variantLabel(m.key)} (${m.unit})`}>
                 {m.code}
+                {m.color && <span className="th-unit">{m.color}</span>}
               </th>
             ))}
           </tr>
@@ -61,8 +62,8 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
                   <td>{row.size}</td>
                   <td className="align-right">{formatNumber(row.quantity, 0)}</td>
                   {used.map((m) => (
-                    <td key={m.code} className="align-right">
-                      {cell(row.requirements[m.code])}
+                    <td key={m.key} className="align-right">
+                      {cell(row.requirements[m.key])}
                     </td>
                   ))}
                 </tr>
@@ -71,8 +72,8 @@ export function OrderLinesTable({ summary }: { summary: OrderSummaryDto }) {
                 <td colSpan={2}>{group.component} total</td>
                 <td className="align-right subtotal-qty">{formatNumber(group.quantity, 0)}</td>
                 {used.map((m) => (
-                  <td key={m.code} className="align-right">
-                    {cell(group.subtotals[m.code])}
+                  <td key={m.key} className="align-right">
+                    {cell(group.subtotals[m.key])}
                   </td>
                 ))}
               </tr>

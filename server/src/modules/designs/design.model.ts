@@ -6,6 +6,8 @@ import { model, Schema, type HydratedDocument } from 'mongoose';
  */
 export interface ConsumptionItem {
   material: string;
+  /** Colour variant entered in Punching (e.g. WHITE); null = the plain material. */
+  color: string | null;
   qty: number;
 }
 
@@ -19,8 +21,9 @@ export interface DesignSize {
 export interface DesignComponent {
   name: string;
   /**
-   * Material columns chosen for this component (shared by all its sizes), in Material Master order.
-   * Undefined on components saved before columns were selectable: then the used materials apply.
+   * Columns chosen for this component (shared by all its sizes): variant keys such as "SEQ-3MM" or
+   * "SEQ-3MM|WHITE", in Material Master order. Undefined on components saved before columns were
+   * selectable: then the used materials apply.
    */
   materials?: string[];
   sizes: DesignSize[];
@@ -38,6 +41,7 @@ export interface Design {
 const consumptionSchema = new Schema<ConsumptionItem>(
   {
     material: { type: String, required: true },
+    color: { type: String, default: null },
     qty: { type: Number, required: true, min: 0 },
   },
   { _id: false },

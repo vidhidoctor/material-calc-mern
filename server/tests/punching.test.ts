@@ -85,7 +85,7 @@ describe('materials and designs (Punching)', () => {
         .put('/api/designs/30-01/components/GALISH')
         .set(bearer(punching))
         .send({
-          materials: ['seq-4mm', 'SEQ-3MM'],
+          columns: ['seq-4mm', 'SEQ-3MM'],
           sizes: [
             { size: '18', stitch: 10, consumption: { 'SEQ-3MM': 50 } },
             { size: '20', stitch: 12, consumption: { 'SEQ-3MM': 60, CORD: 2 } },
@@ -94,21 +94,46 @@ describe('materials and designs (Punching)', () => {
       assert.equal(res.status, 200, JSON.stringify(res.body));
       const galish = res.body.components.find((c: { name: string }) => c.name === 'GALISH');
       // Chosen SEQ-4MM stays even without quantities; CORD has a quantity so it is added; Material Master order.
-      assert.deepEqual(galish.materials, ['SEQ-3MM', 'SEQ-4MM', 'CORD']);
+      assert.deepEqual(galish.columns, ['SEQ-3MM', 'SEQ-4MM', 'CORD']);
 
       const unknown = await ctx.api
         .put('/api/designs/30-01/components/GALISH')
         .set(bearer(punching))
-        .send({ materials: ['NOPE'], sizes: [{ size: '18', stitch: 1 }] });
+        .send({ columns: ['NOPE'], sizes: [{ size: '18', stitch: 1 }] });
       assert.equal(unknown.body.error, 'Unknown material NOPE.');
 
       assert.equal((await ctx.api.delete('/api/designs/30-01/components/GALISH').set(bearer(punching))).status, 200);
     });
 
+    it('a material can have colour variants, each its own column with its own quantity', async () => {
+      const res = await ctx.api
+        .put('/api/designs/30-01/components/BLOUSE')
+        .set(bearer(punching))
+        .send({
+          columns: ['SEQ-3MM|white', 'SEQ-3MM|Light  Pink', 'SEQ-3MM|DARK PINK', 'CORD'],
+          sizes: [
+            { size: '18', stitch: 10, consumption: { 'SEQ-3MM|WHITE': 120, 'SEQ-3MM|LIGHT PINK': 80, 'SEQ-3MM|DARK PINK': 60 } },
+            { size: '20', stitch: 12, consumption: { 'SEQ-3MM|WHITE': 130, CORD: 3 } },
+          ],
+        });
+      assert.equal(res.status, 200, JSON.stringify(res.body));
+      const blouse = res.body.components.find((c: { name: string }) => c.name === 'BLOUSE');
+      assert.deepEqual(blouse.columns, ['SEQ-3MM|WHITE', 'SEQ-3MM|LIGHT PINK', 'SEQ-3MM|DARK PINK', 'CORD']);
+      assert.deepEqual(blouse.sizes[0].consumption, { 'SEQ-3MM|WHITE': 120, 'SEQ-3MM|LIGHT PINK': 80, 'SEQ-3MM|DARK PINK': 60 });
+
+      const bad = await ctx.api
+        .put('/api/designs/30-01/components/BLOUSE')
+        .set(bearer(punching))
+        .send({ columns: ['SEQ-3MM|<script>'], sizes: [{ size: '18', stitch: 1 }] });
+      assert.equal(bad.status, 400);
+      assert.match(bad.body.error, /may only contain letters/);
+      assert.equal((await ctx.api.delete('/api/designs/30-01/components/BLOUSE').set(bearer(punching))).status, 200);
+    });
+
     it('components saved before column selection show the materials they use', async () => {
       const design = (await ctx.api.get('/api/designs/26-49').set(bearer(punching))).body;
       const belt = design.components.find((c: { name: string }) => c.name === 'BELT');
-      assert.deepEqual(belt.materials, ['SEQ-3MM', 'CORD']);
+      assert.deepEqual(belt.columns, ['SEQ-3MM', 'CORD']);
     });
 
     it('replaces a component\'s sizes on save', async () => {
