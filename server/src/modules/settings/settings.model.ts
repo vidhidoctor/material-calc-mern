@@ -13,6 +13,8 @@ export interface AdminEmailEntry {
 export interface Settings {
   _id: string;
   adminEmails: AdminEmailEntry[];
+  /** When the business rate sheet was applied (db/rate-sheet.ts); null = not yet. */
+  rateSheetAppliedAt?: Date | null;
 }
 
 const adminEmailSchema = new Schema<AdminEmailEntry>(
@@ -30,6 +32,7 @@ const settingsSchema = new Schema<Settings>(
   {
     _id: { type: String, required: true },
     adminEmails: { type: [adminEmailSchema], default: [] },
+    rateSheetAppliedAt: { type: Date, default: null },
   },
   { versionKey: false },
 );

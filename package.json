@@ -8,6 +8,7 @@
     "build": "npm run build -w client",
     "seed": "npm run seed -w server",
     "seed:materials": "npm run seed:materials -w server",
+    "seed:rates": "npm run seed:rates -w server --",
     "test": "npm test -w server",
     "typecheck": "npm run typecheck --workspaces --if-present"
   }

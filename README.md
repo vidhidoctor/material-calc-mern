@@ -24,6 +24,7 @@ Requirements: Node 22+ (LTS) and a free MongoDB Atlas cluster.
 | `npm run dev:client` | Web app on http://localhost:5173 (proxies `/api` to :4000) — run alongside `npm run dev` |
 | `npm run build` | Typecheck + production build of the web app |
 | `npm run seed` | Seed / re-seed foundation data |
+| `npm run seed:rates` | Load the business rate sheet (bead rates, sequence sizes, sequence type rates). Runs once automatically at API start; add `-- --force` to reset to the sheet values |
 | `npm test` | API tests on an in-memory MongoDB (never touches Atlas) |
 | `npm run typecheck` | TypeScript check of every workspace |
 

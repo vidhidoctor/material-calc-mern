@@ -8,6 +8,7 @@
     "start": "tsx src/server.ts",
     "seed": "tsx scripts/seed.ts",
     "seed:materials": "tsx scripts/seed-materials.ts",
+    "seed:rates": "tsx scripts/seed-rates.ts",
     "test": "node --import tsx --test --test-concurrency=1 \"tests/**/*.test.ts\"",
     "typecheck": "tsc -p tsconfig.json"
   },
