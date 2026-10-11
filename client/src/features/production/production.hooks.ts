@@ -10,15 +10,18 @@ import {
   getProductionDesign,
   listOrders,
   listProductionDesigns,
+  updateOrder,
   updateOrderStatus,
   type CreateOrderBody,
+  type OrderBody,
 } from './production.api';
 
 export const useProductionDesigns = (q: string) =>
   useQuery({ queryKey: queryKeys.productionDesigns(q), queryFn: () => listProductionDesigns(q), placeholderData: keepPreviousData });
 
+/** Not loaded while designNo is empty (e.g. the drawer only needs it when editing). */
 export const useProductionDesign = (designNo: string) =>
-  useQuery({ queryKey: queryKeys.productionDesign(designNo), queryFn: () => getProductionDesign(designNo) });
+  useQuery({ queryKey: queryKeys.productionDesign(designNo), queryFn: () => getProductionDesign(designNo), enabled: designNo !== '' });
 
 export const useOrders = () => useQuery({ queryKey: queryKeys.orders, queryFn: listOrders });
 export const useOrder = (orderNo: number) => useQuery({ queryKey: queryKeys.order(orderNo), queryFn: () => getOrder(orderNo) });
@@ -44,6 +47,11 @@ function useInvalidateOrders() {
 export function useCreateOrder() {
   const invalidate = useInvalidateOrders();
   return useMutation({ mutationFn: (body: CreateOrderBody) => createOrder(body), onSuccess: invalidate });
+}
+
+export function useUpdateOrder(orderNo: number) {
+  const invalidate = useInvalidateOrders();
+  return useMutation({ mutationFn: (body: OrderBody) => updateOrder(orderNo, body), onSuccess: invalidate });
 }
 
 export function useDeleteOrder() {

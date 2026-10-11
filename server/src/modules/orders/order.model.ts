@@ -28,6 +28,8 @@ export interface Order {
    * changes do not alter this order. Missing on older orders (then today's rates are used).
    */
   unitCosts?: Record<string, string>;
+  /** Type chosen in Production for each typed column, e.g. { "SEQ-3MM|PINK": "MATT" }. */
+  types?: Record<string, string>;
 }
 
 const lineSchema = new Schema<OrderLine>(
@@ -52,6 +54,7 @@ const orderSchema = new Schema<Order>(
     createdAt: { type: Date, default: () => new Date() },
     lines: { type: [lineSchema], default: [] },
     unitCosts: { type: Schema.Types.Mixed, default: undefined },
+    types: { type: Schema.Types.Mixed, default: undefined },
   },
   { versionKey: false },
 );

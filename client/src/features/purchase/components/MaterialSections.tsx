@@ -47,6 +47,7 @@ export function CategorySection({ category, rows }: { category: PurchaseCategory
                 <td>
                   <strong>{m.code}</strong>
                   {m.color && <span className="badge badge-blue color-badge">{m.color}</span>}
+                  {m.type && <span className="badge badge-amber color-badge">{m.type}</span>}
                   {ruleText(category, m) && <span className="sub-figure">{ruleText(category, m)}</span>}
                 </td>
                 <td className="align-right">{formatNumber(m.total)}</td>

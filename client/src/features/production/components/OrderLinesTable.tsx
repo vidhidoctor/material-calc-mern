@@ -33,7 +33,7 @@ function groupByComponent(rows: OrderSummaryRowDto[]): ComponentGroup[] {
  * Requirement = consumption per piece × quantity (from the API).
  */
 /** `cost` (Admin only) adds a ₹ column: material cost per row and per component. */
-export function OrderLinesTable({ summary, cost }: { summary: OrderSummaryDto; cost?: OrderCostDto }) {
+export function OrderLinesTable({ summary, cost, types = {} }: { summary: OrderSummaryDto; cost?: OrderCostDto; types?: Record<string, string> }) {
   const used = summary.columns;
   const rowCost = new Map(cost?.rows.map((r) => [`${r.component}\u0000${r.size}`, r.cost]) ?? []);
   const componentCost = new Map(cost?.components.map((c) => [c.component, c.cost]) ?? []);
@@ -51,7 +51,7 @@ export function OrderLinesTable({ summary, cost }: { summary: OrderSummaryDto; c
             {used.map((m) => (
               <th key={m.key} className="align-right" title={`${variantLabel(m.key)} (${m.unit})`}>
                 {m.code}
-                {m.color && <span className="th-unit">{m.color}</span>}
+                {(m.color || types[m.key]) && <span className="th-unit">{[m.color, types[m.key]].filter(Boolean).join(' · ')}</span>}
               </th>
             ))}
             {cost && <th className="align-right cost-col">Cost ₹</th>}

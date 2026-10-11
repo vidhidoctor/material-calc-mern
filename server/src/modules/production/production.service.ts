@@ -1,5 +1,6 @@
 import type { ProductionDesignDetailDto, ProductionDesignListItemDto } from '@app/shared';
 import { getDesignDetail, searchDesigns, toDesignListItem } from '../designs/designs.service.js';
+import { loadCategoryMap } from '../materials/materials.service.js';
 import { OrderModel } from '../orders/order.model.js';
 import { toDateOnly, totalPieces } from '../orders/orders.service.js';
 
@@ -20,12 +21,18 @@ export async function listProductionDesigns(q?: string): Promise<ProductionDesig
 
 /** Read-only design (Punching details) + previous orders, newest first. */
 export async function getProductionDesign(designNo: string): Promise<ProductionDesignDetailDto> {
-  const [detail, orders] = await Promise.all([
+  const [detail, orders, categories] = await Promise.all([
     getDesignDetail(designNo),
     OrderModel.find({ designNo }).sort({ orderNo: -1 }),
+    loadCategoryMap(),
   ]);
+  const usedCategories = new Set(detail.materials.filter((m) => m.typed).map((m) => m.category));
   return {
     ...detail,
+    typeOptions: [...usedCategories]
+      .map((code) => categories.get(code))
+      .filter((c) => c !== undefined)
+      .map((c) => ({ category: c.code, name: c.name, types: [...c.types] })),
     previousOrders: orders.map((order) => ({
       orderNo: order.orderNo,
       partyOrderNo: order.partyOrderNo,

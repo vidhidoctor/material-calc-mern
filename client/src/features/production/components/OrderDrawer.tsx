@@ -1,9 +1,12 @@
+import { variantLabel } from '@app/shared';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Drawer } from '../../../components/Drawer';
 import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
 import { formatDate, formatMoney, formatNumber } from '../../../lib/format';
-import { useDeleteOrder, useOrder, useOrderCost, useOrderSummary } from '../production.hooks';
+import { useDeleteOrder, useOrder, useOrderCost, useOrders, useOrderSummary, useProductionDesign } from '../production.hooks';
+import { NewOrderModal } from './NewOrderModal';
 import { OrderLinesTable } from './OrderLinesTable';
 
 /** Everything about one order: stats, quantities and material requirement. */
@@ -13,6 +16,11 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   const summary = useOrderSummary(orderNo);
   const cost = useOrderCost(orderNo, auth.can('COST_VIEW'));
   const remove = useDeleteOrder();
+  const [editing, setEditing] = useState(false);
+  // Only loaded while editing: the design (for the form) and previous parties (suggestions).
+  const design = useProductionDesign(editing && order.data ? order.data.designNo : '');
+  const allOrders = useOrders();
+  const parties = useMemo(() => [...new Set((allOrders.data ?? []).map((o) => o.party))].sort(), [allOrders.data]);
 
   const onDelete = () => {
     const label = order.data ? `${order.data.party}-${order.data.partyOrderNo}` : `this order`;
@@ -36,6 +44,11 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
           {auth.can('PRODUCTION_UPDATE') && (
             <button type="button" className="btn btn-danger-ghost" disabled={remove.isPending} onClick={onDelete}>
               Delete order
+            </button>
+          )}
+          {auth.can('PRODUCTION_UPDATE') && (
+            <button type="button" className="btn" disabled={!order.data} onClick={() => setEditing(true)}>
+              Edit order
             </button>
           )}
           {auth.can('PURCHASE_REQUIREMENT_VIEW') && (
@@ -84,6 +97,19 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
             )}
 
 
+            {Object.keys(o.types).length > 0 && (
+              <div className="order-type-list">
+                <span className="muted small">Types chosen</span>
+                <div className="tags">
+                  {Object.entries(o.types).map(([key, type]) => (
+                    <span key={key} className="tag">
+                      {variantLabel(key)} → <strong>{type}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <section>
               <h3 className="drawer-subtitle">Quantities &amp; material requirement</h3>
               <p className="muted small drawer-note">Requirement = consumption per piece × quantity (current Punching values).</p>
@@ -99,7 +125,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                         </ul>
                       </div>
                     )}
-                    <OrderLinesTable summary={s} cost={cost.data} />
+                    <OrderLinesTable summary={s} cost={cost.data} types={o.types} />
                   </>
                 )}
               </QueryState>
@@ -107,6 +133,15 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
           </div>
         )}
       </QueryState>
+      {editing && order.data && design.data && (
+        <NewOrderModal
+          design={design.data}
+          parties={parties}
+          order={order.data}
+          onClose={() => setEditing(false)}
+          onCreated={() => setEditing(false)}
+        />
+      )}
     </Drawer>
   );
 }

@@ -13,6 +13,8 @@ export interface CategoryBody {
   fields: { key: string; label: string; required: boolean; missingMessage?: string | null }[];
   steps: { key: string; label: string; formula: string }[];
   purchaseStep: string;
+  /** Types chosen per order in Production (e.g. MATT, METAL). */
+  types: string[];
 }
 
 export const listMaterials = () => api<MaterialDto[]>('/materials');

@@ -4,6 +4,11 @@ export const rateKeyParams = z.object({
   key: z.string({ error: 'Invalid material.' }).trim().min(1, 'Invalid material.').max(80, 'Invalid material.'),
 });
 
+export const typeRateParams = z.object({
+  category: z.string({ error: 'Invalid category.' }).trim().toUpperCase().min(1, 'Invalid category.').max(30, 'Invalid category.'),
+  type: z.string({ error: 'Invalid type.' }).trim().min(1, 'Invalid type.').max(30, 'Invalid type.'),
+});
+
 export const setRateBody = z.object({
   basicRate: z
     .number({ error: 'Basic rate must be a number.' })

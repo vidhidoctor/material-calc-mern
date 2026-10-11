@@ -118,6 +118,8 @@ export interface MaterialCategoryDto {
   steps: CategoryStepDto[];
   /** Key of the step that is the quantity to purchase. */
   purchaseStep: string;
+  /** Types chosen per order in Production (e.g. MATT, METAL, PURE GLASS); empty = no types. */
+  types: string[];
   materialCount: number;
 }
 
@@ -129,6 +131,11 @@ export interface MaterialColumnDto {
   /** Category code. */
   category: string;
   unit: string;
+  /**
+   * The category has types chosen per order in Production (e.g. sequence finish). Punching must then
+   * enter a colour for every column of this material.
+   */
+  typed: boolean;
 }
 
 export interface MaterialDto extends MaterialColumnDto {
@@ -204,6 +211,8 @@ export interface PreviousOrderDto {
 
 export interface ProductionDesignDetailDto extends DesignDetailDto {
   previousOrders: PreviousOrderDto[];
+  /** Types to choose from per order, for each typed category the design uses (e.g. Sequence finish). */
+  typeOptions: { category: string; name: string; types: string[] }[];
 }
 
 /** Orders follow the design: consumption is always read from the design's current values. */
@@ -231,6 +240,8 @@ export interface OrderListItemDto {
 
 export interface OrderDto extends OrderListItemDto {
   lines: OrderLineDto[];
+  /** Type chosen for each typed column of this order (column key "SEQ-3MM|PINK" → "MATT"). */
+  types: Record<string, string>;
 }
 
 export interface OrderSummaryRowDto {
@@ -252,9 +263,11 @@ export interface OrderSummaryDto {
 // ---- Purchase requirements ----
 
 export interface PurchaseTotalDto extends MaterialColumnDto {
-  /** Variant key: the material code, or "CODE|COLOR". */
+  /** Purchase key: material code, "CODE|COLOR", or with the order type "CODE|COLOR^TYPE". */
   key: string;
   color: string | null;
+  /** Type chosen in the order(s), e.g. MATT; null = no type (or not chosen yet). */
+  type: string | null;
   /** Required quantity in the category unit. */
   total: DecimalString;
   rules: Record<string, number>;
@@ -332,4 +345,20 @@ export interface OrderCostDto {
   /** True when some rates were not saved with the order (older orders): current rates were used. */
   usesCurrentRates: boolean;
   errors: string[];
+}
+
+/** Rate of one type of a category (e.g. Sequence · PURE GLASS ₹8,000 per roll + 5%), Admin only. */
+export interface TypeRateDto {
+  category: string;
+  categoryName: string;
+  type: string;
+  /** What the rate is per (category purchase step, e.g. "Rolls"). */
+  purchaseUnit: string;
+  /** Consumption unit (e.g. PCS). */
+  unit: string;
+  basicRate: number | null;
+  gstPercent: number | null;
+  rateInclGst: DecimalString | null;
+  /** Cost of one consumption unit of each material of the category with this type (like the rate sheet). */
+  perMaterial: { code: string; costPerUnit: DecimalString | null }[];
 }

@@ -9,7 +9,7 @@ import {
   type DesignListItemDto,
 } from '@app/shared';
 import { AppError } from '../../lib/app-error.js';
-import { listMaterialColumns } from '../materials/materials.service.js';
+import { listMaterialColumns, loadCategoryMap } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
 import { OrderModel, orderLabel } from '../orders/order.model.js';
 import {
@@ -28,6 +28,8 @@ export const DESIGN_MESSAGES = {
   componentNotFound: (name: string) => `Component ${name} not found in this design.`,
   unknownMaterial: (code: string) => `Unknown material ${code}.`,
   badColor: (color: string) => `Colour “${color}” may only contain letters, numbers, spaces, dots, dashes, & and /.`,
+  colorRequired: (code: string, category: string) =>
+    `${code} needs a colour (the ${category} type is chosen per order in Production).`,
   sizeInUse: (component: string, size: string, order: string) =>
     `${component} size ${size} is used by order ${order} and cannot be removed.`,
   componentInUse: (component: string, order: string) =>
@@ -178,13 +180,22 @@ async function firstOrderUsing(designNo: string, component: string, sizes?: stri
 export async function putComponent(designNo: string, name: string, input: PutComponentInput): Promise<DesignDetailDto> {
   const design = await findDesign(designNo);
 
-  const ordered = (await MaterialModel.find({}, { code: 1 }).sort({ sortOrder: 1, code: 1 })).map((m) => m.code);
+  const [allMaterials, categories] = await Promise.all([MaterialModel.find({}, { code: 1, category: 1 }).sort({ sortOrder: 1, code: 1 }), loadCategoryMap()]);
+  const ordered = allMaterials.map((m) => m.code);
   const knownCodes = new Set(ordered);
+  /** Category name for materials whose category has types (colour then compulsory). */
+  const typedCategory = new Map(
+    allMaterials
+      .map((m) => [m.code, categories.get(m.category)] as const)
+      .filter(([, c]) => (c?.types?.length ?? 0) > 0)
+      .map(([code, c]) => [code, c!.name]),
+  );
   /** "seq-3mm|white" → { code: SEQ-3MM, color: WHITE, key }, checked against Material Master. */
   const checkKey = (raw: string) => {
     const { code, color } = parseVariantKey(raw);
     if (!knownCodes.has(code)) throw new AppError(400, DESIGN_MESSAGES.unknownMaterial(code));
     if (color !== null && (color.length > 30 || !COLOR_PATTERN.test(color))) throw new AppError(400, DESIGN_MESSAGES.badColor(color));
+    if (color === null && typedCategory.has(code)) throw new AppError(400, DESIGN_MESSAGES.colorRequired(code, typedCategory.get(code)!));
     return { code, color, key: variantKey(code, color) };
   };
   const chosenColumns = (input.columns ?? []).map((raw) => checkKey(raw).key);

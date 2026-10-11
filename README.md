@@ -54,6 +54,8 @@ are decimal strings.
 | GET | `/costing/rates` | — (every material + colours used in designs: rate, GST, rate incl. GST, cost per unit) | COST_VIEW |
 | PUT | `/costing/rates/:key` | `{ basicRate, gstPercent }` — key = material code or `CODE|COLOUR` | COST_VIEW |
 | DELETE | `/costing/rates/:key` | — (a colour then uses its material rate) | COST_VIEW |
+| GET | `/costing/type-rates` | — (rate per type of each typed category, cost per unit for each of its materials) | COST_VIEW |
+| PUT | `/costing/type-rates/:category/:type` | `{ basicRate, gstPercent }` | COST_VIEW |
 | GET | `/costing/designs/:designNo` | — (₹ per piece by component and size, today rates) | COST_VIEW |
 | GET | `/costing/orders/:orderNo` | — (₹ for the order with the rates saved when it was created) | COST_VIEW |
 | GET | `/settings` | — (global config: admin emails) | SETTINGS_MANAGE |
@@ -79,6 +81,7 @@ are decimal strings.
 | GET | `/orders` | — (newest first) | PRODUCTION_VIEW |
 | POST | `/orders` | `{ designNo, party, orderDate?, quantity }` or `{ designNo, party, orderDate?, lines: [{ component, size, quantity }] }` | PRODUCTION_CREATE |
 | GET | `/orders/:orderNo` | — | PRODUCTION_VIEW |
+| PUT | `/orders/:orderNo` | `{ party, orderDate?, quantity \| lines, types }` — edit everything except the design; a new party gets its next number | PRODUCTION_UPDATE |
 | DELETE | `/orders/:orderNo` | — (number is not reused) | PRODUCTION_UPDATE |
 | PATCH | `/orders/:orderNo/status` | `{ status }` | PRODUCTION_UPDATE |
 | GET | `/orders/:orderNo/summary` | — (requirement per row + totals) | PRODUCTION_VIEW |

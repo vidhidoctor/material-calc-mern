@@ -156,6 +156,17 @@ expected results. The engine MUST reproduce them, e.g. 3-MM Sequence 8,861,475 P
   later rate changes do not change its cost. Older orders without saved rates use today's rates (flagged).
 - Material cost is kept separate from labour/punching charges (not modelled yet).
 
+## 5c. Material types chosen per order (decided 2026-10-12)
+
+- A category can have **types** (Admin, Material Master → Categories), e.g. Sequence: PURE GLASS, COLOR GLASS,
+  OPQ, METAL, MATT, SPARKLE. Each type has its own **rate per purchase unit + GST** (Rates & costs), shared by
+  every size: cost per sequence = type rate incl. GST ÷ (CD per roll × seq per CD).
+- **Punching** enters only size + colour + quantity; a colour is compulsory for materials of a typed category.
+- **Production** chooses the type for each typed colour **per order** (`order.types`: "SEQ-3MM|PINK" → "MATT");
+  required when creating or editing an order. Other orders and the design are not affected.
+- Procurement Planning and costing use the order's type (key `SEQ-3MM|PINK^MATT`), so each finish is bought
+  and priced separately. Orders are editable (party, date, quantities, types; not the design).
+
 ## 6. Screens and behaviour (final)
 
 Sidebar shows only pages the user may open; the first one is their landing page.

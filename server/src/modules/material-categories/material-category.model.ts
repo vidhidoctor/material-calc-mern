@@ -22,6 +22,8 @@ export interface MaterialCategory {
   fields: CategoryField[];
   steps: CategoryStep[];
   purchaseStep: string;
+  /** Types chosen per order in Production (e.g. sequence finish MATT, METAL); empty = none. */
+  types: string[];
 }
 
 const fieldSchema = new Schema<CategoryField>(
@@ -52,6 +54,7 @@ const categorySchema = new Schema<MaterialCategory>(
     fields: { type: [fieldSchema], default: [] },
     steps: { type: [stepSchema], default: [] },
     purchaseStep: { type: String, required: true },
+    types: { type: [String], default: [] },
   },
   { versionKey: false },
 );

@@ -1,4 +1,4 @@
-import type { MaterialCategoryDto } from '@app/shared';
+import { COLOR_PATTERN, normalizeType, type MaterialCategoryDto } from '@app/shared';
 import { useRef, useState } from 'react';
 import { Modal } from '../../../components/Modal';
 import { ErrorAlert, Field } from '../../../components/ui';
@@ -36,6 +36,15 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
   );
   const [steps, setSteps] = useState<StepRow[]>(() => (category?.steps ?? [{ key: '', label: '', formula: '' }]).map((s) => ({ ...s, id: id() })));
   const [purchaseStep, setPurchaseStep] = useState(category?.purchaseStep ?? '');
+  const [types, setTypes] = useState<string[]>(category?.types ?? []);
+  const [newType, setNewType] = useState('');
+  const typeName = normalizeType(newType);
+  const canAddType = typeName !== null && COLOR_PATTERN.test(typeName) && !types.includes(typeName);
+  const addType = () => {
+    if (!canAddType) return;
+    setTypes((t) => [...t, typeName!]);
+    setNewType('');
+  };
 
   const usedFields = fields.filter((f) => f.key.trim() || f.label.trim());
   const usedSteps = steps.filter((s) => s.key.trim() || s.formula.trim());
@@ -61,6 +70,7 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
       fields: usedFields.map((f) => ({ key: f.key.trim(), label: f.label.trim(), required: f.required, missingMessage: f.missingMessage })),
       steps: usedSteps.map((s) => ({ key: s.key.trim().toUpperCase(), label: s.label.trim() || s.key.trim().toUpperCase(), formula: s.formula.trim() })),
       purchaseStep: purchaseStep.toUpperCase(),
+      types,
     };
     save.mutate({ code: code.trim().toUpperCase(), body, isNew: category === null }, { onSuccess: onClose });
   };
@@ -210,6 +220,43 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
                 {n}
               </span>
             ))}
+          </div>
+        </section>
+
+        <section className="editor-section">
+          <h3>3. Types (chosen per order in Production)</h3>
+          <p className="muted small">
+            Optional, e.g. sequence finish: PURE GLASS, COLOR GLASS, MATT, METAL. When a category has types, Punching must enter a colour for its
+            materials and Production picks the type for each colour in every order. Each type gets its own rate in Rates &amp; costs.
+          </p>
+          <div className="material-picker-row">
+            {types.length === 0 && <span className="muted small">No types — this category is priced per material.</span>}
+            {types.map((t) => (
+              <span key={t} className="tag material-tag">
+                {t}
+                <button type="button" className="tag-remove" aria-label={`Remove type ${t}`} onClick={() => setTypes((list) => list.filter((x) => x !== t))}>
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="material-picker-row add-column">
+            <input
+              className={`input input-sm upper ${!typeName || COLOR_PATTERN.test(typeName) ? '' : 'invalid'}`}
+              placeholder="New type, e.g. MATT"
+              aria-label="New type"
+              value={newType}
+              onChange={(e) => setNewType(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addType();
+                }
+              }}
+            />
+            <button type="button" className="btn btn-sm" disabled={!canAddType} onClick={addType}>
+              + Add type
+            </button>
           </div>
         </section>
       </div>

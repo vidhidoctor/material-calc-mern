@@ -46,6 +46,8 @@ Imports in server/ and shared/ end in `.js` (NodeNext ESM).
   an order cannot be removed. Design consumption is stored as `[{ material, color, qty }]` (codes may contain dots).
 - Colour variants are entered in Punching, not Admin: a column key is `CODE` or `CODE|COLOUR` (shared/src/variants.ts).
   Each component stores its chosen columns; requirements and purchase are computed per material + colour.
+- Category types (e.g. sequence finish MATT/METAL/GLASS) are defined by Admin; Punching must give typed materials a
+  colour; Production picks the type per order (`order.types`, key `CODE|COLOUR^TYPE`); purchase and cost follow the type.
 - Don't seed sample data (fixture 26-49) into Atlas; the fixture is for tests only. The user enters real data.
 
 ## Git

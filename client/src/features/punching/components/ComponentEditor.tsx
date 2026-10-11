@@ -62,7 +62,9 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   const [newColor, setNewColor] = useState('');
   const newKey = newMaterial ? variantKey(newMaterial, newColor) : '';
   const colorOk = !normalizeColor(newColor) || COLOR_PATTERN.test(normalizeColor(newColor)!);
-  const canAddColumn = newKey !== '' && colorOk && !selected.includes(newKey);
+  /** Typed materials (e.g. sequence): the type is chosen per order in Production, so a colour is required here. */
+  const colorRequired = !!materialByCode.get(newMaterial)?.typed && !normalizeColor(newColor);
+  const canAddColumn = newKey !== '' && colorOk && !colorRequired && !selected.includes(newKey);
   const usedColors = [...new Set(design.components.flatMap((c) => c.columns.map((k) => parseVariantKey(k).color)).filter(Boolean))] as string[];
   const colorSuggestions = [...new Set([...usedColors, ...COMMON_COLORS])];
 
@@ -245,8 +247,8 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
               </select>
               <input
                 className={`input input-sm upper color-input ${colorOk ? '' : 'invalid'}`}
-                aria-label="Colour (optional)"
-                placeholder="Colour (optional)"
+                aria-label={materialByCode.get(newMaterial)?.typed ? 'Colour (required)' : 'Colour (optional)'}
+                placeholder={materialByCode.get(newMaterial)?.typed ? 'Colour (required)' : 'Colour (optional)'}
                 list="color-suggestions"
                 value={newColor}
                 onChange={(e) => setNewColor(e.target.value.toUpperCase())}
@@ -266,6 +268,9 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                 + Add column
               </button>
               {newKey && selected.includes(newKey) && <span className="muted small">{variantLabel(newKey)} is already a column.</span>}
+              {colorRequired && (
+                <span className="muted small">Enter the colour — the {newMaterial} type (Matt, Glass …) is chosen per order in Production.</span>
+              )}
             </div>
           </div>
         )}

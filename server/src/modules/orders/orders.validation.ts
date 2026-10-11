@@ -21,42 +21,50 @@ const orderLine = z.object({
   quantity: z.number({ error: INVALID_QUANTITY }),
 });
 
+const orderFields = z.object({
+  party: requiredName('Party').toUpperCase(),
+  orderDate: dateOnly.optional(),
+  quantity: z.number({ error: INVALID_QUANTITY }).nullable().optional(),
+  lines: z.array(orderLine, { error: 'Lines must be a list.' }).optional(),
+  /** Type per typed column of the design, e.g. { "SEQ-3MM|PINK": "MATT" } (chosen in Production). */
+  types: z
+    .record(z.string(), z.string({ error: 'Types must be text.' }), { error: 'Types must be an object of column → type.' })
+    .default({}),
+});
+
 /**
  * Either one `quantity` for every component + size ("Same for all rows"),
  * or `lines` with a quantity per row ("Different per row"; 0 = not ordered).
  */
-export const createOrderBody = z
-  .object({
-    designNo,
-    party: requiredName('Party').toUpperCase(),
-    orderDate: dateOnly.optional(),
-    quantity: z.number({ error: INVALID_QUANTITY }).nullable().optional(),
-    lines: z.array(orderLine, { error: 'Lines must be a list.' }).optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.lines === undefined) {
-      if (value.quantity == null || !isValidQuantity(value.quantity)) {
-        ctx.addIssue({ code: 'custom', path: ['quantity'], message: INVALID_QUANTITY });
-      }
-      return;
+function checkQuantities(value: z.infer<typeof orderFields>, ctx: z.RefinementCtx): void {
+  if (value.lines === undefined) {
+    if (value.quantity == null || !isValidQuantity(value.quantity)) {
+      ctx.addIssue({ code: 'custom', path: ['quantity'], message: INVALID_QUANTITY });
     }
-    if (value.quantity != null) {
-      ctx.addIssue({ code: 'custom', path: ['quantity'], message: 'Send either one Order Quantity or quantities per row, not both.' });
-      return;
+    return;
+  }
+  if (value.quantity != null) {
+    ctx.addIssue({ code: 'custom', path: ['quantity'], message: 'Send either one Order Quantity or quantities per row, not both.' });
+    return;
+  }
+  const seen = new Set<string>();
+  value.lines.forEach((line, index) => {
+    if (line.quantity !== 0 && !isValidQuantity(line.quantity)) {
+      ctx.addIssue({ code: 'custom', path: ['lines', index, 'quantity'], message: `${line.component} ${line.size}: ${INVALID_QUANTITY}` });
     }
-    const seen = new Set<string>();
-    value.lines.forEach((line, index) => {
-      if (line.quantity !== 0 && !isValidQuantity(line.quantity)) {
-        ctx.addIssue({ code: 'custom', path: ['lines', index, 'quantity'], message: `${line.component} ${line.size}: ${INVALID_QUANTITY}` });
-      }
-      const key = `${line.component} ${line.size}`;
-      if (seen.has(key)) ctx.addIssue({ code: 'custom', path: ['lines', index], message: `${key} is listed twice.` });
-      seen.add(key);
-    });
-    if (!value.lines.some((line) => line.quantity > 0)) {
-      ctx.addIssue({ code: 'custom', path: ['lines'], message: INVALID_QUANTITY });
-    }
+    const key = `${line.component} ${line.size}`;
+    if (seen.has(key)) ctx.addIssue({ code: 'custom', path: ['lines', index], message: `${key} is listed twice.` });
+    seen.add(key);
   });
+  if (!value.lines.some((line) => line.quantity > 0)) {
+    ctx.addIssue({ code: 'custom', path: ['lines'], message: INVALID_QUANTITY });
+  }
+}
+
+export const createOrderBody = orderFields.extend({ designNo }).superRefine(checkQuantities);
+
+/** Every field of an order can be edited except its design. */
+export const updateOrderBody = orderFields.superRefine(checkQuantities);
 
 export const orderNoParam = z
   .string({ error: 'Invalid order number.' })
@@ -70,3 +78,4 @@ export const updateStatusBody = z.object({
 });
 
 export type CreateOrderInput = z.infer<typeof createOrderBody>;
+export type UpdateOrderInput = z.infer<typeof updateOrderBody>;

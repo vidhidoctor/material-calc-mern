@@ -1,10 +1,15 @@
 import {
+  normalizeType,
+  parseTypedKey,
   parseVariantKey,
   sortVariantKeys,
+  typedKey,
+  typedLabel,
   variantKey,
   type DesignCostDto,
   type MaterialRateDto,
   type OrderCostDto,
+  type TypeRateDto,
 } from '@app/shared';
 import { Decimal, toDecimalString, unitCost, type CompiledCategory } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
@@ -18,7 +23,10 @@ import type { SetRateInput } from './costing.validation.js';
 
 export const COSTING_MESSAGES = {
   unknownMaterial: (code: string) => `Unknown material ${code}.`,
-  noRate: (key: string) => `${key.replace('|', ' · ')}: no rate set (Material Master → Rates & costs).`,
+  noRate: (key: string) => `${typedLabel(key)}: no rate set (Material Master → Rates & costs).`,
+  typeNotChosen: (key: string, category: string) => `${typedLabel(key)}: the ${category} type is chosen per order, so its cost is shown on orders.`,
+  unknownCategory: (code: string) => `Unknown category ${code}.`,
+  unknownType: (category: string, type: string) => `${type} is not a ${category} type.`,
   orderNotFound: (orderNo: number) => `Order #${orderNo} not found.`,
 } as const;
 
@@ -42,6 +50,9 @@ async function loadContext(): Promise<CostContext> {
   };
 }
 
+/** Rate key of a category type, e.g. "@SEQUENCE^MATT". */
+export const typeRateKey = (category: string, type: string) => `@${category}^${normalizeType(type)}`;
+
 /** A colour uses its own rate when set, otherwise its material's rate. */
 function rateFor(ctx: CostContext, key: string): { rate: MaterialRate | null; inherited: boolean } {
   const own = ctx.rates.get(key);
@@ -54,10 +65,18 @@ function rateFor(ctx: CostContext, key: string): { rate: MaterialRate | null; in
 
 /** Current cost of one consumption unit for a column key, or an error. */
 function currentUnitCost(ctx: CostContext, key: string): { perUnit: Decimal | null; rateInclGst: Decimal | null; error?: string } {
-  const { code } = parseVariantKey(key);
+  const { code, columnKey, type } = parseTypedKey(key);
   const material = ctx.materials.get(code);
   if (!material) return { perUnit: null, rateInclGst: null, error: COSTING_MESSAGES.unknownMaterial(code) };
-  const { rate } = rateFor(ctx, key);
+  const materialCategory = ctx.categories.get(material.category);
+  // Typed categories (e.g. sequence finish): the rate comes from the type chosen in the order.
+  let rate: MaterialRate | null;
+  if ((materialCategory?.types?.length ?? 0) > 0) {
+    if (!type) return { perUnit: null, rateInclGst: null, error: COSTING_MESSAGES.typeNotChosen(columnKey, materialCategory!.name) };
+    rate = ctx.rates.get(typeRateKey(material.category, type)) ?? null;
+  } else {
+    rate = rateFor(ctx, columnKey).rate;
+  }
   if (!rate) return { perUnit: null, rateInclGst: null, error: COSTING_MESSAGES.noRate(key) };
   const category = ctx.compiled.get(material.category) ?? null;
   if (!category) return { perUnit: null, rateInclGst: null, error: 'Material category is not configured.' };
@@ -82,7 +101,12 @@ export async function listRates(): Promise<MaterialRateDto[]> {
   const colourKeys = designs.flatMap((d) => d.components.flatMap((c) => selectedColumns(c))).filter((k) => parseVariantKey(k).color);
   const rateKeys = [...ctx.rates.keys()];
   const order = [...ctx.materials.keys()];
-  const keys = sortVariantKeys([...order, ...colourKeys, ...rateKeys], order).filter((k) => ctx.materials.has(parseVariantKey(k).code));
+  const typedCodes = new Set(
+    [...ctx.materials.values()].filter((m) => (ctx.categories.get(m.category)?.types?.length ?? 0) > 0).map((m) => m.code),
+  );
+  const keys = sortVariantKeys([...order, ...colourKeys, ...rateKeys.filter((k) => !k.startsWith('@'))], order).filter(
+    (k) => ctx.materials.has(parseVariantKey(k).code) && !typedCodes.has(parseVariantKey(k).code),
+  );
 
   return keys.map((key) => {
     const { code, color } = parseVariantKey(key);
@@ -136,7 +160,12 @@ export async function designCost(designNo: string): Promise<DesignCostDto> {
     if (!(key in unitCosts)) {
       const cost = currentUnitCost(ctx, key);
       unitCosts[key] = cost.perUnit ? toDecimalString(cost.perUnit, COST_PLACES) : null;
-      if (cost.error) errors.add(cost.error);
+      if (cost.error) {
+        // Typed materials (e.g. sequence) have no type in a design: one short note per category instead of one per colour.
+        const material = ctx.materials.get(parseVariantKey(key).code);
+        const category = ctx.categories.get(material?.category ?? '');
+        errors.add((category?.types?.length ?? 0) > 0 ? `${category!.name}: cost depends on the type chosen per order (see each order).` : cost.error);
+      }
     }
     return unitCosts[key] === null ? null : new Decimal(unitCosts[key]!);
   };
@@ -167,6 +196,12 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
   const [design, ctx] = await Promise.all([DesignModel.findOne({ designNo: order.designNo }), loadContext()]);
   const lookup = consumptionLookup(design);
   const saved: Record<string, string> = order.unitCosts ?? {};
+  const types = order.types ?? {};
+  const isTyped = (key: string) => {
+    const material = ctx.materials.get(parseVariantKey(key).code);
+    return (ctx.categories.get(material?.category ?? '')?.types?.length ?? 0) > 0;
+  };
+  const costKey = (key: string) => (isTyped(key) ? typedKey(key, types[key] ?? null) : key);
   const errors = new Set<string>();
   let usesCurrentRates = false;
 
@@ -184,7 +219,7 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
     const consumption = lookup(component, size);
     let cost = new Decimal(0);
     for (const [key, qty] of Object.entries(consumption ?? {})) {
-      const perUnit = unit(key);
+      const perUnit = unit(costKey(key));
       if (perUnit) cost = cost.plus(perUnit.times(qty).times(quantity));
     }
     total = total.plus(cost);
@@ -209,4 +244,50 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
     usesCurrentRates,
     errors: [...errors],
   };
+}
+
+/** Rates of every type of every typed category, with the resulting cost per unit of each material (like the rate sheet). */
+export async function listTypeRates(): Promise<TypeRateDto[]> {
+  const ctx = await loadContext();
+  const rows: TypeRateDto[] = [];
+  const categories = [...ctx.categories.values()].filter((c) => (c.types?.length ?? 0) > 0).sort((a, b) => a.sortOrder - b.sortOrder);
+  for (const category of categories) {
+    const step = category.steps.find((st) => st.key === category.purchaseStep);
+    const members = [...ctx.materials.values()].filter((m) => m.category === category.code);
+    for (const type of category.types) {
+      const rate = ctx.rates.get(typeRateKey(category.code, type)) ?? null;
+      const compiled = ctx.compiled.get(category.code) ?? null;
+      const perMaterial = members.map((m) => {
+        if (!rate || !compiled) return { code: m.code, costPerUnit: null };
+        const cost = unitCost(compiled, m.rules ?? {}, rate.basicRate, rate.gstPercent);
+        return { code: m.code, costPerUnit: cost.perUnit ? toDecimalString(cost.perUnit, COST_PLACES) : null };
+      });
+      rows.push({
+        category: category.code,
+        categoryName: category.name,
+        type,
+        purchaseUnit: step?.label ?? category.purchaseStep,
+        unit: category.unit,
+        basicRate: rate?.basicRate ?? null,
+        gstPercent: rate?.gstPercent ?? null,
+        rateInclGst: rate ? toDecimalString(new Decimal(rate.basicRate).times(new Decimal(rate.gstPercent).dividedBy(100).plus(1)), COST_PLACES) : null,
+        perMaterial,
+      });
+    }
+  }
+  return rows;
+}
+
+export async function setTypeRate(category: string, type: string, input: SetRateInput, actorEmail: string): Promise<TypeRateDto[]> {
+  const ctx = await loadContext();
+  const found = ctx.categories.get(category);
+  if (!found) throw new AppError(404, COSTING_MESSAGES.unknownCategory(category));
+  const name = normalizeType(type) ?? '';
+  if (!found.types.includes(name)) throw new AppError(404, COSTING_MESSAGES.unknownType(found.name, name));
+  await MaterialRateModel.updateOne(
+    { key: typeRateKey(category, name) },
+    { $set: { basicRate: input.basicRate, gstPercent: input.gstPercent, updatedAt: new Date(), updatedBy: actorEmail } },
+    { upsert: true },
+  );
+  return listTypeRates();
 }

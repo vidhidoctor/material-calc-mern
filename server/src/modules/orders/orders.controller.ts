@@ -1,7 +1,7 @@
 import type { OrderStatus } from '@app/shared';
 import type { Request, Response } from 'express';
 import * as ordersService from './orders.service.js';
-import type { CreateOrderInput } from './orders.validation.js';
+import type { CreateOrderInput, UpdateOrderInput } from './orders.validation.js';
 
 /** After validate(), orderNo is a number. */
 const orderNoOf = (req: Request): number => (req.params as unknown as { orderNo: number }).orderNo;
@@ -20,6 +20,10 @@ export async function get(req: Request, res: Response): Promise<void> {
 
 export async function updateStatus(req: Request, res: Response): Promise<void> {
   res.json(await ordersService.updateStatus(orderNoOf(req), (req.body as { status: OrderStatus }).status));
+}
+
+export async function update(req: Request, res: Response): Promise<void> {
+  res.json(await ordersService.updateOrder(orderNoOf(req), req.body as UpdateOrderInput));
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {

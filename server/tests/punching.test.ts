@@ -36,7 +36,7 @@ describe('materials and designs (Punching)', () => {
       const res = await ctx.api.get('/api/designs/26-49').set(bearer(punching));
       assert.equal(res.status, 200);
       assert.equal(res.body.materials.length, 11);
-      assert.deepEqual(res.body.materials[0], { code: 'SEQ-3MM', name: '3-MM Sequence', category: 'SEQUENCE', unit: 'PCS' });
+      assert.deepEqual(res.body.materials[0], { code: 'SEQ-3MM', name: '3-MM Sequence', category: 'SEQUENCE', unit: 'PCS', typed: false });
       assert.equal(res.body.materials.at(-1).unit, 'MTR');
     });
   });

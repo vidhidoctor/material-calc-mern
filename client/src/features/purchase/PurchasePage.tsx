@@ -66,7 +66,7 @@ export function PurchasePage() {
     (m) =>
       (category === 'ALL' || m.category === category) &&
       (!onlyRequired || Number(m.total) > 0) &&
-      (!query || m.code.includes(query) || m.name.toUpperCase().includes(query) || (m.color ?? '').includes(query)),
+      (!query || m.code.includes(query) || m.name.toUpperCase().includes(query) || (m.color ?? '').includes(query) || (m.type ?? '').includes(query)),
   );
   const categoryList = data?.categories ?? [];
   const byCategory = (code: string) => visible.filter((m) => m.category === code);

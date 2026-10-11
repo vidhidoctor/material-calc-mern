@@ -1,4 +1,13 @@
-import { parseVariantKey, sortVariantKeys, type PurchaseCategoryDto, type PurchaseRequirementDto, type PurchaseTotalDto } from '@app/shared';
+import {
+  parseTypedKey,
+  parseVariantKey,
+  sortVariantKeys,
+  typedKey,
+  typedLabel,
+  type PurchaseCategoryDto,
+  type PurchaseRequirementDto,
+  type PurchaseTotalDto,
+} from '@app/shared';
 import {
   calculateRequirements,
   convertWithCategory,
@@ -32,16 +41,26 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
   const lookups = new Map(designs.map((d) => [d.designNo, consumptionLookup(d)]));
   const missingDesign = consumptionLookup(null);
 
+  const typedCodes = new Set(materials.filter((m) => (categories.get(m.category)?.types?.length ?? 0) > 0).map((m) => m.code));
+  /** Consumption with typed columns renamed to the order's chosen type (bought and priced per type). */
+  const withTypes = (consumption: Record<string, number> | null, types: Record<string, string>) =>
+    consumption === null
+      ? null
+      : Object.fromEntries(
+          Object.entries(consumption).map(([key, qty]) => [typedCodes.has(parseVariantKey(key).code) ? typedKey(key, types[key] ?? null) : key, qty]),
+        );
+
   const wanted = new Set(components);
   const lines: CalcLine[] = orders.flatMap((order) => {
     const lookup = lookups.get(order.designNo) ?? missingDesign;
+    const types = order.types ?? {};
     return order.lines
       .filter((line) => wanted.size === 0 || wanted.has(line.component))
       .map(({ component, size, quantity }) => ({
         component,
         size,
         quantity,
-        consumption: lookup(component, size),
+        consumption: withTypes(lookup(component, size), types),
         label: `${orderLabel(order)} ${component} ${size}`,
       }));
   });
@@ -53,23 +72,24 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
   const codes = materials.map((m) => m.code);
   const byCode = new Map(materials.map((m) => [m.code, m]));
   const keys = sortVariantKeys([...codes, ...lines.flatMap((l) => Object.keys(l.consumption ?? {}))], codes).filter((key) =>
-    byCode.has(parseVariantKey(key).code),
+    byCode.has(parseTypedKey(key).code),
   );
   const result = calculateRequirements(lines, keys);
   const errors = [...result.errors];
   const totals: PurchaseTotalDto[] = keys.map((key) => {
-    const { code, color } = parseVariantKey(key);
+    const { code, color, type } = parseTypedKey(key);
     const material = byCode.get(code)!;
     const total = result.totals.get(key)!;
     const category = compiled.get(material.category) ?? null;
     const conversion = category
       ? convertWithCategory(category, material.rules ?? {}, total)
       : { values: null, purchase: null, error: CATEGORY_MISSING };
-    if (conversion.error && !total.isZero()) errors.push(`${color ? `${code} · ${color}` : code}: ${conversion.error}`);
+    if (conversion.error && !total.isZero()) errors.push(`${typedLabel(key)}: ${conversion.error}`);
     return {
       ...toMaterialColumn(material, categories),
       key,
       color,
+      type,
       total: toDecimalString(total),
       rules: { ...(material.rules ?? {}) },
       values: conversion.values ? Object.fromEntries([...conversion.values].map(([k, v]) => [k, toDecimalString(v)])) : null,

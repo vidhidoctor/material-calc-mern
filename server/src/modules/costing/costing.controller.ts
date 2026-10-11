@@ -22,3 +22,11 @@ export async function designCost(req: Request<{ designNo: string }>, res: Respon
 export async function orderCost(req: Request, res: Response): Promise<void> {
   res.json(await costingService.orderCost((req.params as unknown as { orderNo: number }).orderNo));
 }
+
+export async function listTypeRates(_req: Request, res: Response): Promise<void> {
+  res.json(await costingService.listTypeRates());
+}
+
+export async function setTypeRate(req: Request<{ category: string; type: string }>, res: Response): Promise<void> {
+  res.json(await costingService.setTypeRate(req.params.category, req.params.type, req.body as SetRateInput, getAuth(req).user.email));
+}

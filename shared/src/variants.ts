@@ -52,3 +52,33 @@ export function sortVariantKeys(keys: Iterable<string>, materialOrder: readonly 
     )
     .map((v) => v.key);
 }
+
+// ---- Material types (e.g. sequence finish: MATT, METAL, PURE GLASS) ----
+// Types belong to a category (Admin), are chosen per ORDER in Production for each colour column, and
+// set the rate. A typed key adds the type to a column key: "SEQ-3MM|PINK^MATT".
+
+export const TYPE_SEPARATOR = '^';
+
+/** Type names: same characters as colours; stored upper-case. */
+export function normalizeType(type: string | null | undefined): string | null {
+  return normalizeColor(type);
+}
+
+/** "SEQ-3MM|PINK" + "matt" → "SEQ-3MM|PINK^MATT"; no type → the column key itself. */
+export function typedKey(columnKey: string, type?: string | null): string {
+  const t = normalizeType(type);
+  return t ? `${columnKey}${TYPE_SEPARATOR}${t}` : columnKey;
+}
+
+export function parseTypedKey(key: string): VariantParts & { columnKey: string; type: string | null } {
+  const index = key.indexOf(TYPE_SEPARATOR);
+  const columnKey = index === -1 ? key : key.slice(0, index);
+  const type = index === -1 ? null : normalizeType(key.slice(index + 1));
+  return { ...parseVariantKey(columnKey), columnKey, type };
+}
+
+/** "SEQ-3MM · PINK · MATT" for display. */
+export function typedLabel(key: string): string {
+  const { columnKey, type } = parseTypedKey(key);
+  return type ? `${variantLabel(columnKey)} · ${type}` : variantLabel(columnKey);
+}

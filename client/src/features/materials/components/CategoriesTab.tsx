@@ -71,6 +71,18 @@ export function CategoriesTab() {
                         </div>
                       )}
                     </div>
+                    {c.types.length > 0 && (
+                      <div>
+                        <div className="category-label">Types (chosen per order)</div>
+                        <div className="tags">
+                          {c.types.map((t) => (
+                            <span key={t} className="tag">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div>
                       <div className="category-label">Formula</div>
                       <ol className="steps">

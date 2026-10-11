@@ -15,8 +15,13 @@ export interface OrderLineBody {
   quantity: number;
 }
 
-/** Either one quantity for every row, or a quantity per row. */
-export type CreateOrderBody = { designNo: string; party: string; orderDate: string } & (
+/** Either one quantity for every row, or a quantity per row; plus the type of each typed column. */
+export type OrderBody = { party: string; orderDate: string; types: Record<string, string> } & (
+  | { quantity: number; lines?: undefined }
+  | { quantity?: undefined; lines: OrderLineBody[] }
+);
+
+export type CreateOrderBody = { designNo: string; party: string; orderDate: string; types?: Record<string, string> } & (
   | { quantity: number; lines?: undefined }
   | { quantity?: undefined; lines: OrderLineBody[] }
 );
@@ -32,6 +37,7 @@ export const listOrders = () => api<OrderListItemDto[]>('/orders');
 export const getOrder = (orderNo: number) => api<OrderDto>(`/orders/${orderNo}`);
 export const getOrderSummary = (orderNo: number) => api<OrderSummaryDto>(`/orders/${orderNo}/summary`);
 export const createOrder = (body: CreateOrderBody) => api<OrderDto>('/orders', { method: 'POST', body });
+export const updateOrder = (orderNo: number, body: OrderBody) => api<OrderDto>(`/orders/${orderNo}`, { method: 'PUT', body });
 export const deleteOrder = (orderNo: number) => api<void>(`/orders/${orderNo}`, { method: 'DELETE' });
 export const updateOrderStatus = (orderNo: number, status: OrderStatus) =>
   api<OrderDto>(`/orders/${orderNo}/status`, { method: 'PATCH', body: { status } });

@@ -44,7 +44,14 @@ export async function loadCategoryMap(): Promise<CategoryMap> {
 }
 
 export function toMaterialColumn(material: Material, categories: CategoryMap): MaterialColumnDto {
-  return { code: material.code, name: material.name, category: material.category, unit: categories.get(material.category)?.unit ?? '' };
+  const category = categories.get(material.category);
+  return {
+    code: material.code,
+    name: material.name,
+    category: material.category,
+    unit: category?.unit ?? '',
+    typed: (category?.types?.length ?? 0) > 0,
+  };
 }
 
 function toMaterialDto(material: Material, categories: CategoryMap): MaterialDto {

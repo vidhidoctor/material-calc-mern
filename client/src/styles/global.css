@@ -1036,6 +1036,47 @@ a {
   width: 100%;
 }
 
+/* ---- Types chosen per order (e.g. sequence finish) ---- */
+.order-types {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.order-types-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.set-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.set-all .input,
+.order-type-row .input {
+  width: 180px;
+  min-width: 0;
+}
+.order-type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+}
+.order-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 /* ---- Costing (Admin only) ---- */
 .cost-figure {
   color: var(--success);

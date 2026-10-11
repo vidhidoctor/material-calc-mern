@@ -20,6 +20,7 @@ function toCategoryDto(category: MaterialCategory, materialCount: number): Mater
     fields: category.fields.map((f) => ({ key: f.key, label: f.label, required: f.required, missingMessage: f.missingMessage ?? null })),
     steps: category.steps.map((s) => ({ key: s.key, label: s.label, formula: s.formula })),
     purchaseStep: category.purchaseStep,
+    types: [...(category.types ?? [])],
     materialCount,
   };
 }
@@ -32,6 +33,7 @@ function prepare(input: UpdateCategoryInput): Omit<MaterialCategory, 'code' | 's
     fields: input.fields.map((f) => ({ key: f.key, label: f.label, required: f.required, missingMessage: f.missingMessage || null })),
     steps: input.steps.map((s) => ({ key: s.key.toUpperCase(), label: s.label, formula: s.formula })),
     purchaseStep: input.purchaseStep.toUpperCase(),
+    types: input.types,
   };
   const problems = validateCategory({ code: '', ...definition });
   if (problems.length > 0) {
