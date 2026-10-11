@@ -120,8 +120,8 @@ export async function updateMaterial(code: string, input: UpdateMaterialInput): 
   const material = await MaterialModel.findOne({ code });
   if (!material) throw new AppError(404, MATERIAL_MESSAGES.NOT_FOUND);
   const { category, rules } = await categoryRules(input);
-  // The name is optional; without one the material is shown by its code.
-  material.set({ name: input.name || material.code, category, rules });
+  // The name is optional: left out = keep it; empty = fall back to the code.
+  material.set({ name: input.name === undefined ? material.name : input.name || material.code, category, rules });
   material.markModified('rules');
   await material.save();
   return toMaterialDto(material, await loadCategoryMap());

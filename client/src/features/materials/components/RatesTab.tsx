@@ -164,28 +164,52 @@ function useRateMutations() {
 
 const label = (r: MaterialRateDto) => (r.color ? `${r.code} · ${r.color}` : r.code);
 
-/** Edit a rate: basic rate per purchase unit + GST %. Rate incl. GST is shown live; cost per piece after saving. */
+/**
+ * Edit a material's costing in one place: basic rate + GST, and its conversion values (e.g. Pieces per
+ * KG). Rate incl. GST is shown live; the cost per piece is recalculated on save.
+ */
 function RateModal({ row, onClose }: { row: MaterialRateDto; onClose: () => void }) {
-  const { save } = useRateMutations();
+  const queryClient = useQueryClient();
   const [basic, setBasic] = useState(row.inherited || row.basicRate === null ? '' : String(row.basicRate));
   const [gst, setGst] = useState(row.inherited || row.gstPercent === null ? '12' : String(row.gstPercent));
+  // Conversion values belong to the material (not to a colour), so they are edited on the material row only.
+  const editFields = row.color === null && row.fields.length > 0;
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    Object.fromEntries(row.fields.map((f) => [f.key, f.value === null ? '' : String(f.value)])),
+  );
   const basicValue = parseNumberInput(basic);
   const gstValue = parseNumberInput(gst) ?? 0;
   const incl = basicValue === null ? null : basicValue * (1 + gstValue / 100);
+  const fieldsMissing = editFields && row.fields.some((f) => f.required && !(parseNumberInput(values[f.key] ?? '') ?? 0));
+  const fieldsChanged = editFields && row.fields.some((f) => (parseNumberInput(values[f.key] ?? '') ?? null) !== f.value);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (fieldsChanged) {
+        await api(`/materials/${encodeURIComponent(row.code)}`, {
+          method: 'PUT',
+          body: { category: row.category, rules: Object.fromEntries(row.fields.map((f) => [f.key, parseNumberInput(values[f.key] ?? '')])) },
+        });
+      }
+      return api<MaterialRateDto[]>(ratePath(row.key), { method: 'PUT', body: { basicRate: basicValue, gstPercent: gstValue } });
+    },
+    onSuccess: () =>
+      Promise.all([queryKeys.costing, queryKeys.materials, queryKeys.purchase].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
+  });
 
   return (
     <Modal
       open
       title={`Rate — ${label(row)}`}
       onClose={onClose}
-      onSubmit={() => basicValue !== null && save.mutate({ key: row.key, basicRate: basicValue, gstPercent: gstValue }, { onSuccess: onClose })}
+      onSubmit={() => basicValue !== null && !fieldsMissing && save.mutate(undefined, { onSuccess: onClose })}
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={save.isPending || basicValue === null || gstValue > 100}>
-            {save.isPending ? 'Saving…' : 'Save rate'}
+          <button type="submit" className="btn btn-primary" disabled={save.isPending || basicValue === null || gstValue > 100 || fieldsMissing}>
+            {save.isPending ? 'Saving…' : 'Save'}
           </button>
         </>
       }
@@ -204,13 +228,17 @@ function RateModal({ row, onClose }: { row: MaterialRateDto; onClose: () => void
           <Field label="GST %" required>
             <NumberInput decimal value={gst} onChange={setGst} />
           </Field>
+          {editFields &&
+            row.fields.map((f) => (
+              <Field key={f.key} label={f.label} required={f.required}>
+                <NumberInput decimal value={values[f.key] ?? ''} onChange={(v) => setValues((current) => ({ ...current, [f.key]: v }))} />
+              </Field>
+            ))}
         </div>
         <div className="rate-preview">
           <span className="muted small">Rate incl. GST</span>
           <strong>{incl === null ? '—' : `${formatMoney(incl, 4)} per ${row.purchaseUnit || 'unit'}`}</strong>
-          <span className="muted small">
-            Cost per {row.unit || 'unit'} is worked out from the material's conversion rule when you save.
-          </span>
+          <span className="muted small">The cost per {row.unit || 'unit'} is recalculated when you save.</span>
         </div>
       </div>
     </Modal>
@@ -242,6 +270,18 @@ export function RatesTab() {
       render: (r) => (r.basicRate === null ? <span className="muted">Not set</span> : `${formatMoney(r.basicRate)} / ${r.purchaseUnit}`),
     },
     { key: 'gst', header: 'GST', align: 'right', render: (r) => (r.gstPercent === null ? '—' : `${formatNumber(r.gstPercent)}%`) },
+    // Conversion values of the materials shown (e.g. Pieces per KG); a colour shows its material's value.
+    ...[...new Map((rates.data ?? []).flatMap((r) => r.fields.map((f) => [f.key, f.label] as const))).entries()].map<Column<MaterialRateDto>>(
+      ([key, fieldLabel]) => ({
+        key: `field-${key}`,
+        header: fieldLabel,
+        align: 'right',
+        render: (r) => {
+          const value = r.fields.find((f) => f.key === key)?.value;
+          return value === undefined || value === null ? <span className="muted">—</span> : formatNumber(value);
+        },
+      }),
+    ),
     { key: 'incl', header: 'Rate incl. GST', align: 'right', render: (r) => (r.rateInclGst === null ? '—' : `${formatMoney(r.rateInclGst)} / ${r.purchaseUnit}`) },
     {
       key: 'cost',

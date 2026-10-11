@@ -261,7 +261,9 @@ describe('materials and designs (Punching)', () => {
       assert.equal(created.body.name, 'SEQ-5MM');
       const named = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ name: '5-MM', category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
       assert.equal(named.body.name, '5-MM');
-      const cleared = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
+      const kept = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
+      assert.equal(kept.body.name, '5-MM');
+      const cleared = await ctx.api.put('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken)).send({ name: '', category: 'SEQUENCE', rules: { seqPerCd: 9000, cdPerRoll: 60 } });
       assert.equal(cleared.body.name, 'SEQ-5MM');
       assert.equal((await ctx.api.delete('/api/materials/SEQ-5MM').set(bearer(ctx.adminToken))).status, 204);
     });

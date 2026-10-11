@@ -303,6 +303,10 @@ export interface MaterialRateDto {
   key: string;
   code: string;
   color: string | null;
+  /** Category code (its fields are the conversion values, e.g. Pieces per KG). */
+  category: string;
+  /** The material conversion values used in the cost (e.g. Pieces per KG 80,000). */
+  fields: { key: string; label: string; required: boolean; value: number | null }[];
   /** Consumption unit (PCS, MTR …). */
   unit: string;
   /** What the rate is per, from the category purchase step (e.g. "KG", "Rolls"). */

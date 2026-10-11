@@ -69,6 +69,7 @@ describe('business rate sheet (loaded once, editable, calculations match the she
       assert.ok(row, code);
       assert.equal(row.rateInclGst, expected.incl, code);
       assert.equal(round(row.costPerUnit, 3), expected.perPiece, code);
+      assert.equal((row as unknown as { fields: { key: string; value: number }[] }).fields[0]!.key, 'pcsPerKg');
     }
     // Sequences are priced by type, not per material.
     assert.equal(list.some((r) => r.key.startsWith('SEQ-')), false);

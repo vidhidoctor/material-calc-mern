@@ -119,6 +119,13 @@ export async function listRates(): Promise<MaterialRateDto[]> {
       key,
       code,
       color,
+      category: material.category,
+      fields: (category?.fields ?? []).map((f) => ({
+        key: f.key,
+        label: f.label,
+        required: f.required,
+        value: typeof material.rules?.[f.key] === 'number' ? material.rules[f.key]! : null,
+      })),
       unit: category?.unit ?? '',
       purchaseUnit: step?.label ?? category?.purchaseStep ?? '',
       basicRate: rate?.basicRate ?? null,
