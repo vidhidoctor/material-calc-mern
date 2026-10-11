@@ -152,6 +152,8 @@ export interface DesignSizeDto {
 
 export interface DesignComponentDto {
   name: string;
+  /** Material columns chosen for this component (shared by its sizes), in Material Master order. */
+  materials: string[];
   sizes: DesignSizeDto[];
 }
 

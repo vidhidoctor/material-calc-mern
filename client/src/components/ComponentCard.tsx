@@ -10,9 +10,9 @@ interface Props {
   removing?: boolean;
 }
 
-/** One component: its sizes, Stitch, Laser and per-piece consumption (only materials it uses). */
+/** One component: its sizes, Stitch, Laser and per-piece consumption (only the materials chosen for it). */
 export function ComponentCard({ component, materials, onEdit, onRemove, removing }: Props) {
-  const used = materials.filter((m) => component.sizes.some((s) => (s.consumption[m.code] ?? 0) > 0));
+  const used = materials.filter((m) => component.materials.includes(m.code));
 
   const columns: Column<DesignSizeDto>[] = [
     { key: 'size', header: 'Size', render: (s) => <strong>{s.size}</strong> },

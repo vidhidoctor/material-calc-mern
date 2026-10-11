@@ -25,7 +25,10 @@ interface Props {
   onClose: () => void;
 }
 
-/** Grid editor: one row per size with Size, Stitch, Laser and one input per material. Saving replaces the sizes. */
+/**
+ * Grid editor: one row per size with Size, Stitch, Laser and one input per material chosen for this
+ * component (shared by all its sizes). Saving replaces the sizes.
+ */
 export function ComponentEditor({ design, componentName, onClose }: Props) {
   const save = usePutComponent(design.designNo);
   const nextKey = useRef(0);
@@ -45,6 +48,29 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   const [custom, setCustom] = useState(false);
   const [rows, setRows] = useState<Row[]>(() => (existing ? existing.sizes.map((s) => toRow(s)) : [toRow()]));
   const [dirty, setDirty] = useState(false);
+  /** Material columns chosen for this component, kept in Material Master order. */
+  const [selected, setSelected] = useState<string[]>(() => existing?.materials ?? []);
+  const columns = design.materials.filter((m) => selected.includes(m.code));
+  const available = design.materials.filter((m) => !selected.includes(m.code));
+
+  const addMaterial = (code: string) => {
+    if (!code) return;
+    setDirty(true);
+    setSelected((current) => design.materials.map((m) => m.code).filter((c) => c === code || current.includes(c)));
+  };
+
+  const removeMaterial = (code: string) => {
+    const hasValues = rows.some((r) => (parseNumberInput(r.consumption[code] ?? '') ?? 0) > 0);
+    if (hasValues && !window.confirm(`Remove ${code} from this component? Its quantities in every size will be cleared.`)) return;
+    setDirty(true);
+    setSelected((current) => current.filter((c) => c !== code));
+    setRows((rs) =>
+      rs.map((r) => {
+        const { [code]: _removed, ...rest } = r.consumption;
+        return { ...r, consumption: rest };
+      }),
+    );
+  };
 
   const taken = new Set(design.components.map((c) => c.name));
   const suggestions = SUGGESTED_COMPONENTS.filter((c) => !taken.has(c));
@@ -91,11 +117,12 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
       laser: parseNumberInput(row.laser),
       consumption: Object.fromEntries(
         Object.entries(row.consumption)
+          .filter(([code]) => selected.includes(code))
           .map(([code, value]) => [code, parseNumberInput(value) ?? 0] as const)
           .filter(([, qty]) => qty > 0),
       ),
     }));
-    save.mutate({ name: name.trim(), sizes }, { onSuccess: onClose });
+    save.mutate({ name: name.trim(), materials: selected, sizes }, { onSuccess: onClose });
   };
 
   return (
@@ -170,8 +197,44 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
           )}
         </div>
 
-        {design.materials.length === 0 && (
+        {design.materials.length === 0 ? (
           <div className="alert alert-info">No materials yet. Add them in Admin → Material Master to enter consumption.</div>
+        ) : (
+          <div className="material-picker">
+            <span className="field-label">Materials used by this component</span>
+            <div className="material-picker-row">
+              {columns.length === 0 && <span className="muted small">None yet — add the materials this component consumes.</span>}
+              {columns.map((m) => (
+                <span key={m.code} className="tag material-tag">
+                  {m.code}
+                  <button type="button" className="tag-remove" aria-label={`Remove ${m.code}`} onClick={() => removeMaterial(m.code)}>
+                    ✕
+                  </button>
+                </span>
+              ))}
+              {available.length > 0 && (
+                <select
+                  className="input input-sm material-add"
+                  aria-label="Add material"
+                  value=""
+                  onChange={(e) => addMaterial(e.target.value)}
+                >
+                  <option value="">+ Add material</option>
+                  {[...new Set(available.map((m) => m.category))].map((category) => (
+                    <optgroup key={category} label={category}>
+                      {available
+                        .filter((m) => m.category === category)
+                        .map((m) => (
+                          <option key={m.code} value={m.code}>
+                            {m.code} ({m.unit})
+                          </option>
+                        ))}
+                    </optgroup>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
         )}
 
         <div className="table-wrap editor-grid">
@@ -181,7 +244,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                 <th className="sticky-col">Size</th>
                 <th className="align-right">Stitch *</th>
                 <th className="align-right">Laser</th>
-                {design.materials.map((m) => (
+                {columns.map((m) => (
                   <th key={m.code} className="align-right" title={`${m.code} — ${m.unit} per piece`}>
                     {m.code}
                     <span className="th-unit">{m.unit}</span>
@@ -217,7 +280,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                       onChange={(v) => update(row.key, (r) => ({ ...r, laser: v }))}
                     />
                   </td>
-                  {design.materials.map((m) => (
+                  {columns.map((m) => (
                     <td key={m.code}>
                       <NumberInput
                         decimal

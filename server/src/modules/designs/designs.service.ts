@@ -3,7 +3,14 @@ import { AppError } from '../../lib/app-error.js';
 import { listMaterialColumns } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
 import { OrderModel, orderLabel } from '../orders/order.model.js';
-import { DesignModel, type ConsumptionItem, type Design, type DesignDocument, type DesignSize } from './design.model.js';
+import {
+  DesignModel,
+  type ConsumptionItem,
+  type Design,
+  type DesignComponent,
+  type DesignDocument,
+  type DesignSize,
+} from './design.model.js';
 import type { CreateDesignInput, PutComponentInput, UpdateDesignInput } from './designs.validation.js';
 
 export const DESIGN_MESSAGES = {
@@ -34,6 +41,14 @@ export function toConsumption(items: readonly ConsumptionItem[]): Consumption {
   return Object.fromEntries(items.map((item) => [item.material, item.qty]));
 }
 
+/** The component's chosen material columns; older components fall back to the materials they use. */
+export function selectedMaterials(component: DesignComponent): string[] {
+  if (component.materials) return [...component.materials];
+  const used: string[] = [];
+  for (const size of component.sizes) for (const item of size.consumption) if (!used.includes(item.material)) used.push(item.material);
+  return used;
+}
+
 export function toDesignDto(design: Design): DesignDto {
   return {
     designNo: design.designNo,
@@ -41,6 +56,7 @@ export function toDesignDto(design: Design): DesignDto {
     createdAt: design.createdAt.toISOString(),
     components: design.components.map((component) => ({
       name: component.name,
+      materials: selectedMaterials(component),
       sizes: component.sizes.map((size) => ({
         size: size.size,
         stitch: size.stitch,
@@ -146,7 +162,11 @@ async function firstOrderUsing(designNo: string, component: string, sizes?: stri
 export async function putComponent(designNo: string, name: string, input: PutComponentInput): Promise<DesignDetailDto> {
   const design = await findDesign(designNo);
 
-  const knownCodes = new Set((await MaterialModel.find({}, { code: 1 })).map((m) => m.code));
+  const ordered = (await MaterialModel.find({}, { code: 1 }).sort({ sortOrder: 1, code: 1 })).map((m) => m.code);
+  const knownCodes = new Set(ordered);
+  for (const code of input.materials ?? []) {
+    if (!knownCodes.has(code)) throw new AppError(400, DESIGN_MESSAGES.unknownMaterial(code));
+  }
   const sizes: DesignSize[] = input.sizes.map((row) => {
     const consumption: ConsumptionItem[] = [];
     for (const [rawCode, qty] of Object.entries(row.consumption)) {
@@ -157,6 +177,10 @@ export async function putComponent(designNo: string, name: string, input: PutCom
     return { size: row.size, stitch: row.stitch, laser: row.laser ?? null, consumption };
   });
 
+  // Chosen columns + every material that has a quantity, in Material Master order.
+  const chosen = new Set([...(input.materials ?? []), ...sizes.flatMap((s) => s.consumption.map((c) => c.material))]);
+  const materials = ordered.filter((code) => chosen.has(code));
+
   const existing = design.components.find((c) => c.name === name);
   if (existing) {
     const kept = new Set(sizes.map((s) => s.size));
@@ -166,8 +190,9 @@ export async function putComponent(designNo: string, name: string, input: PutCom
       if (used) throw new AppError(409, DESIGN_MESSAGES.sizeInUse(name, used.size, used.order));
     }
     existing.sizes = sizes;
+    existing.materials = materials;
   } else {
-    design.components.push({ name, sizes });
+    design.components.push({ name, materials, sizes });
   }
   await design.save();
   return getDesignDetail(designNo);

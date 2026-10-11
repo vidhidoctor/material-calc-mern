@@ -67,7 +67,8 @@ export function useDeleteDesign() {
 export function usePutComponent(designNo: string) {
   const saved = useDesignSaved();
   return useMutation({
-    mutationFn: ({ name, sizes }: { name: string; sizes: SizeRowBody[] }) => putComponent(designNo, name, sizes),
+    mutationFn: ({ name, materials, sizes }: { name: string; materials: string[]; sizes: SizeRowBody[] }) =>
+      putComponent(designNo, name, materials, sizes),
     onSuccess: saved,
   });
 }

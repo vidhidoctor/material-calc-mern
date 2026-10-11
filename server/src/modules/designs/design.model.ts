@@ -18,6 +18,11 @@ export interface DesignSize {
 
 export interface DesignComponent {
   name: string;
+  /**
+   * Material columns chosen for this component (shared by all its sizes), in Material Master order.
+   * Undefined on components saved before columns were selectable: then the used materials apply.
+   */
+  materials?: string[];
   sizes: DesignSize[];
 }
 
@@ -51,6 +56,7 @@ const sizeSchema = new Schema<DesignSize>(
 const componentSchema = new Schema<DesignComponent>(
   {
     name: { type: String, required: true },
+    materials: { type: [String], default: undefined },
     sizes: { type: [sizeSchema], default: [] },
   },
   { _id: false },

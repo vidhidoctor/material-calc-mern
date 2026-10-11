@@ -59,6 +59,8 @@ export const updateDesignBody = z
 export type UpdateDesignInput = z.infer<typeof updateDesignBody>;
 
 export const putComponentBody = z.object({
+  /** Material columns chosen for this component; materials with a quantity are always included. */
+  materials: z.array(z.string({ error: 'Material codes must be text.' }).trim().toUpperCase(), { error: 'Materials must be a list.' }).optional(),
   sizes: z
     .array(sizeRow, { error: 'Sizes must be a list.' })
     .min(1, 'Add at least one size.')
