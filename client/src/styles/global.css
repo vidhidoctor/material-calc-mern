@@ -1077,6 +1077,53 @@ a {
   gap: 4px;
 }
 
+/* ---- Rate table (sheet style): inputs vs calculated cells ---- */
+.rate-table th,
+.rate-table td {
+  white-space: nowrap;
+}
+.rate-table .input-head {
+  background: var(--surface-2);
+}
+.rate-table .input-cell {
+  background: var(--surface-2);
+}
+.rate-table .input-cell .input {
+  width: 96px;
+  min-width: 0;
+  margin-left: auto;
+}
+.rate-table .type-head {
+  text-transform: none;
+}
+.rate-table .type-head span {
+  display: block;
+  text-transform: uppercase;
+}
+.price-btn {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.price-btn:hover {
+  border-style: solid;
+  border-color: var(--primary);
+}
+.rate-table .sub-head {
+  font-size: 0.68rem;
+  text-transform: none;
+}
+.row-dirty td {
+  background: var(--highlight) !important;
+}
+
 /* ---- Costing (Admin only) ---- */
 .cost-figure {
   color: var(--success);

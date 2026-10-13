@@ -1,4 +1,4 @@
-import type { MaterialRateDto, TypeRateDto } from '@app/shared';
+import type { MaterialRateDto } from '@app/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../../api/client';
@@ -7,147 +7,12 @@ import { Modal } from '../../../components/Modal';
 import { EmptyState, ErrorAlert, Field, NumberInput, parseNumberInput, QueryState } from '../../../components/ui';
 import { formatMoney, formatNumber } from '../../../lib/format';
 import { queryKeys } from '../../../lib/query-keys';
+import { TypeRateTables } from './TypeRateTable';
 
 const ratePath = (key: string) => `/costing/rates/${encodeURIComponent(key)}`;
 
 function useRates() {
   return useQuery({ queryKey: queryKeys.rates, queryFn: () => api<MaterialRateDto[]>('/costing/rates') });
-}
-
-function useTypeRates() {
-  return useQuery({ queryKey: [...queryKeys.costing, 'type-rates'], queryFn: () => api<TypeRateDto[]>('/costing/type-rates') });
-}
-
-function useSaveTypeRate() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ category, type, basicRate, gstPercent }: { category: string; type: string; basicRate: number; gstPercent: number }) =>
-      api<TypeRateDto[]>(`/costing/type-rates/${encodeURIComponent(category)}/${encodeURIComponent(type)}`, {
-        method: 'PUT',
-        body: { basicRate, gstPercent },
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.costing }),
-  });
-}
-
-/** Rate of one type (e.g. Sequence · PURE GLASS ₹8,000 per roll + 5%). */
-function TypeRateModal({ row, onClose }: { row: TypeRateDto; onClose: () => void }) {
-  const save = useSaveTypeRate();
-  const [basic, setBasic] = useState(row.basicRate === null ? '' : String(row.basicRate));
-  const [gst, setGst] = useState(row.gstPercent === null ? '5' : String(row.gstPercent));
-  const basicValue = parseNumberInput(basic);
-  const gstValue = parseNumberInput(gst) ?? 0;
-  const incl = basicValue === null ? null : basicValue * (1 + gstValue / 100);
-
-  return (
-    <Modal
-      open
-      title={`${row.categoryName} · ${row.type}`}
-      onClose={onClose}
-      onSubmit={() =>
-        basicValue !== null &&
-        save.mutate({ category: row.category, type: row.type, basicRate: basicValue, gstPercent: gstValue }, { onSuccess: onClose })
-      }
-      footer={
-        <>
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn btn-primary" disabled={save.isPending || basicValue === null || gstValue > 100}>
-            {save.isPending ? 'Saving…' : 'Save rate'}
-          </button>
-        </>
-      }
-    >
-      <div className="stack">
-        <ErrorAlert error={save.error} />
-        <div className="grid-2">
-          <Field label={`Rate (₹ per ${row.purchaseUnit}) — incl. job/cutting`} required>
-            <NumberInput decimal autoFocus value={basic} onChange={setBasic} placeholder="e.g. 8000" />
-          </Field>
-          <Field label="GST %" required>
-            <NumberInput decimal value={gst} onChange={setGst} />
-          </Field>
-        </div>
-        <div className="rate-preview">
-          <span className="muted small">Rate incl. GST</span>
-          <strong>{incl === null ? '—' : `${formatMoney(incl, 4)} per ${row.purchaseUnit}`}</strong>
-          <span className="muted small">Applies to every {row.categoryName.toLowerCase()} size; the cost per piece uses each size's conversion.</span>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/** One table per typed category: types × materials, like the rate sheet. */
-function TypeRatesSection() {
-  const typeRates = useTypeRates();
-  const [editing, setEditing] = useState<TypeRateDto | null>(null);
-  if (!typeRates.data || typeRates.data.length === 0) return null;
-  const categories = [...new Set(typeRates.data.map((r) => r.category))];
-
-  return (
-    <>
-      {categories.map((category) => {
-        const rows = typeRates.data!.filter((r) => r.category === category);
-        const first = rows[0]!;
-        return (
-          <section key={category} className="card">
-            <header className="card-header">
-              <div>
-                <h2>{first.categoryName} — rate by type</h2>
-                <span className="muted small">
-                  Rate per {first.purchaseUnit} (incl. job/cutting) + GST; cost per {first.unit} for each size. The type is chosen per order in Production.
-                </span>
-              </div>
-            </header>
-            <div className="table-wrap">
-              <table className="table clean-table">
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th className="align-right">Rate</th>
-                    <th className="align-right">GST</th>
-                    <th className="align-right">Incl. GST</th>
-                    {first.perMaterial.map((m) => (
-                      <th key={m.code} className="align-right">
-                        {m.code}
-                        <span className="th-unit">₹ / {first.unit}</span>
-                      </th>
-                    ))}
-                    <th aria-label="Actions" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.type}>
-                      <td>
-                        <strong>{r.type}</strong>
-                      </td>
-                      <td className="align-right">{r.basicRate === null ? <span className="muted">Not set</span> : formatMoney(r.basicRate)}</td>
-                      <td className="align-right">{r.gstPercent === null ? '—' : `${formatNumber(r.gstPercent)}%`}</td>
-                      <td className="align-right">{formatMoney(r.rateInclGst)}</td>
-                      {r.perMaterial.map((m) => (
-                        <td key={m.code} className="align-right cost-figure">
-                          {m.costPerUnit === null ? <span className="muted">—</span> : formatMoney(m.costPerUnit, 5)}
-                        </td>
-                      ))}
-                      <td className="align-right">
-                        <button type="button" className="btn btn-sm" onClick={() => setEditing(r)}>
-                          {r.basicRate === null ? 'Set rate' : 'Edit'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        );
-      })}
-      {editing && <TypeRateModal row={editing} onClose={() => setEditing(null)} />}
-    </>
-  );
 }
 
 function useRateMutations() {
@@ -328,7 +193,7 @@ export function RatesTab() {
         Enter the basic rate per purchase unit and GST. The cost per piece/metre is worked out with each material's conversion rule (e.g. ₹1,008 per KG ÷
         80,000 pcs per KG = ₹0.0126 per bead). Colours used in designs are listed under their material and can have their own rate.
       </p>
-      <TypeRatesSection />
+      <TypeRateTables />
       <ErrorAlert error={remove.error} />
       <QueryState query={rates}>
         {(list) => (

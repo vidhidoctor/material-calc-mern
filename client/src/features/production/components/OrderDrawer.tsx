@@ -5,7 +5,7 @@ import { Drawer } from '../../../components/Drawer';
 import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
 import { formatDate, formatMoney, formatNumber } from '../../../lib/format';
-import { useDeleteOrder, useOrder, useOrderCost, useOrders, useOrderSummary, useProductionDesign } from '../production.hooks';
+import { useDeleteOrder, useOrder, useOrderCost, useOrders, useOrderSummary, useProductionDesign, useRefreshOrderRates } from '../production.hooks';
 import { NewOrderModal } from './NewOrderModal';
 import { OrderLinesTable } from './OrderLinesTable';
 
@@ -16,6 +16,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   const summary = useOrderSummary(orderNo);
   const cost = useOrderCost(orderNo, auth.can('COST_VIEW'));
   const remove = useDeleteOrder();
+  const refresh = useRefreshOrderRates(orderNo);
   const [editing, setEditing] = useState(false);
   // Only loaded while editing: the design (for the form) and previous parties (suggestions).
   const design = useProductionDesign(editing && order.data ? order.data.designNo : '');
@@ -65,7 +66,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
       <QueryState query={order}>
         {(o) => (
           <div className="stack">
-            <ErrorAlert error={remove.error} />
+            <ErrorAlert error={remove.error ?? refresh.error} />
             <div className="stat-row">
               <div className="stat">
                 <span className="muted small">Total pieces</span>
@@ -80,6 +81,18 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                   <span className="muted small">Material cost</span>
                   <strong>{formatMoney(cost.data.total)}</strong>
                   <span className="muted small">{formatMoney(cost.data.perPiece)} per piece</span>
+                  <button
+                    type="button"
+                    className="link-btn small"
+                    disabled={refresh.isPending}
+                    title="This order keeps the rates saved when it was created. Use this to re-price it with today's rates."
+                    onClick={() =>
+                      window.confirm("Re-price this order with today's rates? Its material cost will change and the old rates are replaced.") &&
+                      refresh.mutate()
+                    }
+                  >
+                    {refresh.isPending ? 'Updating…' : "Use today's rates"}
+                  </button>
                 </div>
               )}
             </div>

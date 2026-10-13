@@ -366,3 +366,26 @@ export interface TypeRateDto {
   /** Cost of one consumption unit of each material of the category with this type (like the rate sheet). */
   perMaterial: { code: string; costPerUnit: DecimalString | null }[];
 }
+
+/**
+ * Rate table of a typed category, like the sequence rate sheet: rows = materials (sizes) with their
+ * editable conversion values, columns = types (roll price editable), cells = calculated costs.
+ */
+export interface TypeRateTableDto {
+  category: string;
+  categoryName: string;
+  /** Consumption unit (e.g. PCS = one sequence). */
+  unit: string;
+  /** What a type rate is per (e.g. "Rolls"). */
+  purchaseUnit: string;
+  fields: { key: string; label: string; required: boolean }[];
+  /** Formula steps except the purchase step (e.g. CD): costs can also be shown per one of these. */
+  steps: { key: string; label: string }[];
+  types: { type: string; basicRate: number | null; gstPercent: number | null; rateInclGst: DecimalString | null }[];
+  materials: {
+    code: string;
+    rules: Record<string, number>;
+    /** type → cost per consumption unit and per step unit (e.g. per CD); null = no rate / not computable. */
+    costs: Record<string, { perUnit: DecimalString | null; perStep: Record<string, DecimalString> }>;
+  }[];
+}

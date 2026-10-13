@@ -10,8 +10,9 @@ import {
   type MaterialRateDto,
   type OrderCostDto,
   type TypeRateDto,
+  type TypeRateTableDto,
 } from '@app/shared';
-import { Decimal, toDecimalString, unitCost, type CompiledCategory } from '../../calculation/engine.js';
+import { convertWithCategory, Decimal, toDecimalString, unitCost, type CompiledCategory } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
 import { consumptionLookup, findDesign, selectedColumns } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
@@ -297,4 +298,88 @@ export async function setTypeRate(category: string, type: string, input: SetRate
     { upsert: true },
   );
   return listTypeRates();
+}
+
+/**
+ * The rate table of every typed category (e.g. Sequence): sizes × types. Each cell has the cost per
+ * consumption unit (one sequence) and per unit of every other step (e.g. per CD = rate ÷ CD per roll),
+ * worked out from the category formula: cost per step unit = cost per piece ÷ step value for one piece.
+ */
+export async function listTypeRateTables(): Promise<TypeRateTableDto[]> {
+  const ctx = await loadContext();
+  const tables: TypeRateTableDto[] = [];
+  const categories = [...ctx.categories.values()].filter((c) => (c.types?.length ?? 0) > 0).sort((a, b) => a.sortOrder - b.sortOrder);
+  for (const category of categories) {
+    const compiled = ctx.compiled.get(category.code) ?? null;
+    const purchase = category.steps.find((st) => st.key === category.purchaseStep);
+    const types = category.types.map((type) => {
+      const rate = ctx.rates.get(typeRateKey(category.code, type)) ?? null;
+      return {
+        type,
+        rate,
+        dto: {
+          type,
+          basicRate: rate?.basicRate ?? null,
+          gstPercent: rate?.gstPercent ?? null,
+          rateInclGst: rate ? toDecimalString(new Decimal(rate.basicRate).times(new Decimal(rate.gstPercent).dividedBy(100).plus(1)), COST_PLACES) : null,
+        },
+      };
+    });
+    const materials = [...ctx.materials.values()]
+      .filter((m) => m.category === category.code)
+      .map((m) => {
+        const rules = { ...(m.rules ?? {}) };
+        const perPiece = compiled ? convertWithCategory(compiled, rules, new Decimal(1)) : null;
+        const costs: TypeRateTableDto['materials'][number]['costs'] = {};
+        for (const { type, rate } of types) {
+          if (!rate || !compiled) {
+            costs[type] = { perUnit: null, perStep: {} };
+            continue;
+          }
+          const cost = unitCost(compiled, rules, rate.basicRate, rate.gstPercent);
+          const perStep: Record<string, string> = {};
+          if (cost.perUnit && perPiece?.values) {
+            for (const step of category.steps) {
+              const value = perPiece.values.get(step.key);
+              if (step.key !== category.purchaseStep && value && !value.isZero()) {
+                perStep[step.key] = toDecimalString(cost.perUnit.dividedBy(value), COST_PLACES);
+              }
+            }
+          }
+          costs[type] = { perUnit: cost.perUnit ? toDecimalString(cost.perUnit, COST_PLACES) : null, perStep };
+        }
+        return { code: m.code, rules, costs };
+      });
+    tables.push({
+      category: category.code,
+      categoryName: category.name,
+      unit: category.unit,
+      purchaseUnit: purchase?.label ?? category.purchaseStep,
+      fields: category.fields.map((f) => ({ key: f.key, label: f.label, required: f.required })),
+      steps: category.steps.filter((st) => st.key !== category.purchaseStep).map((st) => ({ key: st.key, label: st.label })),
+      types: types.map((x) => x.dto),
+      materials,
+    });
+  }
+  return tables;
+}
+
+/**
+ * Explicit, authorised re-pricing of one order with today's rates (orders otherwise keep the rates
+ * saved when they were created).
+ */
+export async function refreshOrderRates(orderNo: number): Promise<OrderCostDto> {
+  const order = await OrderModel.findOne({ orderNo });
+  if (!order) throw new AppError(404, COSTING_MESSAGES.orderNotFound(orderNo));
+  const [design, ctx] = await Promise.all([DesignModel.findOne({ designNo: order.designNo }), loadContext()]);
+  const lookup = consumptionLookup(design);
+  const types = order.types ?? {};
+  const isTyped = (key: string) => (ctx.categories.get(ctx.materials.get(parseVariantKey(key).code)?.category ?? '')?.types?.length ?? 0) > 0;
+  const keys = order.lines.flatMap(({ component, size }) =>
+    Object.keys(lookup(component, size) ?? {}).map((key) => (isTyped(key) ? typedKey(key, types[key] ?? null) : key)),
+  );
+  order.unitCosts = await currentUnitCosts(keys);
+  order.markModified('unitCosts');
+  await order.save();
+  return orderCost(orderNo);
 }

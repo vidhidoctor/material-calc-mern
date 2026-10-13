@@ -166,6 +166,9 @@ expected results. The engine MUST reproduce them, e.g. 3-MM Sequence 8,861,475 P
   required when creating or editing an order. Other orders and the design are not affected.
 - Procurement Planning and costing use the order's type (key `SEQ-3MM|PINK^MATT`), so each finish is bought
   and priced separately. Orders are editable (party, date, quantities, types; not the design).
+- Rate table (Rates & costs): sizes × types; cost per CD = roll price incl. GST ÷ CD per roll (e.g. 8,400 ÷ 210 =
+  ₹40); cost per sequence = cost per CD ÷ seq per CD. Roll prices and size values are edited in the table.
+- An order keeps its saved rates; Admin can explicitly re-price it with today's rates ("Use today's rates").
 
 ## 6. Screens and behaviour (final)
 

@@ -10,6 +10,7 @@ import {
   getProductionDesign,
   listOrders,
   listProductionDesigns,
+  refreshOrderRates,
   updateOrder,
   updateOrderStatus,
   type CreateOrderBody,
@@ -25,6 +26,15 @@ export const useProductionDesign = (designNo: string) =>
 
 export const useOrders = () => useQuery({ queryKey: queryKeys.orders, queryFn: listOrders });
 export const useOrder = (orderNo: number) => useQuery({ queryKey: queryKeys.order(orderNo), queryFn: () => getOrder(orderNo) });
+/** Admin: explicitly re-price an order with today's rates. */
+export function useRefreshOrderRates(orderNo: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => refreshOrderRates(orderNo),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.costing }),
+  });
+}
+
 /** Only fetched for users who may see costs. */
 export const useOrderCost = (orderNo: number, enabled: boolean) =>
   useQuery({ queryKey: queryKeys.orderCost(orderNo), queryFn: () => getOrderCost(orderNo), enabled });

@@ -30,6 +30,9 @@ export const listProductionDesigns = (q: string) => api<ProductionDesignListItem
 export const getProductionDesign = (designNo: string) =>
   api<ProductionDesignDetailDto>(`/production/designs/${encodeURIComponent(designNo)}`);
 
+/** Admin: re-price an order with today's rates (explicit; orders otherwise keep their saved rates). */
+export const refreshOrderRates = (orderNo: number) => api<OrderCostDto>(`/costing/orders/${orderNo}/refresh-rates`, { method: 'POST' });
+
 /** ₹ material cost of an order, with the rates saved when it was created (Admin only). */
 export const getOrderCost = (orderNo: number) => api<OrderCostDto>(`/costing/orders/${orderNo}`);
 

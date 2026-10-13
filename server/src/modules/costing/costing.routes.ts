@@ -16,3 +16,5 @@ costingRoutes.get('/designs/:designNo', guard('COST_VIEW'), validate({ params: d
 costingRoutes.get('/orders/:orderNo', guard('COST_VIEW'), validate({ params: orderParams }), controller.orderCost);
 costingRoutes.get('/type-rates', guard('COST_VIEW'), controller.listTypeRates);
 costingRoutes.put('/type-rates/:category/:type', guard('COST_VIEW'), validate({ params: typeRateParams, body: setRateBody }), controller.setTypeRate);
+costingRoutes.get('/type-rate-tables', guard('COST_VIEW'), controller.listTypeRateTables);
+costingRoutes.post('/orders/:orderNo/refresh-rates', guard('COST_VIEW'), validate({ params: orderParams }), controller.refreshOrderRates);

@@ -57,6 +57,8 @@ are decimal strings.
 | DELETE | `/costing/rates/:key` | — (a colour then uses its material rate) | COST_VIEW |
 | GET | `/costing/type-rates` | — (rate per type of each typed category, cost per unit for each of its materials) | COST_VIEW |
 | PUT | `/costing/type-rates/:category/:type` | `{ basicRate, gstPercent }` | COST_VIEW |
+| GET | `/costing/type-rate-tables` | — (rate table per typed category: sizes × types, cost per piece and per step unit e.g. per CD) | COST_VIEW |
+| POST | `/costing/orders/:orderNo/refresh-rates` | — (explicitly re-price an order with today's rates) | COST_VIEW |
 | GET | `/costing/designs/:designNo` | — (₹ per piece by component and size, today rates) | COST_VIEW |
 | GET | `/costing/orders/:orderNo` | — (₹ for the order with the rates saved when it was created) | COST_VIEW |
 | GET | `/settings` | — (global config: admin emails) | SETTINGS_MANAGE |

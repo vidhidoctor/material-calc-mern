@@ -17,6 +17,14 @@ const SEQUENCE_SHEET: Record<string, Record<string, string>> = {
   SPARKLE: { 'SEQ-3MM': '0.00079', 'SEQ-4MM': '0.00134', 'SEQ-7MM': '0.00387', 'SEQ-9MM': '0.00714' },
 };
 
+/** "1-CD RATE" sheet: roll price incl. cutting + GST ÷ total CD per roll, rounded to rupees (row = size). */
+const CD_SHEET: Record<string, Record<string, string>> = {
+  'SEQ-3MM': { 'PURE GLASS': '40', 'COLOR GLASS': '48', OPQ: '13', METAL: '13', MATT: '13', SPARKLE: '25' },
+  'SEQ-4MM': { 'PURE GLASS': '51', 'COLOR GLASS': '60', OPQ: '16', METAL: '16', MATT: '16', SPARKLE: '32' },
+  'SEQ-7MM': { 'PURE GLASS': '84', 'COLOR GLASS': '100', OPQ: '26', METAL: '26', MATT: '26', SPARKLE: '53' },
+  'SEQ-9MM': { 'PURE GLASS': '120', 'COLOR GLASS': '143', OPQ: '38', METAL: '38', MATT: '38', SPARKLE: '75' },
+};
+
 /** "KHATLI ALL MATERIAL 1 PC RATE WITH GST": 1 KG rate incl. GST and rate per piece. */
 const BEAD_SHEET: Record<string, { incl: string; perPiece: string }> = {
   '2-MM-BEAD': { incl: '1008', perPiece: '0.013' },
@@ -75,6 +83,37 @@ describe('business rate sheet (loaded once, editable, calculations match the she
     assert.equal(list.some((r) => r.key.startsWith('SEQ-')), false);
   });
 
+  it('rate table: cost per CD = roll price ÷ CD per roll for every size and type (1-CD RATE sheet)', async () => {
+    const tables = (await ctx.api.get('/api/costing/type-rate-tables').set(admin())).body as {
+      category: string;
+      steps: { key: string }[];
+      fields: { key: string }[];
+      types: { type: string; rateInclGst: string }[];
+      materials: { code: string; rules: Record<string, number>; costs: Record<string, { perUnit: string; perStep: Record<string, string> }> }[];
+    }[];
+    const sequence = tables.find((t) => t.category === 'SEQUENCE')!;
+    assert.deepEqual(sequence.steps.map((st) => st.key), ['CD']);
+    assert.deepEqual(sequence.fields.map((fl) => fl.key), ['seqPerCd', 'cdPerRoll', 'cdPerRound']);
+    for (const [code, row] of Object.entries(CD_SHEET)) {
+      const material = sequence.materials.find((m) => m.code === code)!;
+      for (const [type, expected] of Object.entries(row)) {
+        assert.equal(round(material.costs[type]!.perStep.CD!, 0), expected, `${code} ${type}`);
+      }
+    }
+    // Exact internally: 9,975 ÷ 210 = 47.5 (shown as 48 on the sheet).
+    assert.equal(Number(sequence.materials.find((m) => m.code === 'SEQ-3MM')!.costs['COLOR GLASS']!.perStep.CD), 47.5);
+    // Cost per sequence = cost per CD ÷ seq per CD.
+    const pure3 = sequence.materials.find((m) => m.code === 'SEQ-3MM')!.costs['PURE GLASS']!;
+    assert.equal(round(pure3.perUnit, 8), round(String(40 / 31600), 8));
+
+    // Editing a size's CD per roll recalculates every type for that size.
+    const res = await ctx.api.put('/api/materials/SEQ-3MM').set(admin()).send({ category: 'SEQUENCE', rules: { seqPerCd: 31600, cdPerRoll: 200, cdPerRound: 40 } });
+    assert.equal(res.status, 200);
+    const after = (await ctx.api.get('/api/costing/type-rate-tables').set(admin())).body[0];
+    assert.equal(after.materials.find((m: { code: string }) => m.code === 'SEQ-3MM').costs['PURE GLASS'].perStep.CD, '42'); // 8,400 ÷ 200
+    await ctx.api.put('/api/materials/SEQ-3MM').set(admin()).send({ category: 'SEQUENCE', rules: { seqPerCd: 31600, cdPerRoll: 210, cdPerRound: 42 } });
+  });
+
   it('is applied once; edits made afterwards are kept and recalculated', async () => {
     assert.deepEqual(await applyRateSheet(), []);
 
@@ -116,5 +155,15 @@ describe('business rate sheet (loaded once, editable, calculations match the she
     // 100 pcs × (1000 × 8400/6,636,000 + 500 × 1008/80,000)
     const expected = new Decimal(100).times(new Decimal(1000).times(8400).dividedBy(6636000).plus(new Decimal(500).times(1008).dividedBy(80000)));
     assert.equal(round(cost.total, 2), expected.toDecimalPlaces(2).toFixed(2));
+
+    // The order keeps its rates when a price changes …
+    await ctx.api.put('/api/costing/type-rates/SEQUENCE/PURE%20GLASS').set(admin()).send({ basicRate: 16000, gstPercent: 5 });
+    const kept = (await ctx.api.get(`/api/costing/orders/${order.body.orderNo}`).set(admin())).body;
+    assert.equal(kept.total, cost.total);
+    // … until Admin explicitly re-prices it with today's rates.
+    const refreshed = await ctx.api.post(`/api/costing/orders/${order.body.orderNo}/refresh-rates`).set(admin());
+    assert.equal(refreshed.status, 200);
+    const repriced = new Decimal(100).times(new Decimal(1000).times(16800).dividedBy(6636000).plus(new Decimal(500).times(1008).dividedBy(80000)));
+    assert.equal(round(refreshed.body.total, 2), repriced.toDecimalPlaces(2).toFixed(2));
   });
 });
