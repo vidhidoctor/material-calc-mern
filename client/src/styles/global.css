@@ -1082,12 +1082,6 @@ a {
 .rate-table td {
   white-space: nowrap;
 }
-.rate-table .input-head {
-  background: var(--surface-2);
-}
-.rate-table .input-cell {
-  background: var(--surface-2);
-}
 .rate-table .input-cell .input {
   width: 96px;
   min-width: 0;
@@ -1167,21 +1161,24 @@ a {
   filter: brightness(1.1);
 }
 /* Actions stay visible at the right edge while the wide table scrolls. */
+/* One colour per row: every header cell grey, every body cell white (yellow while edited). */
+.rate-table thead th {
+  background: var(--surface-2);
+}
+.rate-table tbody td {
+  background: var(--surface);
+}
+.rate-table tbody tr:hover td {
+  background: var(--surface);
+}
 .rate-table th:last-child,
 .rate-table td:last-child {
   position: sticky;
   right: 0;
   z-index: 2;
-  background: var(--surface);
-  box-shadow: -8px 0 8px -8px rgb(16 24 40 / 0.25);
 }
 .rate-table thead th:last-child {
   z-index: 3;
-  background: var(--surface);
-}
-.rate-table td:last-child:empty,
-.rate-table td:last-child:not(:has(*)) {
-  box-shadow: none;
 }
 .rate-table th,
 .rate-table td {
