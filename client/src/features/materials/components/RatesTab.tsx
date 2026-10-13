@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../../api/client';
 import { DataGrid, type Column } from '../../../components/DataGrid';
+import { DenierCalculator } from '../../../components/DenierCalculator';
 import { Modal } from '../../../components/Modal';
 import { EmptyState, ErrorAlert, Field, NumberInput, parseNumberInput, QueryState } from '../../../components/ui';
 import { formatMoney, formatNumber } from '../../../lib/format';
@@ -100,6 +101,9 @@ function RateModal({ row, onClose }: { row: MaterialRateDto; onClose: () => void
               </Field>
             ))}
         </div>
+        {editFields && row.fields.some((f) => f.key === 'denier') && (
+          <DenierCalculator onUse={(denier) => setValues((current) => ({ ...current, denier: String(denier) }))} />
+        )}
         <div className="rate-preview">
           <span className="muted small">Rate incl. GST</span>
           <strong>{incl === null ? '—' : `${formatMoney(incl, 4)} per ${row.purchaseUnit || 'unit'}`}</strong>

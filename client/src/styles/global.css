@@ -1189,6 +1189,45 @@ a {
   width: 84px;
 }
 
+/* ---- Denier calculator ---- */
+.denier-calc {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+.denier-calc summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--primary);
+}
+.denier-calc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  margin-top: 8px;
+}
+.denier-calc-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.denier-calc-row .input {
+  width: 120px;
+}
+.denier-result {
+  display: flex;
+  flex-direction: column;
+}
+.denier-result strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+.section-body {
+  padding: 12px 16px 16px;
+}
+
 /* ---- Costing (Admin only) ---- */
 .cost-figure {
   color: var(--success);

@@ -389,3 +389,42 @@ export interface TypeRateTableDto {
     costs: Record<string, { perUnit: DecimalString | null; perStep: Record<string, DecimalString> }>;
   }[];
 }
+
+/**
+ * Material detail per component + size + column (e.g. the cording sheet: metres per piece, denier,
+ * grams/KG per piece, target pieces, total KG, rate per KG, amount).
+ */
+export interface MaterialBreakdownDto {
+  categories: {
+    code: string;
+    name: string;
+    unit: string;
+    purchaseStep: string;
+    steps: { key: string; label: string; formula: string }[];
+    fields: { key: string; label: string }[];
+  }[];
+  rows: {
+    category: string;
+    component: string;
+    size: string;
+    key: string;
+    code: string;
+    color: string | null;
+    /** Order only: the type chosen for this column (e.g. MATT). */
+    type: string | null;
+    /** The material's field values (e.g. denier). */
+    fields: Record<string, number>;
+    /** Quantity per piece in the category unit (e.g. metres). */
+    perPiece: DecimalString;
+    /** Every formula step for one piece (e.g. GRAMS, KG). */
+    perPieceSteps: Record<string, DecimalString>;
+    /** Order only: pieces ordered of this component + size. */
+    pieces: number | null;
+    total: DecimalString | null;
+    totalSteps: Record<string, DecimalString> | null;
+    /** Admin only: rate per purchase unit (e.g. per KG) and amount. */
+    ratePerPurchaseUnit: DecimalString | null;
+    amount: DecimalString | null;
+    error?: string;
+  }[];
+}

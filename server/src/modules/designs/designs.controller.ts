@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { designBreakdown } from '../orders/breakdown.service.js';
 import * as designsService from './designs.service.js';
 import type { CreateDesignInput, PutComponentInput, UpdateDesignInput } from './designs.validation.js';
 
@@ -32,4 +33,8 @@ export async function putComponent(req: Request<ComponentParams>, res: Response)
 
 export async function removeComponent(req: Request<ComponentParams>, res: Response): Promise<void> {
   res.json(await designsService.deleteComponent(req.params.designNo, req.params.name));
+}
+
+export async function breakdown(req: Request<DesignParams>, res: Response): Promise<void> {
+  res.json(await designBreakdown(req.params.designNo));
 }

@@ -5,6 +5,7 @@ import {
   createOrder,
   deleteOrder,
   getOrder,
+  getOrderBreakdown,
   getOrderCost,
   getOrderSummary,
   getProductionDesign,
@@ -31,9 +32,13 @@ export function useRefreshOrderRates(orderNo: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => refreshOrderRates(orderNo),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.costing }),
+    // Amounts are also shown in the order material detail.
+    onSuccess: () => Promise.all([queryKeys.costing, queryKeys.orders].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
   });
 }
+
+export const useOrderBreakdown = (orderNo: number) =>
+  useQuery({ queryKey: [...queryKeys.orders, 'breakdown', orderNo], queryFn: () => getOrderBreakdown(orderNo) });
 
 /** Only fetched for users who may see costs. */
 export const useOrderCost = (orderNo: number, enabled: boolean) =>

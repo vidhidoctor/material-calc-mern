@@ -85,7 +85,53 @@ function currentUnitCost(ctx: CostContext, key: string): { perUnit: Decimal | nu
   return { perUnit: result.perUnit, rateInclGst: result.rateInclGst, ...(result.error ? { error: result.error } : {}) };
 }
 
-/** Current unit costs for the given column keys (used to save rates with a new order). */
+/** Cost of one consumption unit from a rate per purchase unit, with the material's current conversion. */
+function perUnitFromRate(ctx: CostContext, key: string, rateInclGst: Decimal): { perUnit: Decimal | null; error?: string } {
+  const material = ctx.materials.get(parseTypedKey(key).code);
+  const category = material ? (ctx.compiled.get(material.category) ?? null) : null;
+  if (!material || !category) return { perUnit: null, error: 'Material category is not configured.' };
+  const one = convertWithCategory(category, material.rules ?? {}, new Decimal(1));
+  if (!one.purchase) return { perUnit: null, ...(one.error ? { error: one.error } : {}) };
+  return { perUnit: one.purchase.times(rateInclGst) };
+}
+
+/** Today's rate per purchase unit incl. GST for the given cost keys (saved with a new order). */
+export async function currentUnitRates(keys: Iterable<string>): Promise<Record<string, string>> {
+  const ctx = await loadContext();
+  const rates: Record<string, string> = {};
+  for (const key of new Set(keys)) {
+    const { rateInclGst, perUnit } = currentUnitCost(ctx, key);
+    if (rateInclGst && perUnit) rates[key] = toDecimalString(rateInclGst, COST_PLACES);
+  }
+  return rates;
+}
+
+export interface OrderUnitCost {
+  perUnit: Decimal | null;
+  /** Rate per purchase unit incl. GST used (null for older orders that saved only a unit cost). */
+  rateInclGst: Decimal | null;
+  /** True when no rate was saved with the order and today's rate was used. */
+  current: boolean;
+  error?: string;
+}
+
+/** Unit costs of an order: its saved rates (or older saved unit costs), else today's rates. */
+export async function orderUnitCosts(order: { unitRates?: Record<string, string>; unitCosts?: Record<string, string> }): Promise<(key: string) => OrderUnitCost> {
+  const ctx = await loadContext();
+  const rates = order.unitRates ?? {};
+  const legacy = order.unitCosts ?? {};
+  return (key) => {
+    if (rates[key] !== undefined) {
+      const rateInclGst = new Decimal(rates[key]!);
+      return { ...perUnitFromRate(ctx, key, rateInclGst), rateInclGst, current: false };
+    }
+    if (legacy[key] !== undefined) return { perUnit: new Decimal(legacy[key]!), rateInclGst: null, current: false };
+    const now = currentUnitCost(ctx, key);
+    return { perUnit: now.perUnit, rateInclGst: now.rateInclGst, current: true, ...(now.error ? { error: now.error } : {}) };
+  };
+}
+
+/** Current unit costs for the given column keys. */
 export async function currentUnitCosts(keys: Iterable<string>): Promise<Record<string, string>> {
   const ctx = await loadContext();
   const costs: Record<string, string> = {};
@@ -203,7 +249,7 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
   if (!order) throw new AppError(404, COSTING_MESSAGES.orderNotFound(orderNo));
   const [design, ctx] = await Promise.all([DesignModel.findOne({ designNo: order.designNo }), loadContext()]);
   const lookup = consumptionLookup(design);
-  const saved: Record<string, string> = order.unitCosts ?? {};
+  const resolve = await orderUnitCosts(order);
   const types = order.types ?? {};
   const isTyped = (key: string) => {
     const material = ctx.materials.get(parseVariantKey(key).code);
@@ -214,11 +260,10 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
   let usesCurrentRates = false;
 
   const unit = (key: string): Decimal | null => {
-    if (saved[key] !== undefined) return new Decimal(saved[key]!);
-    usesCurrentRates = true;
-    const current = currentUnitCost(ctx, key);
-    if (current.error) errors.add(current.error);
-    return current.perUnit;
+    const cost = resolve(key);
+    if (cost.current) usesCurrentRates = true;
+    if (cost.error) errors.add(cost.error);
+    return cost.perUnit;
   };
 
   let total = new Decimal(0);
@@ -378,7 +423,9 @@ export async function refreshOrderRates(orderNo: number): Promise<OrderCostDto> 
   const keys = order.lines.flatMap(({ component, size }) =>
     Object.keys(lookup(component, size) ?? {}).map((key) => (isTyped(key) ? typedKey(key, types[key] ?? null) : key)),
   );
-  order.unitCosts = await currentUnitCosts(keys);
+  order.unitRates = await currentUnitRates(keys);
+  order.unitCosts = undefined;
+  order.markModified('unitRates');
   order.markModified('unitCosts');
   await order.save();
   return orderCost(orderNo);

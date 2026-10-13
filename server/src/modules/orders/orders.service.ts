@@ -13,7 +13,7 @@ import {
 } from '@app/shared';
 import { calculateRequirements, toDecimalString } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
-import { currentUnitCosts } from '../costing/costing.service.js';
+import { currentUnitRates } from '../costing/costing.service.js';
 import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import type { DesignDocument } from '../designs/design.model.js';
 import { DesignModel } from '../designs/design.model.js';
@@ -128,7 +128,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
   const design = await findDesign(input.designNo);
   const content = await buildOrderContent(design, input);
   // Save today's rates with the order (its cost must not change when rates change later).
-  const unitCosts = await currentUnitCosts(content.costKeys);
+  const unitRates = await currentUnitRates(content.costKeys);
 
   const order = await OrderModel.create({
     orderNo: await nextOrderNo(),
@@ -141,7 +141,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
     status: 'PENDING',
     lines: content.lines,
     types: content.types,
-    unitCosts,
+    unitRates,
   });
   return toOrderDto(order);
 }
@@ -155,9 +155,10 @@ export async function updateOrder(orderNo: number, input: UpdateOrderInput): Pro
   const design = await findDesign(order.designNo);
   const content = await buildOrderContent(design, input);
 
-  const saved: Record<string, string> = { ...(order.unitCosts ?? {}) };
-  const missingKeys = content.costKeys.filter((k) => saved[k] === undefined);
-  if (missingKeys.length > 0) Object.assign(saved, await currentUnitCosts(missingKeys));
+  // Keep the rates saved with the order; new columns/types get today's rate.
+  const saved: Record<string, string> = { ...(order.unitRates ?? {}) };
+  const missingKeys = content.costKeys.filter((k) => saved[k] === undefined && order.unitCosts?.[k] === undefined);
+  if (missingKeys.length > 0) Object.assign(saved, await currentUnitRates(missingKeys));
 
   if (input.party !== order.party) {
     order.partyOrderNo = await nextPartyOrderNo(order.designNo, input.party);
@@ -167,9 +168,9 @@ export async function updateOrder(orderNo: number, input: UpdateOrderInput): Pro
   order.quantity = content.quantity;
   order.lines = content.lines;
   order.types = content.types;
-  order.unitCosts = saved;
+  order.unitRates = saved;
   order.markModified('types');
-  order.markModified('unitCosts');
+  order.markModified('unitRates');
   await order.save();
   return toOrderDto(order);
 }

@@ -15,6 +15,8 @@ export interface Settings {
   adminEmails: AdminEmailEntry[];
   /** When the business rate sheet was applied (db/rate-sheet.ts); null = not yet. */
   rateSheetAppliedAt?: Date | null;
+  /** When the cording sheet (PC / Moti cord) was applied. */
+  cordSheetAppliedAt?: Date | null;
 }
 
 const adminEmailSchema = new Schema<AdminEmailEntry>(
@@ -33,6 +35,7 @@ const settingsSchema = new Schema<Settings>(
     _id: { type: String, required: true },
     adminEmails: { type: [adminEmailSchema], default: [] },
     rateSheetAppliedAt: { type: Date, default: null },
+    cordSheetAppliedAt: { type: Date, default: null },
   },
   { versionKey: false },
 );

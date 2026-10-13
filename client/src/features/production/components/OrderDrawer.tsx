@@ -5,7 +5,17 @@ import { Drawer } from '../../../components/Drawer';
 import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
 import { formatDate, formatMoney, formatNumber } from '../../../lib/format';
-import { useDeleteOrder, useOrder, useOrderCost, useOrders, useOrderSummary, useProductionDesign, useRefreshOrderRates } from '../production.hooks';
+import { MaterialBreakdown } from '../../../components/MaterialBreakdown';
+import {
+  useDeleteOrder,
+  useOrder,
+  useOrderBreakdown,
+  useOrderCost,
+  useOrders,
+  useOrderSummary,
+  useProductionDesign,
+  useRefreshOrderRates,
+} from '../production.hooks';
 import { NewOrderModal } from './NewOrderModal';
 import { OrderLinesTable } from './OrderLinesTable';
 
@@ -17,6 +27,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   const cost = useOrderCost(orderNo, auth.can('COST_VIEW'));
   const remove = useDeleteOrder();
   const refresh = useRefreshOrderRates(orderNo);
+  const breakdown = useOrderBreakdown(orderNo);
   const [editing, setEditing] = useState(false);
   // Only loaded while editing: the design (for the form) and previous parties (suggestions).
   const design = useProductionDesign(editing && order.data ? order.data.designNo : '');
@@ -142,6 +153,12 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                   </>
                 )}
               </QueryState>
+            </section>
+
+            <section>
+              <h3 className="drawer-subtitle">Material detail</h3>
+              <p className="muted small drawer-note">Per material: quantity per piece, conversion (e.g. cord grams = metres × denier ÷ 9000) and total for this order.</p>
+              {breakdown.data ? <MaterialBreakdown data={breakdown.data} mode="order" /> : null}
             </section>
           </div>
         )}

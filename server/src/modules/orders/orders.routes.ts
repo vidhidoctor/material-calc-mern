@@ -18,4 +18,5 @@ ordersRoutes.patch(
   validate({ params: orderParams, body: updateStatusBody }),
   controller.updateStatus,
 );
+ordersRoutes.get('/:orderNo/breakdown', guard('PRODUCTION_VIEW'), validate({ params: orderParams }), controller.breakdown);
 ordersRoutes.get('/:orderNo/summary', guard('PRODUCTION_VIEW'), validate({ params: orderParams }), controller.summary);

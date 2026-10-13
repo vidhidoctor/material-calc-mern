@@ -3,7 +3,7 @@
 import { EnvError, getEnv, loadDotEnv } from '../src/config/env.js';
 import { connectDb, disconnectDb } from '../src/db/connect.js';
 import { runStartupMigrations } from '../src/db/migrations.js';
-import { applyRateSheet } from '../src/db/rate-sheet.js';
+import { applyCordSheet, applyRateSheet } from '../src/db/rate-sheet.js';
 
 loadDotEnv();
 
@@ -11,7 +11,8 @@ try {
   const env = getEnv();
   await connectDb(env.MONGODB_URI);
   for (const line of await runStartupMigrations()) console.info(line);
-  const log = await applyRateSheet({ force: process.argv.includes('--force') });
+  const force = process.argv.includes('--force');
+  const log = [...(await applyRateSheet({ force })), ...(await applyCordSheet({ force }))];
   for (const line of log) console.info(line);
   console.info(log.length > 0 ? 'Rate sheet applied.' : 'Rate sheet was already applied (use --force to re-apply).');
 } catch (error) {

@@ -1,5 +1,7 @@
 import type { OrderStatus } from '@app/shared';
 import type { Request, Response } from 'express';
+import { getAuth } from '../../middleware/auth.js';
+import { orderBreakdown } from './breakdown.service.js';
 import * as ordersService from './orders.service.js';
 import type { CreateOrderInput, UpdateOrderInput } from './orders.validation.js';
 
@@ -24,6 +26,10 @@ export async function updateStatus(req: Request, res: Response): Promise<void> {
 
 export async function update(req: Request, res: Response): Promise<void> {
   res.json(await ordersService.updateOrder(orderNoOf(req), req.body as UpdateOrderInput));
+}
+
+export async function breakdown(req: Request, res: Response): Promise<void> {
+  res.json(await orderBreakdown(orderNoOf(req), getAuth(req).permissions.has('COST_VIEW')));
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {

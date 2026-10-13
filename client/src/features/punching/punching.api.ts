@@ -1,4 +1,4 @@
-import type { Consumption, DesignCostDto, DesignDetailDto, DesignListItemDto } from '@app/shared';
+import type { Consumption, DesignCostDto, DesignDetailDto, DesignListItemDto, MaterialBreakdownDto } from '@app/shared';
 import { api } from '../../api/client';
 
 export interface SizeRowBody {
@@ -24,3 +24,6 @@ export const deleteComponent = (designNo: string, name: string) =>
 
 /** ₹ cost per piece by component and size (Admin only). */
 export const getDesignCost = (designNo: string) => api<DesignCostDto>(`/costing/designs/${encodeURIComponent(designNo)}`);
+
+/** Per-piece conversions (e.g. cord grams/KG per piece) for every component, size and column. */
+export const getDesignBreakdown = (designNo: string) => api<MaterialBreakdownDto>(`${designPath(designNo)}/breakdown`);

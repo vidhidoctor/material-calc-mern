@@ -84,6 +84,8 @@ are decimal strings.
 | GET | `/orders` | — (newest first) | PRODUCTION_VIEW |
 | POST | `/orders` | `{ designNo, party, orderDate?, quantity }` or `{ designNo, party, orderDate?, lines: [{ component, size, quantity }] }` | PRODUCTION_CREATE |
 | GET | `/orders/:orderNo` | — | PRODUCTION_VIEW |
+| GET | `/orders/:orderNo/breakdown` | — (material detail per line: qty/pc, conversions e.g. cord grams/KG, target pcs, totals; rate + amount only with COST_VIEW) | PRODUCTION_VIEW |
+| GET | `/designs/:designNo/breakdown` | — (per-piece conversions per component, size and column) | PUNCHING_VIEW |
 | PUT | `/orders/:orderNo` | `{ party, orderDate?, quantity \| lines, types }` — edit everything except the design; a new party gets its next number | PRODUCTION_UPDATE |
 | DELETE | `/orders/:orderNo` | — (number is not reused) | PRODUCTION_UPDATE |
 | PATCH | `/orders/:orderNo/status` | `{ status }` | PRODUCTION_UPDATE |

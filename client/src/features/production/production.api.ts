@@ -1,5 +1,6 @@
 import type {
   OrderDto,
+  MaterialBreakdownDto,
   OrderCostDto,
   OrderListItemDto,
   OrderStatus,
@@ -29,6 +30,9 @@ export type CreateOrderBody = { designNo: string; party: string; orderDate: stri
 export const listProductionDesigns = (q: string) => api<ProductionDesignListItemDto[]>('/production/designs', { query: { q } });
 export const getProductionDesign = (designNo: string) =>
   api<ProductionDesignDetailDto>(`/production/designs/${encodeURIComponent(designNo)}`);
+
+/** Material detail of an order (e.g. cording sheet); rate and amount only for Admin. */
+export const getOrderBreakdown = (orderNo: number) => api<MaterialBreakdownDto>(`/orders/${orderNo}/breakdown`);
 
 /** Admin: re-price an order with today's rates (explicit; orders otherwise keep their saved rates). */
 export const refreshOrderRates = (orderNo: number) => api<OrderCostDto>(`/costing/orders/${orderNo}/refresh-rates`, { method: 'POST' });

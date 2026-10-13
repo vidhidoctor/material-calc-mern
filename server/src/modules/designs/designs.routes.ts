@@ -17,6 +17,7 @@ export const designsRoutes = Router();
 designsRoutes.get('/', guard('PUNCHING_VIEW'), validate({ query: listDesignsQuery }), controller.list);
 designsRoutes.post('/', guard('PUNCHING_CREATE'), validate({ body: createDesignBody }), controller.create);
 designsRoutes.get('/:designNo', guard('PUNCHING_VIEW'), validate({ params: designParams }), controller.get);
+designsRoutes.get('/:designNo/breakdown', guard('PUNCHING_VIEW'), validate({ params: designParams }), controller.breakdown);
 designsRoutes.patch(
   '/:designNo',
   guard('PUNCHING_UPDATE'),

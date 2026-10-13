@@ -170,6 +170,17 @@ expected results. The engine MUST reproduce them, e.g. 3-MM Sequence 8,861,475 P
   ₹40); cost per sequence = cost per CD ÷ seq per CD. Roll prices and size values are edited in the table.
 - An order keeps its saved rates; Admin can explicitly re-price it with today's rates ("Use today's rates").
 
+## 5d. Cord / yarn (decided 2026-10-13)
+
+- Cord materials (PC Cord 1,250 den, Moti Cord 1,850 den, ₹550/KG, no GST) are loaded once from the cording
+  sheet; denier and rate are edited in Material Master (with a denier calculator: grams ÷ metres × 9000).
+- Punching enters metres per piece; grams/pc = metres × denier ÷ 9000, KG = grams ÷ 1000 (design page
+  "Per-piece weight & conversion"). Production shows the cording detail per order line (target pcs, total
+  KG, and for Admin rate/KG and amount).
+- Orders save the **rate per purchase unit** (₹/KG, ₹/roll incl. GST) when created (`order.unitRates`);
+  physical values (denier, pcs/KG, CD per roll) always come from the material. Older orders saved a cost
+  per unit (`unitCosts`), which is still honoured.
+
 ## 6. Screens and behaviour (final)
 
 Sidebar shows only pages the user may open; the first one is their landing page.

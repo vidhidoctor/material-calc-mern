@@ -1,6 +1,7 @@
 import type { MaterialCategoryDto, MaterialDto } from '@app/shared';
 import { useState } from 'react';
 import { Modal } from '../../../components/Modal';
+import { DenierCalculator } from '../../../components/DenierCalculator';
 import { ErrorAlert, Field, NumberInput, parseNumberInput } from '../../../components/ui';
 import type { MaterialBody } from '../materials.api';
 import { useSaveMaterial } from '../materials.hooks';
@@ -84,6 +85,9 @@ export function MaterialFormModal({ material, categories, onClose }: Props) {
                   </Field>
                 ))}
               </div>
+            )}
+            {category.fields.some((f) => f.key === 'denier') && (
+              <DenierCalculator onUse={(denier) => setRules((r) => ({ ...r, denier: String(denier) }))} />
             )}
             <div className="formula-list">
               {category.steps.map((s) => (

@@ -6,6 +6,7 @@ import {
   deleteComponent,
   deleteDesign,
   getDesign,
+  getDesignBreakdown,
   getDesignCost,
   listDesigns,
   putComponent,
@@ -17,6 +18,9 @@ export const useDesigns = (q: string) =>
   useQuery({ queryKey: queryKeys.designList(q), queryFn: () => listDesigns(q), placeholderData: keepPreviousData });
 
 export const useDesign = (designNo: string) => useQuery({ queryKey: queryKeys.design(designNo), queryFn: () => getDesign(designNo) });
+
+export const useDesignBreakdown = (designNo: string, enabled: boolean) =>
+  useQuery({ queryKey: [...queryKeys.design(designNo), 'breakdown'], queryFn: () => getDesignBreakdown(designNo), enabled });
 
 /** Only fetched for users who may see costs. */
 export const useDesignCost = (designNo: string, enabled: boolean) =>
