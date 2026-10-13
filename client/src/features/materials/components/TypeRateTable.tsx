@@ -116,12 +116,25 @@ function SizeRow({ table, material, showStep }: { table: TypeRateTableDto; mater
       })}
       <td className="align-right">
         {dirty && (
-          <div className="row-actions">
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setValues(initial())}>
-              Undo
+          <div className="icon-actions">
+            <button
+              type="button"
+              className="icon-action icon-cancel"
+              aria-label={`Undo changes to ${material.code}`}
+              title="Undo changes"
+              onClick={() => setValues(initial())}
+            >
+              ✕
             </button>
-            <button type="button" className="btn btn-sm btn-primary" disabled={save.isPending || invalid} onClick={() => save.mutate()}>
-              {save.isPending ? 'Saving…' : 'Save'}
+            <button
+              type="button"
+              className="icon-action icon-save"
+              aria-label={`Save ${material.code}`}
+              title={invalid ? 'Fill in every required value' : 'Save'}
+              disabled={save.isPending || invalid}
+              onClick={() => save.mutate()}
+            >
+              {save.isPending ? '…' : '✓'}
             </button>
           </div>
         )}

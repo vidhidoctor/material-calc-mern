@@ -1123,6 +1123,49 @@ a {
 .row-dirty td {
   background: var(--highlight) !important;
 }
+/* Row actions as icons: ✕ undo, ✓ save. */
+.icon-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+.icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.icon-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.icon-action:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.icon-cancel {
+  color: var(--danger);
+}
+.icon-cancel:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+.icon-save {
+  border-color: var(--success);
+  background: var(--success);
+  color: #fff;
+}
+.icon-save:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
 /* Actions stay visible at the right edge while the wide table scrolls. */
 .rate-table th:last-child,
 .rate-table td:last-child {
