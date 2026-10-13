@@ -1123,6 +1123,31 @@ a {
 .row-dirty td {
   background: var(--highlight) !important;
 }
+/* Actions stay visible at the right edge while the wide table scrolls. */
+.rate-table th:last-child,
+.rate-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: -8px 0 8px -8px rgb(16 24 40 / 0.25);
+}
+.rate-table thead th:last-child {
+  z-index: 3;
+  background: var(--surface);
+}
+.rate-table td:last-child:empty,
+.rate-table td:last-child:not(:has(*)) {
+  box-shadow: none;
+}
+.rate-table th,
+.rate-table td {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.rate-table .input-cell .input {
+  width: 84px;
+}
 
 /* ---- Costing (Admin only) ---- */
 .cost-figure {
