@@ -18,7 +18,7 @@
 ## Folder layout
 
 ```text
-client/   Vite + React app (not created yet: step 3)
+client/   Vite + React app (built into client/dist and served by the API in deployments)
 server/   Express API
   src/server.ts            listen only;  src/app.ts  express + /api routes + 404 + error handler
   src/config/env.ts        Zod-validated env (loads server/.env)
@@ -32,7 +32,8 @@ shared/   @app/shared: constants (permissions, roles, MESSAGES …) and API DTO 
 docs/     project context and reference fixture
 ```
 
-Commands (from the root): `npm run dev`, `npm run seed`, `npm test`, `npm run typecheck`.
+Commands (from the root): `npm run dev`, `npm run dev:client`, `npm test`, `npm run typecheck`, `npm run build`, `npm start`.
+Deployment: render.yaml (UAT from dev_vidhi, production later from main); `APP_ENV` = local | uat | production.
 Imports in server/ and shared/ end in `.js` (NodeNext ESM).
 
 ## Rules

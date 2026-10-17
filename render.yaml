@@ -1,0 +1,59 @@
+# Render Blueprint (https://render.com/docs/blueprint-spec)
+# One web service = API + built website. Secrets (sync: false) are entered in the Render dashboard,
+# never committed here.
+
+services:
+  # UAT (test website): redeploys automatically on every push to dev_vidhi.
+  - type: web
+    name: material-calc-uat
+    runtime: node
+    plan: free
+    branch: dev_vidhi
+    autoDeploy: true
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: uat
+      # Tests' in-memory MongoDB is not needed on the server: skip its large download.
+      - key: MONGOMS_DISABLE_POSTINSTALL
+        value: "1"
+      # Atlas connection string with its OWN database name, e.g. …mongodb.net/material-calc-uat?retryWrites=true&w=majority
+      - key: MONGODB_URI
+        sync: false
+      # First Admin of the UAT database (created on first start when missing).
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+
+  # Production (live) — add later by uncommenting: deploys from main, its own database.
+  # - type: web
+  #   name: material-calc
+  #   runtime: node
+  #   plan: starter
+  #   branch: main
+  #   autoDeploy: true
+  #   buildCommand: npm ci --include=dev && npm run build
+  #   startCommand: npm start
+  #   healthCheckPath: /api/health
+  #   envVars:
+  #     - key: NODE_VERSION
+  #       value: "22"
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: APP_ENV
+  #       value: production
+  #     - key: MONGOMS_DISABLE_POSTINSTALL
+  #       value: "1"
+  #     - key: MONGODB_URI
+  #       sync: false
+  #     - key: ADMIN_EMAIL
+  #       sync: false
+  #     - key: ADMIN_PASSWORD
+  #       sync: false

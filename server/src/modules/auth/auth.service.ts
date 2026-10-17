@@ -120,7 +120,8 @@ export async function forgotPassword(email: string): Promise<ForgotPasswordRespo
   });
   // No email service yet: the token is logged, and returned outside production.
   logger.info(`[auth] Password reset token for ${user.email}: ${token}`);
-  if (getEnv().NODE_ENV !== 'production') response.devResetToken = token;
+  // No email service yet: show the reset link everywhere except the live (production) site.
+  if (getEnv().APP_ENV !== 'production') response.devResetToken = token;
   return response;
 }
 

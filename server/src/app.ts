@@ -1,4 +1,6 @@
 import cors from 'cors';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import express, { type Express } from 'express';
 import { getEnv } from './config/env.js';
 import { errorHandler, notFound } from './middleware/error-handler.js';
@@ -22,7 +24,7 @@ export function createApp(): Express {
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok' });
+    res.json({ status: 'ok', env: env.APP_ENV });
   });
   app.use('/api/auth', authRoutes);
   app.use('/api/admin', adminRoutes);
@@ -34,6 +36,16 @@ export function createApp(): Express {
   app.use('/api/purchase', purchaseRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/costing', costingRoutes);
+
+  // The built website (client/dist) is served by the API, so a deployment is one service at one address.
+  const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));
+  if (existsSync(clientDist)) {
+    app.use(express.static(clientDist, { index: false, maxAge: '1h' }));
+    // Every other non-API page is the React app (it handles the route itself).
+    app.get(/^(?!\/api(\/|$)).*/, (_req, res) => {
+      res.sendFile('index.html', { root: clientDist, maxAge: 0 });
+    });
+  }
 
   app.use(notFound);
   app.use(errorHandler);

@@ -1,12 +1,17 @@
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { Icon } from '../../components/Icon';
+import { api } from '../../api/client';
 import { EmptyState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { allowedNav } from './nav';
 
 export function AppLayout() {
   const { user, canAny, logout } = useAuth();
+  // Which deployment this is (local / uat / production); a badge marks anything that is not the live site.
+  const health = useQuery({ queryKey: ['health'], queryFn: () => api<{ status: string; env: string }>('/health'), staleTime: Infinity });
+  const appEnv = health.data?.env;
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -32,6 +37,11 @@ export function AppLayout() {
           ☰
         </button>
         <span className="brand">Material Calc</span>
+        {appEnv && appEnv !== 'production' && (
+          <span className={`env-badge env-${appEnv}`} title={appEnv === 'uat' ? 'Test website (UAT) — not the live site' : 'Running on this computer'}>
+            {appEnv.toUpperCase()}
+          </span>
+        )}
         <div className="topbar-user">
           <div className="user-meta">
             <strong>{user?.name}</strong>

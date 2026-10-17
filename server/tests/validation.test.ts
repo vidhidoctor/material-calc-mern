@@ -54,7 +54,9 @@ describe('bad input returns 400, never crashes', () => {
   });
 
   it('server keeps serving after bad input', async () => {
-    assert.equal((await ctx.api.get('/api/health')).status, 200);
+    const health = await ctx.api.get('/api/health');
+    assert.equal(health.status, 200);
+    assert.deepEqual(health.body, { status: 'ok', env: 'local' });
   });
 });
 
@@ -70,6 +72,12 @@ describe('environment validation', () => {
         return true;
       },
     );
+  });
+
+  it('APP_ENV is local by default and only accepts local, uat or production', () => {
+    assert.equal(parseEnv({ MONGODB_URI: 'mongodb://localhost/x' }).APP_ENV, 'local');
+    assert.equal(parseEnv({ MONGODB_URI: 'mongodb://localhost/x', APP_ENV: 'uat' }).APP_ENV, 'uat');
+    assert.throws(() => parseEnv({ MONGODB_URI: 'mongodb://localhost/x', APP_ENV: 'staging' }), /APP_ENV: must be local, uat or production/);
   });
 
   it('rejects a non-MongoDB URI and applies defaults', () => {

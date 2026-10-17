@@ -28,6 +28,39 @@ Requirements: Node 22+ (LTS) and a free MongoDB Atlas cluster.
 | `npm test` | API tests on an in-memory MongoDB (never touches Atlas) |
 | `npm run typecheck` | TypeScript check of every workspace |
 
+## Deployment (UAT now, production later)
+
+One web service runs the API **and** the built website at one address (`npm run build` builds the
+website; `npm start` serves both). The settings are in [render.yaml](render.yaml).
+
+| | UAT (test) | Production (later) |
+|---|---|---|
+| Deploys from | `dev_vidhi` (every push) | `main` (when a release is merged) |
+| Database | Atlas database `material-calc-uat` | Atlas database `material-calc` |
+| `APP_ENV` | `uat` (orange **UAT** badge in the header) | `production` (no badge; reset-link shortcut hidden) |
+| Render plan | Free (sleeps when idle; first visit ~30–60 s) | Starter, always on |
+
+### First UAT deployment
+
+1. **Atlas → Network Access → Add IP Address → Allow access from anywhere (`0.0.0.0/0`)** (Render's free
+   plan has no fixed IP; keep a strong database password).
+2. **render.com** → sign up with GitHub → **New → Blueprint** → choose this repository. Render reads
+   `render.yaml` and proposes the service **material-calc-uat**.
+3. Fill in the three secrets it asks for:
+   - `MONGODB_URI`: your Atlas connection string with the database name `material-calc-uat`
+     (`…mongodb.net/material-calc-uat?retryWrites=true&w=majority`).
+   - `ADMIN_EMAIL` / `ADMIN_PASSWORD`: the first Admin of UAT.
+4. **Apply**. The first build takes a few minutes. Then open `https://material-calc-uat.onrender.com`.
+
+On its first start against an empty database the API creates the departments, roles and the Admin,
+the three material categories and the rate sheets (beads, sequence sizes and types, cords). Everything
+after that is edited in the app.
+
+### Day to day
+
+- Push to `dev_vidhi` → UAT updates itself (Render → Events shows the deploy).
+- Release: open a pull request `dev_vidhi` → `main`; production deploys when it is merged.
+
 ## API
 
 All routes are under `/api`. Except for auth, every route needs `Authorization: Bearer <token>`

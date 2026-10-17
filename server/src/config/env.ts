@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  /** Which deployment this is: local (your PC), uat (test website) or production (live). Shown in the app header. */
+  APP_ENV: z.enum(['local', 'uat', 'production'], { error: 'must be local, uat or production' }).default('local'),
   PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   MONGODB_URI: z
     .string()
