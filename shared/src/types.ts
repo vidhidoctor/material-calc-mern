@@ -118,6 +118,10 @@ export interface MaterialCategoryDto {
   steps: CategoryStepDto[];
   /** Key of the step that is the quantity to purchase. */
   purchaseStep: string;
+  /** Step shown in the order details (e.g. CD for sequences); null = the purchase step. */
+  orderStep: string | null;
+  /** The order total in that step is rounded up to whole units (e.g. whole CDs). */
+  wholeUnits: boolean;
   /** Types chosen per order in Production (e.g. MATT, METAL, PURE GLASS); empty = no types. */
   types: string[];
   materialCount: number;
@@ -248,16 +252,87 @@ export interface OrderSummaryRowDto {
   component: string;
   size: string;
   quantity: number;
+  /** Consumption (category unit, e.g. PCS) per column. */
   requirements: Record<string, DecimalString>;
+  /** The same in the column's order unit (e.g. CD, KG), not rounded. */
+  purchase: Record<string, DecimalString>;
+}
+
+export interface OrderSummaryColumnDto extends VariantColumnDto {
+  /** Category code. */
+  category: string;
+  /** Label of the unit the order shows (e.g. CD, KG); null when the conversion is not configured. */
+  orderUnit: string | null;
+  /** The order total is rounded up to whole units. */
+  wholeUnits: boolean;
+  /** Why the conversion could not be made (e.g. a missing rule), if so. */
+  error?: string;
+}
+
+export interface OrderSummaryComponentDto {
+  component: string;
+  quantity: number;
+  /** Consumption (category unit) per column for this component. */
+  requirements: Record<string, DecimalString>;
+  /** Order unit per column for this component, not rounded. */
+  purchase: Record<string, DecimalString>;
 }
 
 export interface OrderSummaryDto {
   orderNo: number;
   /** Material + colour columns that this order requires. */
-  columns: VariantColumnDto[];
+  columns: OrderSummaryColumnDto[];
   rows: OrderSummaryRowDto[];
+  components: OrderSummaryComponentDto[];
+  /** Consumption totals (category unit). */
   totals: Record<string, DecimalString>;
+  /** Order-unit totals, worked out from the total consumption (no rounding of rows). */
+  purchaseTotals: Record<string, DecimalString>;
+  /** What to buy: the order-unit total, rounded up for whole-unit columns. */
+  buy: Record<string, DecimalString>;
   errors: string[];
+}
+
+// ---- Purchase order (print slip) ----
+
+export interface PurchaseOrderRowDto {
+  /** Stable id of the row, used to save its Name ("C:KALI::SEQ-3MM|WHITE"). */
+  id: string;
+  /** Material name (or code), e.g. "3 MM" or "SEQ-3MM". */
+  label: string;
+  /** Colour · type, e.g. "WHITE · PURE GLASS"; empty when none. */
+  detail: string;
+  /** Quantity to buy in the purchase unit (CD rounded up to whole units, KG); null when not convertible. */
+  qty: DecimalString | null;
+  /** Purchase unit, e.g. CD or KG; null when not convertible. */
+  unit: string | null;
+  /** Total consumption for the order (pieces, metres). */
+  totalQty: DecimalString;
+  /** Consumption unit, e.g. PCS or MTR. */
+  totalUnit: string;
+  /** Entered on the website; printed exactly as entered. */
+  name: string;
+}
+
+export interface PurchaseOrderSectionDto {
+  /** "C:<component>" (per component, e.g. sequences) or "K:<category>" (whole order, e.g. beads). */
+  id: string;
+  title: string;
+  /** First column heading, e.g. "Sequence" or "Material". */
+  itemHeader: string;
+  /** Purchase unit of every row when they share one (e.g. CD), else null. */
+  unit: string | null;
+  rows: PurchaseOrderRowDto[];
+}
+
+export interface PurchaseOrderDto {
+  orderNo: number;
+  partyOrderNo: number;
+  designNo: string;
+  item: string;
+  party: string;
+  orderDate: string;
+  sections: PurchaseOrderSectionDto[];
 }
 
 // ---- Purchase requirements ----

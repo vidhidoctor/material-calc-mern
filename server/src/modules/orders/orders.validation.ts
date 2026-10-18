@@ -73,6 +73,18 @@ export const orderNoParam = z
 
 export const orderParams = z.object({ orderNo: orderNoParam });
 
+/** Names written on the purchase order slip: row id → name (printed exactly as entered; blank removes it). */
+export const purchaseOrderNamesBody = z.object({
+  names: z
+    .record(
+      z.string().max(200, 'Row id is too long.'),
+      z.string({ error: 'Name must be text.' }).max(100, 'Name is too long (100 characters at most).'),
+      { error: 'Names must be an object.' },
+    )
+    .refine((names) => Object.keys(names).length <= 500, 'Too many names.'),
+});
+export type PurchaseOrderNamesInput = z.infer<typeof purchaseOrderNamesBody>;
+
 export const updateStatusBody = z.object({
   status: z.enum(ORDER_STATUSES, { error: 'Choose a valid status: PENDING, IN_PROGRESS, COMPLETED or CANCELLED.' }),
 });

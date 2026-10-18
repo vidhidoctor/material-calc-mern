@@ -8,6 +8,7 @@ import type { CreateCategoryInput, UpdateCategoryInput } from './material-catego
 export const CATEGORY_MESSAGES = {
   NOT_FOUND: 'Category not found.',
   CODE_TAKEN: 'A category with this code already exists.',
+  UNKNOWN_ORDER_STEP: 'The unit shown on orders must be one of the formula steps.',
   inUse: (count: number) => `This category is used by ${count} material${count === 1 ? '' : 's'} and cannot be removed.`,
 } as const;
 
@@ -20,6 +21,8 @@ function toCategoryDto(category: MaterialCategory, materialCount: number): Mater
     fields: category.fields.map((f) => ({ key: f.key, label: f.label, required: f.required, missingMessage: f.missingMessage ?? null })),
     steps: category.steps.map((s) => ({ key: s.key, label: s.label, formula: s.formula })),
     purchaseStep: category.purchaseStep,
+    orderStep: category.orderStep ?? null,
+    wholeUnits: category.wholeUnits ?? false,
     types: [...(category.types ?? [])],
     materialCount,
   };
@@ -33,9 +36,14 @@ function prepare(input: UpdateCategoryInput): Omit<MaterialCategory, 'code' | 's
     fields: input.fields.map((f) => ({ key: f.key, label: f.label, required: f.required, missingMessage: f.missingMessage || null })),
     steps: input.steps.map((s) => ({ key: s.key.toUpperCase(), label: s.label, formula: s.formula })),
     purchaseStep: input.purchaseStep.toUpperCase(),
+    orderStep: input.orderStep ?? null,
+    wholeUnits: input.wholeUnits,
     types: input.types,
   };
   const problems = validateCategory({ code: '', ...definition });
+  if (definition.orderStep && !definition.steps.some((s) => s.key === definition.orderStep)) {
+    problems.push(CATEGORY_MESSAGES.UNKNOWN_ORDER_STEP);
+  }
   if (problems.length > 0) {
     throw new AppError(400, problems[0]!, problems.map((message) => ({ path: 'body', message })));
   }

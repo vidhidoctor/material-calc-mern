@@ -92,6 +92,9 @@ export function CategoriesTab() {
                               {s.key} = {s.formula}
                             </span>
                             {s.key === c.purchaseStep && <span className="badge badge-blue">Purchase</span>}
+                            {s.key === (c.orderStep ?? c.purchaseStep) && (
+                              <span className="badge">Orders{c.wholeUnits ? ' · whole units' : ''}</span>
+                            )}
                           </li>
                         ))}
                       </ol>

@@ -20,6 +20,8 @@ export async function ensureDefaultCategories(): Promise<number> {
           fields: category.fields.map((f) => ({ ...f, missingMessage: f.missingMessage ?? null })),
           steps: category.steps,
           purchaseStep: category.purchaseStep,
+          orderStep: category.orderStep,
+          wholeUnits: category.wholeUnits,
         },
       },
       { upsert: true },
@@ -27,6 +29,24 @@ export async function ensureDefaultCategories(): Promise<number> {
     created += result.upsertedCount;
   }
   return created;
+}
+
+/**
+ * Categories saved before orders showed purchase units: the default categories get their order unit
+ * (sequences in whole CDs, when the category still has a CD step); others show the purchase step.
+ */
+export async function migrateOrderUnits(): Promise<number> {
+  const old = await MaterialCategoryModel.collection.find({ orderStep: { $exists: false } }).toArray();
+  for (const category of old) {
+    const preset = DEFAULT_CATEGORIES.find((c) => c.code === category.code);
+    const steps = (category.steps ?? []) as { key: string }[];
+    const usable = preset?.orderStep && steps.some((s) => s.key === preset.orderStep);
+    await MaterialCategoryModel.collection.updateOne(
+      { _id: category._id },
+      { $set: { orderStep: usable ? preset.orderStep : null, wholeUnits: usable ? preset.wholeUnits : false } },
+    );
+  }
+  return old.length;
 }
 
 /** Materials saved before categories were configurable: move the fixed rule fields into `rules`. */
@@ -56,6 +76,8 @@ export async function runStartupMigrations(): Promise<string[]> {
   if ((await grantAdminAllPermissions()) > 0) log.push('Admin role: new permissions granted.');
   const categories = await ensureDefaultCategories();
   if (categories > 0) log.push(`Created ${categories} default material categor${categories === 1 ? 'y' : 'ies'}.`);
+  const units = await migrateOrderUnits();
+  if (units > 0) log.push(`Set the order unit of ${units} material categor${units === 1 ? 'y' : 'ies'}.`);
   const materials = await migrateMaterialRules();
   if (materials > 0) log.push(`Moved conversion rules of ${materials} material(s) to the category format.`);
   const orders = await backfillPartyOrderNos();

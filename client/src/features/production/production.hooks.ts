@@ -8,6 +8,8 @@ import {
   getOrderBreakdown,
   getOrderCost,
   getOrderSummary,
+  getPurchaseOrder,
+  savePurchaseOrderNames,
   getProductionDesign,
   listOrders,
   listProductionDesigns,
@@ -85,4 +87,16 @@ export function useDeleteOrder() {
 export function useUpdateOrderStatus(orderNo: number) {
   const invalidate = useInvalidateOrders();
   return useMutation({ mutationFn: (status: OrderStatus) => updateOrderStatus(orderNo, status), onSuccess: invalidate });
+}
+
+export const usePurchaseOrder = (orderNo: number) =>
+  useQuery({ queryKey: queryKeys.purchaseOrder(orderNo), queryFn: () => getPurchaseOrder(orderNo) });
+
+/** Saves the names written on the purchase order slip; the saved slip replaces the cached one. */
+export function useSavePurchaseOrderNames(orderNo: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (names: Record<string, string>) => savePurchaseOrderNames(orderNo, names),
+    onSuccess: (data) => queryClient.setQueryData(queryKeys.purchaseOrder(orderNo), data),
+  });
 }

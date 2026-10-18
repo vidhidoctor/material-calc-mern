@@ -5,6 +5,7 @@ import type {
   OrderListItemDto,
   OrderStatus,
   OrderSummaryDto,
+  PurchaseOrderDto,
   ProductionDesignDetailDto,
   ProductionDesignListItemDto,
 } from '@app/shared';
@@ -43,6 +44,11 @@ export const getOrderCost = (orderNo: number) => api<OrderCostDto>(`/costing/ord
 export const listOrders = () => api<OrderListItemDto[]>('/orders');
 export const getOrder = (orderNo: number) => api<OrderDto>(`/orders/${orderNo}`);
 export const getOrderSummary = (orderNo: number) => api<OrderSummaryDto>(`/orders/${orderNo}/summary`);
+/** The purchase order print slip (quantities from the order calculation, names entered by hand). */
+export const getPurchaseOrder = (orderNo: number) => api<PurchaseOrderDto>(`/orders/${orderNo}/purchase-order`);
+/** Saves slip names (row id → name; blank removes). */
+export const savePurchaseOrderNames = (orderNo: number, names: Record<string, string>) =>
+  api<PurchaseOrderDto>(`/orders/${orderNo}/purchase-order/names`, { method: 'PUT', body: { names } });
 export const createOrder = (body: CreateOrderBody) => api<OrderDto>('/orders', { method: 'POST', body });
 export const updateOrder = (orderNo: number, body: OrderBody) => api<OrderDto>(`/orders/${orderNo}`, { method: 'PUT', body });
 export const deleteOrder = (orderNo: number) => api<void>(`/orders/${orderNo}`, { method: 'DELETE' });

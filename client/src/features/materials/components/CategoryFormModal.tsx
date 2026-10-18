@@ -36,6 +36,8 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
   );
   const [steps, setSteps] = useState<StepRow[]>(() => (category?.steps ?? [{ key: '', label: '', formula: '' }]).map((s) => ({ ...s, id: id() })));
   const [purchaseStep, setPurchaseStep] = useState(category?.purchaseStep ?? '');
+  const [orderStep, setOrderStep] = useState(category?.orderStep ?? '');
+  const [wholeUnits, setWholeUnits] = useState(category?.wholeUnits ?? false);
   const [types, setTypes] = useState<string[]>(category?.types ?? []);
   const [newType, setNewType] = useState('');
   const typeName = normalizeType(newType);
@@ -70,6 +72,9 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
       fields: usedFields.map((f) => ({ key: f.key.trim(), label: f.label.trim(), required: f.required, missingMessage: f.missingMessage })),
       steps: usedSteps.map((s) => ({ key: s.key.trim().toUpperCase(), label: s.label.trim() || s.key.trim().toUpperCase(), formula: s.formula.trim() })),
       purchaseStep: purchaseStep.toUpperCase(),
+      // A removed step falls back to the purchase step.
+      orderStep: usedSteps.some((s) => s.key.trim().toUpperCase() === orderStep.toUpperCase()) ? orderStep.toUpperCase() : null,
+      wholeUnits,
       types,
     };
     save.mutate({ code: code.trim().toUpperCase(), body, isNew: category === null }, { onSuccess: onClose });
@@ -213,6 +218,24 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
           <button type="button" className="btn btn-sm" onClick={() => setSteps((rows) => [...rows, { id: id(), key: '', label: '', formula: '' }])}>
             + Add step
           </button>
+          <div className="order-unit-row">
+            <Field label="Show on orders in" hint="The unit the order details and purchase summary use, e.g. CD for sequences.">
+              <select className="input input-sm" value={orderStep.toUpperCase()} onChange={(e) => setOrderStep(e.target.value)}>
+                <option value="">Purchase step{purchaseStep ? ` (${purchaseStep})` : ''}</option>
+                {usedSteps
+                  .filter((s) => s.key.trim())
+                  .map((s) => (
+                    <option key={s.id} value={s.key.trim().toUpperCase()}>
+                      {s.label.trim() || s.key.trim().toUpperCase()}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={wholeUnits} onChange={(e) => setWholeUnits(e.target.checked)} />
+              Buy in whole units (round the order total up, e.g. 51.4 → 52 CD)
+            </label>
+          </div>
           <div className="formula-list">
             <span className="muted small">Names you can use:</span>
             {names.map((n) => (

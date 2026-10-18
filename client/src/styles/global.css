@@ -1679,3 +1679,607 @@ a {
   border-top: 1px solid var(--border);
   font-size: 0.9rem;
 }
+
+/* ---- Order details drawer ---- */
+.drawer-wide {
+  width: min(1000px, 100vw);
+}
+.btn-lg {
+  padding: 10px 22px;
+}
+.order-details {
+  gap: 18px;
+}
+.order-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+.order-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 16px;
+  color: var(--text-muted);
+}
+.order-info-item + .order-info-item {
+  border-left: 1px solid var(--border);
+}
+.order-info-item:first-child {
+  padding-left: 0;
+}
+.order-info-item > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.order-info-item strong {
+  color: var(--text);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.order-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.order-stat {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.order-stat-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.order-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.order-stat-value {
+  font-size: 1.6rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.order-stat-money {
+  color: var(--success);
+}
+.order-stat-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.order-stat-sep {
+  color: var(--border-strong);
+}
+.order-stat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+}
+.order-tabs {
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.order-tabs button {
+  padding: 10px 2px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 1rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.order-tabs button[aria-selected='true'] {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+.order-tabs button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+.po-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.po-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.po-card-head h3 {
+  margin: 0 0 2px;
+  font-size: 1.05rem;
+}
+.po-card-head p {
+  margin: 0;
+}
+.po-card-icon {
+  color: var(--text);
+  padding-top: 2px;
+}
+.po-export {
+  margin-left: auto;
+  padding: 8px 16px;
+}
+.po-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.po-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.po-table th,
+.po-table td {
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+  white-space: nowrap;
+}
+.po-table th:last-child,
+.po-table td:last-child {
+  border-right: none;
+}
+.po-table thead th {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  vertical-align: top;
+}
+.po-table tbody td {
+  border-bottom: 1px solid var(--border);
+}
+.po-table .po-size {
+  font-weight: 700;
+  text-align: left;
+}
+.po-table thead .po-size {
+  vertical-align: middle;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+.po-material {
+  display: block;
+  font-weight: 600;
+}
+.po-variant {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.unit-pill {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.unit-count {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.unit-weight {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.unit-missing {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.unit-count-text {
+  color: var(--primary);
+  font-size: 0.85em;
+}
+.unit-weight-text {
+  color: var(--success);
+  font-size: 0.85em;
+}
+.po-table tr.po-component td {
+  padding: 8px 14px;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.po-table tr.po-subtotal td {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.po-table tfoot td {
+  background: var(--primary-soft);
+  border-top: 2px solid var(--primary);
+  vertical-align: top;
+}
+.po-total {
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.po-length,
+.po-exact {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.po-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--primary-soft);
+  border-radius: 8px;
+  background: var(--info-soft);
+  color: var(--primary);
+}
+.po-note > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text);
+}
+@media (max-width: 640px) {
+  .order-info-item {
+    padding: 8px 0;
+  }
+  .order-info-item + .order-info-item {
+    border-left: none;
+  }
+  .po-card-head {
+    flex-wrap: wrap;
+  }
+}
+.text-danger {
+  color: var(--danger);
+}
+.order-unit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 24px;
+}
+.order-unit-row .input {
+  min-width: 200px;
+}
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  padding-bottom: 8px;
+}
+
+/* ---- Purchase order print slip (A4 portrait, two slips per page when one fits in half) ---- */
+.po-print {
+  min-height: 100vh;
+  padding: 0 16px 32px;
+  background: var(--bg);
+}
+.po-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 12px 0;
+  background: var(--bg);
+}
+.po-toolbar-note {
+  margin-right: auto;
+}
+.po-toolbar-error {
+  max-width: 210mm;
+  margin: 0 auto;
+}
+/* Paper: fixed colours, the same in dark mode. */
+.po-page {
+  --po-maroon: #6e1423;
+  --po-rose: #f7e1db;
+  --po-rose-strong: #f1cfc6;
+  --po-line: #d9b3a9;
+  --po-ink: #2b2b2b;
+  --po-muted: #6b6466;
+  box-sizing: border-box;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto 16px;
+  padding: 8mm;
+  background: #fff;
+  color: var(--po-ink);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.15);
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.po-two-up {
+  display: flex;
+  flex-direction: column;
+}
+/* Each slip takes half the page so the cut line sits in the middle; content is never clipped. */
+.po-two-up .po-slip {
+  min-height: calc((281mm - 8mm) / 2);
+}
+/* Off-screen copy at the printable width, used to measure one slip. */
+.po-measure {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  width: 194mm;
+  visibility: hidden;
+  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+}
+.po-cut {
+  position: relative;
+  height: 8mm;
+  display: flex;
+  align-items: center;
+  border: none;
+}
+.po-cut::before {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed #555;
+}
+.po-cut span {
+  position: absolute;
+  left: -2mm;
+  font-size: 14pt;
+  line-height: 1;
+  background: #fff;
+  color: #333;
+}
+.po-slip {
+  box-sizing: border-box;
+  font-size: 9pt;
+}
+.po-slip-head {
+  display: grid;
+  grid-template-columns: 22mm 1fr 42mm;
+  align-items: start;
+  gap: 3mm;
+  margin-bottom: 2mm;
+}
+.po-ornament {
+  width: 20mm;
+  height: 16mm;
+  fill: none;
+  stroke: #d99a8c;
+  stroke-width: 1.2;
+}
+.po-ornament ellipse {
+  fill: #f1c9bf;
+  stroke: #d99a8c;
+  stroke-width: 0.6;
+}
+.po-slip-title {
+  text-align: center;
+}
+/* Company name on top (largest), then a smaller "PURCHASE ORDER" between two lines. */
+.po-slip-title .po-company {
+  margin: 0;
+  color: var(--po-maroon);
+  font-size: 20pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+}
+.po-doc-title {
+  display: flex;
+  align-items: center;
+  gap: 3mm;
+  margin: 0.8mm 0 0;
+  color: var(--po-muted);
+  font-size: 9pt;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+}
+.po-doc-title::before,
+.po-doc-title::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--po-line);
+}
+.po-order-ref {
+  margin: 1mm 0 0;
+  color: var(--po-muted);
+  font-size: 8pt;
+}
+.po-order-ref strong {
+  color: var(--po-ink);
+}
+.po-date {
+  margin-top: 2mm;
+  padding: 2mm 3mm;
+  border-radius: 1.5mm;
+  background: var(--po-rose);
+  font-size: 9.5pt;
+  text-align: center;
+  white-space: nowrap;
+}
+.po-date strong {
+  margin-left: 2mm;
+  font-weight: 400;
+}
+.po-section {
+  margin-top: 2.5mm;
+  break-inside: avoid;
+}
+.po-section-tab {
+  display: inline-block;
+  min-width: 34mm;
+  margin: 0 0 0 0;
+  padding: 0.6mm 4mm;
+  border-radius: 2mm 2mm 0 0;
+  background: var(--po-rose-strong);
+  color: var(--po-maroon);
+  font-size: 10pt;
+  font-weight: 700;
+}
+.po-slip-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--po-line);
+  border-radius: 0 1.5mm 1.5mm 1.5mm;
+  table-layout: fixed;
+}
+.po-slip-table .po-col-item {
+  width: 22%;
+}
+.po-slip-table .po-col-total {
+  width: 17%;
+}
+.po-slip-table .po-col-qty {
+  width: 16%;
+}
+.po-slip-table .po-col-name {
+  width: 27%;
+}
+.po-slip-table .po-col-sample {
+  width: 18%;
+}
+.po-slip-table th,
+.po-slip-table td {
+  padding: 0.9mm 1.5mm;
+  border-right: 1px solid var(--po-line);
+  border-bottom: 1px solid var(--po-line);
+  text-align: center;
+  vertical-align: middle;
+}
+.po-slip-table th:last-child,
+.po-slip-table td:last-child {
+  border-right: none;
+}
+.po-slip-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.po-slip-table th {
+  background: var(--po-rose);
+  font-weight: 400;
+  font-size: 8.5pt;
+}
+.po-slip-table tr {
+  break-inside: avoid;
+}
+.po-item {
+  display: block;
+}
+.po-item-detail {
+  display: block;
+  color: var(--po-muted);
+  font-size: 7pt;
+}
+.po-unit {
+  color: var(--po-muted);
+  font-size: 7pt;
+}
+.po-qty {
+  font-weight: 700;
+}
+.po-name-cell {
+  text-align: left;
+}
+.po-name-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 5mm;
+  padding: 0 1mm;
+  border: 1px solid #c9d3e3;
+  border-radius: 1mm;
+  background: #f7faff;
+  color: var(--po-ink);
+  font: inherit;
+}
+.po-name-input:focus {
+  outline: 2px solid #2357c6;
+  outline-offset: 0;
+}
+.po-name-print {
+  display: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.po-sample-box {
+  display: block;
+  height: 5mm;
+  border: 1px dashed #b9a7a3;
+  border-radius: 1mm;
+}
+.po-empty {
+  margin-top: 6mm;
+  text-align: center;
+  color: var(--po-muted);
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  body,
+  .po-print {
+    background: #fff !important;
+  }
+  .po-print {
+    min-height: 0;
+    padding: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .po-page {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .po-two-up {
+    break-inside: avoid;
+  }
+  .po-page-break {
+    break-before: page;
+  }
+  .po-name-input {
+    display: none;
+  }
+  .po-name-print {
+    display: inline;
+  }
+}

@@ -20,6 +20,7 @@ export const queryKeys = {
   orders: ['orders'] as const,
   order: (orderNo: number) => ['orders', 'detail', orderNo] as const,
   orderSummary: (orderNo: number) => ['orders', 'summary', orderNo] as const,
+  purchaseOrder: (orderNo: number) => ['orders', 'purchase-order', orderNo] as const,
   purchase: ['purchase'] as const,
   /** Prefix for every ₹ query (rates, design cost, order cost). */
   costing: ['costing'] as const,

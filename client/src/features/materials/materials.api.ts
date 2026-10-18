@@ -13,6 +13,10 @@ export interface CategoryBody {
   fields: { key: string; label: string; required: boolean; missingMessage?: string | null }[];
   steps: { key: string; label: string; formula: string }[];
   purchaseStep: string;
+  /** Step shown in the order details; null = the purchase step. */
+  orderStep: string | null;
+  /** Round the order total up to whole units. */
+  wholeUnits: boolean;
   /** Types chosen per order in Production (e.g. MATT, METAL). */
   types: string[];
 }

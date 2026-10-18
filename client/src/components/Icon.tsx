@@ -50,6 +50,28 @@ const PATHS = {
       <line x1="12" y1="22" x2="12" y2="12" />
     </>
   ),
+  code: <path d="M8 7l-5 5 5 5M16 7l5 5-5 5" />,
+  bag: (
+    <>
+      <path d="M6 7h12l1 14H5L6 7z" />
+      <path d="M9 10V6a3 3 0 0 1 6 0v4" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+    </>
+  ),
+  rupee: <path d="M6 4h12M6 9h12M9 4c4 0 6 2 6 5s-2 5-6 5H6l8 7" />,
+  download: <path d="M12 3v12M7 10l5 5 5-5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />,
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </>
+  ),
+  refresh: <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4" />,
   sliders: <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />,
 } satisfies Record<string, ReactNode>;
 

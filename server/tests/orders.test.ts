@@ -65,10 +65,101 @@ describe('production orders and purchase requirements', () => {
     const res = await ctx.api.get('/api/orders/1/summary').set(bearer(prod));
     assert.equal(res.status, 200);
     assert.equal(res.body.rows.length, 37);
-    assert.deepEqual(res.body.rows[0], { component: 'KALI', size: '18', quantity: 230, requirements: { 'SEQ-3MM': '224250', 'SEQ-4MM': '224250', CORD: '6900' } });
+    assert.deepEqual(res.body.rows[0], { component: 'KALI', size: '18', quantity: 230, requirements: { 'SEQ-3MM': '224250', 'SEQ-4MM': '224250', CORD: '6900' },
+      purchase: { 'SEQ-3MM': '7.096519', 'SEQ-4MM': '9.452055', CORD: '0.92' },
+    });
     assert.equal(res.body.totals['SEQ-3MM'], '8861475');
     assert.equal(res.body.totals.CORD, '289206.5');
     assert.deepEqual(res.body.errors, []);
+  });
+
+  it('the order summary shows purchase units: sequences in CD (whole CDs to buy), beads and cord in KG', async () => {
+    const res = await ctx.api.get('/api/orders/1/summary').set(bearer(prod));
+    assert.equal(res.status, 200);
+    type Column = { key: string; orderUnit: string | null; wholeUnits: boolean };
+    const column = (key: string) => (res.body.columns as Column[]).find((c) => c.key === key)!;
+    assert.deepEqual([column('SEQ-3MM').orderUnit, column('SEQ-3MM').wholeUnits], ['CD', true]);
+    assert.deepEqual([column('BEAD-2.5MM').orderUnit, column('BEAD-2.5MM').wholeUnits], ['KG', false]);
+    assert.deepEqual([column('CORD').orderUnit, column('CORD').wholeUnits], ['KG', false]);
+
+    // Row: KALI 18 × 230 = 224,250 sequences ÷ 31,600 per CD = 7.0965… CD (rows are not rounded).
+    assert.equal(res.body.rows[0].purchase['SEQ-3MM'], '7.096519');
+    // Totals come from the total consumption: 8,861,475 ÷ 31,600 = 280.43 CD → buy 281 whole CDs.
+    assert.equal(round2(res.body.purchaseTotals['SEQ-3MM']), 280.43);
+    assert.equal(res.body.buy['SEQ-3MM'], '281');
+    // KG is not rounded up: 21.94 KG of 2.5 MM beads, 38.56 KG of cord.
+    assert.equal(round2(res.body.buy['BEAD-2.5MM']), 21.94);
+    assert.equal(round2(res.body.buy.CORD), 38.56);
+
+    // Component totals add up to the order total.
+    type Component = { component: string; quantity: number; purchase: Record<string, string>; requirements: Record<string, string> };
+    const components = res.body.components as Component[];
+    assert.equal(components[0]!.component, 'KALI');
+    const sum = components.reduce((s, c) => s + Number(c.requirements['SEQ-3MM'] ?? 0), 0);
+    assert.equal(sum, 8861475);
+    const cds = components.reduce((s, c) => s + Number(c.purchase['SEQ-3MM'] ?? 0), 0);
+    assert.equal(round2(String(cds)), 280.43);
+  });
+
+  it('purchase order slip: sequences per component in whole CDs, beads and cord per category for the order', async () => {
+    const res = await ctx.api.get('/api/orders/1/purchase-order').set(bearer(prod));
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    type Row = { id: string; label: string; qty: string | null; unit: string | null; totalQty: string; totalUnit: string; name: string };
+    type Section = { id: string; title: string; itemHeader: string; unit: string | null; rows: Row[] };
+    const sections = res.body.sections as Section[];
+    assert.equal(res.body.designNo, '26-49');
+
+    const kali = sections.find((s) => s.id === 'C:KALI')!;
+    assert.deepEqual([kali.title, kali.itemHeader, kali.unit], ['KALI', 'Sequence', 'CD']);
+    for (const row of kali.rows) assert.match(row.qty!, /^\d+$/, 'whole CDs');
+
+    // Per component: each rounded up, so their sum is at least the order total (280.43 CD).
+    const seq3 = sections.flatMap((s) => s.rows.filter((r) => r.id.endsWith('::SEQ-3MM')));
+    assert.ok(seq3.reduce((sum, r) => sum + Number(r.qty), 0) >= 281);
+    assert.equal(seq3.reduce((sum, r) => sum + Number(r.totalQty), 0), 8861475);
+
+    const beads = sections.find((s) => s.id === 'K:BEAD')!;
+    assert.equal(beads.title, 'BEADS & DECORATIVE');
+    assert.equal(round2(beads.rows.find((r) => r.id === 'K:BEAD::BEAD-2.5MM')!.qty!), 21.94);
+    const cord = sections.find((s) => s.id === 'K:CORD')!.rows[0]!;
+    assert.deepEqual([round2(cord.qty!), cord.unit, cord.totalQty, cord.totalUnit], [38.56, 'KG', '289206.5', 'MTR']);
+    // Sections: components first, then the categories in Material Master order.
+    assert.ok(sections.findIndex((s) => s.id === 'K:BEAD') > sections.findIndex((s) => s.id === 'C:KALI'));
+  });
+
+  it('purchase order names are saved on the order and printed exactly as entered', async () => {
+    const key = 'K:BEAD::BEAD-2.5MM';
+    const saved = await ctx.api
+      .put('/api/orders/1/purchase-order/names')
+      .set(bearer(prod))
+      .send({ names: { [key]: 'Ramesh bhai (Surat)', 'C:KALI::SEQ-3MM': 'Shree Sequins' } });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    const rowOf = (body: { sections: { rows: { id: string; name: string }[] }[] }, id: string) =>
+      body.sections.flatMap((s) => s.rows).find((r) => r.id === id)!;
+    assert.equal(rowOf(saved.body, key).name, 'Ramesh bhai (Surat)');
+
+    // Blank removes; others are kept.
+    const cleared = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { [key]: '  ' } });
+    assert.equal(rowOf(cleared.body, key).name, '');
+    assert.equal(rowOf(cleared.body, 'C:KALI::SEQ-3MM').name, 'Shree Sequins');
+
+    const tooLong = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { [key]: 'x'.repeat(101) } });
+    assert.equal(tooLong.status, 400);
+    await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { 'C:KALI::SEQ-3MM': '' } });
+  });
+
+  it('a material without its conversion rule keeps its consumption unit and reports why', async () => {
+    const before = await MaterialModel.findOne({ code: 'SEQ-7MM' });
+    await MaterialModel.updateOne({ code: 'SEQ-7MM' }, { $unset: { 'rules.seqPerCd': '' } });
+    try {
+      const res = await ctx.api.get('/api/orders/1/summary').set(bearer(prod));
+      const column = res.body.columns.find((c: { key: string }) => c.key === 'SEQ-7MM');
+      assert.equal(column.orderUnit, null);
+      assert.ok(column.error);
+      assert.equal(res.body.buy['SEQ-7MM'], undefined);
+    } finally {
+      await MaterialModel.updateOne({ code: 'SEQ-7MM' }, { $set: { rules: before!.rules } });
+    }
   });
 
   describe('creating orders', () => {

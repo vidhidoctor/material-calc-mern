@@ -34,6 +34,15 @@ const categoryFields = z.object({
   fields: z.array(fieldRow, { error: 'Fields must be a list.' }).default([]),
   steps: z.array(stepRow, { error: 'Steps must be a list.' }).min(1, 'Add at least one formula step.'),
   purchaseStep: z.string({ error: 'Choose which step is the purchase quantity.' }).trim().min(1, 'Choose which step is the purchase quantity.'),
+  /** Step shown in the order details; blank/null = the purchase step. */
+  orderStep: z
+    .string({ error: 'Order unit must be a step name.' })
+    .trim()
+    .toUpperCase()
+    .nullable()
+    .optional()
+    .transform((s) => s || null),
+  wholeUnits: z.boolean({ error: 'Whole units must be true or false.' }).default(false),
   /** Types chosen per order in Production (e.g. MATT, METAL, PURE GLASS). */
   types: z
     .array(

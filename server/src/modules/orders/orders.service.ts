@@ -11,13 +11,13 @@ import {
   type OrderStatus,
   type OrderSummaryDto,
 } from '@app/shared';
-import { calculateRequirements, toDecimalString } from '../../calculation/engine.js';
+import { calculateRequirements, convertWithCategory, Decimal, toDecimalString } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
 import { currentUnitRates } from '../costing/costing.service.js';
 import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import type { DesignDocument } from '../designs/design.model.js';
 import { DesignModel } from '../designs/design.model.js';
-import { loadMaterialsWithCategories, toMaterialColumn, type CategoryMap } from '../materials/materials.service.js';
+import { compileCategories, loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
 import { nextOrderNo, nextPartyOrderNo, OrderModel, type Order, type OrderDocument, type OrderLine } from './order.model.js';
 import type { CreateOrderInput, UpdateOrderInput } from './orders.validation.js';
 
@@ -199,13 +199,19 @@ export async function updateStatus(orderNo: number, status: OrderStatus): Promis
   return toOrderDto(order);
 }
 
-/** Requirement per row = the design's current consumption × quantity, plus totals. */
+/**
+ * Requirement per row = the design's current consumption × quantity, in the category unit (e.g. PCS)
+ * and in the unit the order shows (the category's order step, e.g. CD; else its purchase step).
+ * Order totals are converted from the total consumption, never from rounded rows; whole-unit
+ * categories round only that total up (what to buy).
+ */
 export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto> {
   const order = await findOrder(orderNo);
   const [design, { materials, categories }] = await Promise.all([
     DesignModel.findOne({ designNo: order.designNo }),
     loadMaterialsWithCategories(),
   ]);
+  const compiled = compileCategories(categories);
   const lookup = consumptionLookup(design);
   const lines = order.lines.map(({ component, size, quantity }) => ({ component, size, quantity, consumption: lookup(component, size) }));
   // Columns = material + colour variants the order's lines use, in Material Master order.
@@ -217,23 +223,84 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
 
   const totals: Record<string, string> = {};
   for (const [code, total] of result.totals) if (!total.isZero()) totals[code] = toDecimalString(total);
+  const usedKeys = keys.filter((key) => totals[key] !== undefined);
+
+  // How each column converts to its order unit.
+  const converters = new Map(
+    usedKeys.map((key) => {
+      const material = materials.find((m) => m.code === parseVariantKey(key).code);
+      const category = material ? categories.get(material.category) : undefined;
+      const formulas = category ? compiled.get(category.code) : null;
+      const stepKey = category ? (category.orderStep ?? category.purchaseStep) : '';
+      const step = category?.steps.find((st) => st.key === stepKey);
+      const convert = (total: Decimal): Decimal | null =>
+        formulas && material ? (convertWithCategory(formulas, material.rules ?? {}, total).values?.get(stepKey) ?? null) : null;
+      const check = formulas && material ? convertWithCategory(formulas, material.rules ?? {}, new Decimal(1)) : null;
+      return [key, { material, category, unitLabel: step?.label ?? null, convert, error: check?.error ?? (formulas ? undefined : MESSAGES.CONVERSION_RULE_MISSING) }] as const;
+    }),
+  );
+  const toPurchase = (requirements: Map<string, Decimal>): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const [key, value] of requirements) {
+      const converted = converters.get(key)?.convert(value);
+      if (converted) out[key] = toDecimalString(converted);
+    }
+    return out;
+  };
+
+  const components: OrderSummaryDto['components'] = [];
+  const componentTotals = new Map<string, Map<string, Decimal>>();
+  for (const row of result.rows) {
+    let group = components.at(-1);
+    if (!group || group.component !== row.component) {
+      group = { component: row.component, quantity: 0, requirements: {}, purchase: {} };
+      components.push(group);
+      componentTotals.set(row.component, new Map());
+    }
+    group.quantity += row.quantity;
+    const sums = componentTotals.get(row.component)!;
+    for (const [key, value] of row.requirements) sums.set(key, (sums.get(key) ?? new Decimal(0)).plus(value));
+  }
+  for (const group of components) {
+    const sums = componentTotals.get(group.component)!;
+    group.requirements = Object.fromEntries([...sums].map(([key, value]) => [key, toDecimalString(value)]));
+    group.purchase = toPurchase(sums);
+  }
+
+  const purchaseTotals = toPurchase(new Map(usedKeys.map((key) => [key, result.totals.get(key)!])));
+  const buy: Record<string, string> = {};
+  for (const [key, value] of Object.entries(purchaseTotals)) {
+    const whole = converters.get(key)?.category?.wholeUnits ?? false;
+    buy[key] = whole ? new Decimal(value).toDecimalPlaces(0, Decimal.ROUND_UP).toString() : value;
+  }
 
   return {
     orderNo: order.orderNo,
-    columns: keys
-      .filter((key) => totals[key] !== undefined)
-      .map((key) => {
-        const { code, color } = parseVariantKey(key);
-        const material = materials.find((m) => m.code === code);
-        return { key, code, color, unit: material ? toMaterialColumn(material, categories).unit : '' };
-      }),
+    columns: usedKeys.map((key) => {
+      const { code, color } = parseVariantKey(key);
+      const c = converters.get(key)!;
+      return {
+        key,
+        code,
+        color,
+        unit: c.material ? toMaterialColumn(c.material, categories).unit : '',
+        category: c.material?.category ?? '',
+        orderUnit: c.error ? null : c.unitLabel,
+        wholeUnits: c.category?.wholeUnits ?? false,
+        ...(c.error ? { error: c.error } : {}),
+      };
+    }),
     rows: result.rows.map((row) => ({
       component: row.component,
       size: row.size,
       quantity: row.quantity,
       requirements: Object.fromEntries([...row.requirements].map(([code, value]) => [code, toDecimalString(value)])),
+      purchase: toPurchase(row.requirements),
     })),
+    components,
     totals,
+    purchaseTotals,
+    buy,
     errors: result.errors,
   };
 }

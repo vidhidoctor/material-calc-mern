@@ -36,6 +36,8 @@ export interface Order {
   unitRates?: Record<string, string>;
   /** Type chosen in Production for each typed column, e.g. { "SEQ-3MM|PINK": "MATT" }. */
   types?: Record<string, string>;
+  /** Name written on the purchase order slip, per row id (see purchase-order.service.ts). */
+  poNames?: { key: string; name: string }[];
 }
 
 const lineSchema = new Schema<OrderLine>(
@@ -62,6 +64,8 @@ const orderSchema = new Schema<Order>(
     unitCosts: { type: Schema.Types.Mixed, default: undefined },
     unitRates: { type: Schema.Types.Mixed, default: undefined },
     types: { type: Schema.Types.Mixed, default: undefined },
+    // A list, not an object: row ids contain material codes, which may contain dots.
+    poNames: { type: [new Schema({ key: { type: String, required: true }, name: { type: String, required: true } }, { _id: false })], default: undefined },
   },
   { versionKey: false },
 );

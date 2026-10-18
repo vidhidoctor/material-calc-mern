@@ -9,6 +9,7 @@ import { MaterialsPage } from '../features/materials/MaterialsPage';
 import { DesignSearchPage } from '../features/production/DesignSearchPage';
 import { OrderRedirect, OrdersPage } from '../features/production/OrdersPage';
 import { ProductionDesignPage } from '../features/production/ProductionDesignPage';
+import { PurchaseOrderPrintPage } from '../features/production/PurchaseOrderPrintPage';
 import { PurchasePage } from '../features/purchase/PurchasePage';
 import { DesignPage } from '../features/punching/DesignPage';
 import { DesignsPage } from '../features/punching/DesignsPage';
@@ -27,6 +28,8 @@ export const router = createBrowserRouter([
   { path: '/signup', element: <SignupPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
+  // Print page: no sidebar or top bar, only the A4 slips.
+  { path: '/orders/:orderNo/purchase-order', element: <RequireAuth>{guarded('/orders', <PurchaseOrderPrintPage />)}</RequireAuth> },
   {
     path: '/',
     element: (

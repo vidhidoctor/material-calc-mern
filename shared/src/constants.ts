@@ -40,6 +40,9 @@ export function permissionGroup(code: PermissionCode): string {
   return Object.keys(PERMISSION_GROUPS).find((group) => PERMISSION_GROUPS[group]?.includes(code)) ?? 'Other';
 }
 
+/** Business name printed on the purchase order slip. */
+export const COMPANY_NAME = 'CREATIVE EMBROIDERY';
+
 export const ADMIN_ROLE = 'Admin';
 
 /** Default roles created by the seed. Admin is always re-granted every permission. */

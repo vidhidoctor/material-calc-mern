@@ -6,10 +6,12 @@ interface DrawerProps {
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  /** Wider panel for tables with many columns. */
+  wide?: boolean;
 }
 
 /** Right-side panel on a native <dialog> (Esc closes, focus is trapped, clicking the backdrop closes). */
-export function Drawer({ title, open, onClose, children, footer }: DrawerProps) {
+export function Drawer({ title, open, onClose, children, footer, wide = false }: DrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -22,7 +24,7 @@ export function Drawer({ title, open, onClose, children, footer }: DrawerProps) 
   return (
     <dialog
       ref={ref}
-      className="drawer"
+      className={wide ? 'drawer drawer-wide' : 'drawer'}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

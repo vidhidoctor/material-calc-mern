@@ -102,7 +102,7 @@ are decimal strings.
 | PUT | `/materials/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
 | DELETE | `/materials/:code` | — (409 while a design uses it) | MATERIAL_MASTER_MANAGE |
 | GET | `/material-categories` | — (categories with fields and formula steps) | MATERIAL_MASTER_VIEW |
-| POST | `/material-categories` | `{ code, name, unit, fields: [{ key, label, required }], steps: [{ key, label, formula }], purchaseStep }` | MATERIAL_MASTER_MANAGE |
+| POST | `/material-categories` | `{ code, name, unit, fields: [{ key, label, required }], steps: [{ key, label, formula }], purchaseStep, orderStep?, wholeUnits? }` (orderStep = unit shown on orders, e.g. CD) | MATERIAL_MASTER_MANAGE |
 | PUT | `/material-categories/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
 | DELETE | `/material-categories/:code` | — (409 while a material uses it) | MATERIAL_MASTER_MANAGE |
 | GET | `/designs` | `?q=` (ignores case, spaces, dashes) | PUNCHING_VIEW |
@@ -118,11 +118,13 @@ are decimal strings.
 | POST | `/orders` | `{ designNo, party, orderDate?, quantity }` or `{ designNo, party, orderDate?, lines: [{ component, size, quantity }] }` | PRODUCTION_CREATE |
 | GET | `/orders/:orderNo` | — | PRODUCTION_VIEW |
 | GET | `/orders/:orderNo/breakdown` | — (material detail per line: qty/pc, conversions e.g. cord grams/KG, target pcs, totals; rate + amount only with COST_VIEW) | PRODUCTION_VIEW |
+| GET | `/orders/:orderNo/purchase-order` | — (print slip: sequences per component in whole CDs, other categories per order in KG …, total qty, saved names) | PRODUCTION_VIEW |
+| PUT | `/orders/:orderNo/purchase-order/names` | `{ names: { <row id>: name } }` (printed exactly as entered; blank removes) | PRODUCTION_UPDATE or PURCHASE_REQUIREMENT_VIEW |
 | GET | `/designs/:designNo/breakdown` | — (per-piece conversions per component, size and column) | PUNCHING_VIEW |
 | PUT | `/orders/:orderNo` | `{ party, orderDate?, quantity \| lines, types }` — edit everything except the design; a new party gets its next number | PRODUCTION_UPDATE |
 | DELETE | `/orders/:orderNo` | — (number is not reused) | PRODUCTION_UPDATE |
 | PATCH | `/orders/:orderNo/status` | `{ status }` | PRODUCTION_UPDATE |
-| GET | `/orders/:orderNo/summary` | — (requirement per row + totals) | PRODUCTION_VIEW |
+| GET | `/orders/:orderNo/summary` | — (requirement per row and component in consumption and order units, e.g. CD/KG; `buy` = order total, rounded up for whole-unit categories) | PRODUCTION_VIEW |
 | GET | `/purchase/requirements` | `?orderNo=&components=KALI,GALISH` (no order = all except CANCELLED) | PURCHASE_REQUIREMENT_VIEW |
 
 Orders follow the design (docs/context.md §8): figures always use the design's current consumption,

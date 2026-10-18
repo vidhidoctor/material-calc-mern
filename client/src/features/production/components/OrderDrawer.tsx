@@ -1,11 +1,12 @@
-import { variantLabel } from '@app/shared';
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
+import type { OrderCostDto, OrderDto } from '@app/shared';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Drawer } from '../../../components/Drawer';
+import { Icon, type IconName } from '../../../components/Icon';
+import { MaterialBreakdown } from '../../../components/MaterialBreakdown';
 import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
 import { formatDate, formatMoney, formatNumber } from '../../../lib/format';
-import { MaterialBreakdown } from '../../../components/MaterialBreakdown';
+import { downloadPurchaseCsv } from '../purchase-sheet';
 import {
   useDeleteOrder,
   useOrder,
@@ -17,9 +18,110 @@ import {
   useRefreshOrderRates,
 } from '../production.hooks';
 import { NewOrderModal } from './NewOrderModal';
-import { OrderLinesTable } from './OrderLinesTable';
+import { PurchaseSummary } from './PurchaseSummary';
 
-/** Everything about one order: stats, quantities and material requirement. */
+type Tab = 'purchase' | 'components' | 'cost';
+
+function InfoItem({ icon, label, value }: { icon: IconName; label: string; value: ReactNode }) {
+  return (
+    <div className="order-info-item">
+      <Icon name={icon} size={22} />
+      <div>
+        <span className="muted small">{label}</span>
+        <strong>{value}</strong>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, children }: { icon: IconName; label: string; children: ReactNode }) {
+  return (
+    <div className="order-stat">
+      <span className="order-stat-icon">
+        <Icon name={icon} size={22} />
+      </span>
+      <div className="order-stat-body">
+        <span className="muted small">{label}</span>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Pieces per size over all components, e.g. "18: 460 | 20: 1,000". */
+function piecesBySize(order: OrderDto): { size: string; pieces: number }[] {
+  const bySize = new Map<string, number>();
+  for (const line of order.lines) bySize.set(line.size, (bySize.get(line.size) ?? 0) + line.quantity);
+  return [...bySize].map(([size, pieces]) => ({ size, pieces }));
+}
+
+/** Material cost per component and size (Admin), with the rates saved with the order. */
+function CostBreakup({ cost }: { cost: OrderCostDto }) {
+  return (
+    <div className="stack">
+      {(cost.errors.length > 0 || cost.usesCurrentRates) && (
+        <div className="alert alert-info small">
+          {cost.usesCurrentRates && <p>Some rates were not saved with this order, so today's rates are used for them.</p>}
+          {cost.errors.length > 0 && (
+            <ul>
+              {cost.errors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      <div className="table-wrap po-table-wrap">
+        <table className="po-table">
+          <thead>
+            <tr>
+              <th className="po-size">Component</th>
+              <th>Size</th>
+              <th>Pcs</th>
+              <th>Cost ₹</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cost.components.map((c) => (
+              <Fragment key={c.component}>
+                {cost.rows
+                  .filter((r) => r.component === c.component)
+                  .map((r, i) => (
+                    <tr key={r.size}>
+                      <td className="po-size">{i === 0 ? c.component : ''}</td>
+                      <td>{r.size}</td>
+                      <td>{formatNumber(r.quantity, 0)}</td>
+                      <td>{formatMoney(r.cost)}</td>
+                    </tr>
+                  ))}
+                {cost.components.length > 1 && (
+                  <tr className="po-subtotal">
+                    <td className="po-size">{c.component} total</td>
+                    <td />
+                    <td>{formatNumber(c.quantity, 0)}</td>
+                    <td>{formatMoney(c.cost)}</td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td className="po-size">Total</td>
+              <td />
+              <td>{formatNumber(cost.components.reduce((s, c) => s + c.quantity, 0), 0)}</td>
+              <td>
+                <span className="po-total">{formatMoney(cost.total)}</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** Everything about one order: details, stats, purchase requirement, component detail and cost. */
 export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: () => void }) {
   const auth = useAuth();
   const order = useOrder(orderNo);
@@ -28,73 +130,94 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
   const remove = useDeleteOrder();
   const refresh = useRefreshOrderRates(orderNo);
   const breakdown = useOrderBreakdown(orderNo);
+  const [tab, setTab] = useState<Tab>('purchase');
   const [editing, setEditing] = useState(false);
   // Only loaded while editing: the design (for the form) and previous parties (suggestions).
   const design = useProductionDesign(editing && order.data ? order.data.designNo : '');
   const allOrders = useOrders();
   const parties = useMemo(() => [...new Set((allOrders.data ?? []).map((o) => o.party))].sort(), [allOrders.data]);
+  const label = order.data ? `${order.data.party}-${order.data.partyOrderNo}` : '';
 
   const onDelete = () => {
-    const label = order.data ? `${order.data.party}-${order.data.partyOrderNo}` : `this order`;
-    if (window.confirm(`Delete order ${label}? It is removed from all lists and purchase requirements. This cannot be undone.`)) {
+    if (window.confirm(`Delete order ${label || 'this order'}? It is removed from all lists and purchase requirements. This cannot be undone.`)) {
       remove.mutate(orderNo, { onSuccess: onClose });
     }
   };
 
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'purchase', label: 'Purchase Requirement' },
+    { id: 'components', label: 'Component Details' },
+    ...(cost.data ? [{ id: 'cost' as const, label: 'Cost Breakup' }] : []),
+  ];
+
   return (
     <Drawer
       open
-      title={
-        <span className="drawer-title">
-          <span>Order {order.data ? `#${order.data.partyOrderNo}` : ''}</span>
-          {order.data && <span className="badge badge-blue">{order.data.party}</span>}
-        </span>
-      }
+      wide
+      title={<span className="drawer-title">Order Details{label ? ` – ${label}` : ''}</span>}
       onClose={onClose}
       footer={
         <>
           {auth.can('PRODUCTION_UPDATE') && (
             <button type="button" className="btn btn-danger-ghost" disabled={remove.isPending} onClick={onDelete}>
-              Delete order
+              Delete
             </button>
           )}
           {auth.can('PRODUCTION_UPDATE') && (
-            <button type="button" className="btn" disabled={!order.data} onClick={() => setEditing(true)}>
+            <button type="button" className="btn btn-ghost footer-note" disabled={!order.data} onClick={() => setEditing(true)}>
               Edit order
             </button>
           )}
-          {auth.can('PURCHASE_REQUIREMENT_VIEW') && (
-            <Link className="btn footer-note" to={`/purchase?orderNo=${orderNo}`}>
-              Procurement planning
-            </Link>
-          )}
-          <button type="button" className="btn btn-primary" onClick={onClose}>
+          <button type="button" className="btn btn-lg" onClick={onClose}>
             Close
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-lg"
+            disabled={!order.data || !summary.data || summary.data.columns.length === 0}
+            onClick={() => order.data && summary.data && downloadPurchaseCsv(summary.data, order.data)}
+          >
+            <Icon name="download" size={18} /> Export Purchase List
           </button>
         </>
       }
     >
       <QueryState query={order}>
         {(o) => (
-          <div className="stack">
+          <div className="stack order-details">
             <ErrorAlert error={remove.error ?? refresh.error} />
-            <div className="stat-row">
-              <div className="stat">
-                <span className="muted small">Total pieces</span>
-                <strong>{formatNumber(o.totalPieces, 0)}</strong>
-              </div>
-              <div className="stat">
-                <span className="muted small">Order date</span>
-                <strong>{formatDate(o.orderDate)}</strong>
-              </div>
+
+            <div className="order-info">
+              <InfoItem icon="code" label="Design No." value={o.designNo} />
+              <InfoItem icon="bag" label="Item" value={o.item} />
+              <InfoItem icon="users" label="Party" value={o.party} />
+              <InfoItem icon="calendar" label="Order Date" value={formatDate(o.orderDate)} />
+            </div>
+
+            <div className="order-stats">
+              <StatCard icon="package" label="Total Pieces">
+                <strong className="order-stat-value">{formatNumber(o.totalPieces, 0)}</strong>
+                <span className="order-stat-sizes">
+                  {piecesBySize(o).map(({ size, pieces }, i) => (
+                    <Fragment key={size}>
+                      {i > 0 && <span className="order-stat-sep">|</span>}
+                      <span>
+                        {size}: {formatNumber(pieces, 0)}
+                      </span>
+                    </Fragment>
+                  ))}
+                </span>
+              </StatCard>
+              <StatCard icon="calendar" label="Order Date">
+                <strong className="order-stat-value">{formatDate(o.orderDate)}</strong>
+              </StatCard>
               {cost.data && (
-                <div className="stat stat-cost">
-                  <span className="muted small">Material cost</span>
-                  <strong>{formatMoney(cost.data.total)}</strong>
+                <StatCard icon="rupee" label="Material Cost">
+                  <strong className="order-stat-value order-stat-money">{formatMoney(cost.data.total)}</strong>
                   <span className="muted small">{formatMoney(cost.data.perPiece)} per piece</span>
                   <button
                     type="button"
-                    className="link-btn small"
+                    className="link-btn small order-stat-link"
                     disabled={refresh.isPending}
                     title="This order keeps the rates saved when it was created. Use this to re-price it with today's rates."
                     onClick={() =>
@@ -102,64 +225,28 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                       refresh.mutate()
                     }
                   >
-                    {refresh.isPending ? 'Updating…' : "Use today's rates"}
+                    <Icon name="refresh" size={14} /> {refresh.isPending ? 'Updating…' : "Use today's rates"}
                   </button>
-                </div>
+                </StatCard>
               )}
             </div>
-            {cost.data && (cost.data.errors.length > 0 || cost.data.usesCurrentRates) && (
-              <div className="alert alert-info small">
-                {cost.data.usesCurrentRates && <p>Some rates were not saved with this order, so today's rates are used for them.</p>}
-                {cost.data.errors.length > 0 && (
-                  <ul>
-                    {cost.data.errors.map((e) => (
-                      <li key={e}>{e}</li>
-                    ))}
-                  </ul>
-                )}
+
+            <div className="order-tabs" role="tablist" aria-label="Order details">
+              {tabs.map((t) => (
+                <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {tab === 'purchase' && <QueryState query={summary}>{(s) => <PurchaseSummary summary={s} order={o} />}</QueryState>}
+            {tab === 'components' && (
+              <div className="stack">
+                <p className="muted small">Per material: quantity per piece, conversion (e.g. cord grams = metres × denier ÷ 9000) and total for this order.</p>
+                {breakdown.data ? <MaterialBreakdown data={breakdown.data} mode="order" /> : null}
               </div>
             )}
-
-
-            {Object.keys(o.types).length > 0 && (
-              <div className="order-type-list">
-                <span className="muted small">Types chosen</span>
-                <div className="tags">
-                  {Object.entries(o.types).map(([key, type]) => (
-                    <span key={key} className="tag">
-                      {variantLabel(key)} → <strong>{type}</strong>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <section>
-              <h3 className="drawer-subtitle">Quantities &amp; material requirement</h3>
-              <p className="muted small drawer-note">Requirement = consumption per piece × quantity (current Punching values).</p>
-              <QueryState query={summary}>
-                {(s) => (
-                  <>
-                    {s.errors.length > 0 && (
-                      <div className="alert alert-error">
-                        <ul>
-                          {s.errors.map((e) => (
-                            <li key={e}>{e}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <OrderLinesTable summary={s} cost={cost.data} types={o.types} />
-                  </>
-                )}
-              </QueryState>
-            </section>
-
-            <section>
-              <h3 className="drawer-subtitle">Material detail</h3>
-              <p className="muted small drawer-note">Per material: quantity per piece, conversion (e.g. cord grams = metres × denier ÷ 9000) and total for this order.</p>
-              {breakdown.data ? <MaterialBreakdown data={breakdown.data} mode="order" /> : null}
-            </section>
+            {tab === 'cost' && cost.data && <CostBreakup cost={cost.data} />}
           </div>
         )}
       </QueryState>

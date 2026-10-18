@@ -4,6 +4,9 @@ import type { CategoryRule } from '../calculation/engine.js';
 export interface DefaultCategory extends CategoryRule {
   unit: string;
   sortOrder: number;
+  /** Step shown in the order details; null = the purchase step. */
+  orderStep: string | null;
+  wholeUnits: boolean;
 }
 
 /**
@@ -26,6 +29,9 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: 'ROLLS', label: 'Rolls', formula: 'CD / cdPerRoll' },
     ],
     purchaseStep: 'ROLLS',
+    // Orders show sequences in whole CDs (the purchase department buys CDs).
+    orderStep: 'CD',
+    wholeUnits: true,
   },
   {
     code: 'BEAD',
@@ -35,6 +41,8 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
     fields: [{ key: 'pcsPerKg', label: 'Pieces per KG', required: true }],
     steps: [{ key: 'KG', label: 'KG', formula: 'TOTAL / pcsPerKg' }],
     purchaseStep: 'KG',
+    orderStep: null,
+    wholeUnits: false,
   },
   {
     code: 'CORD',
@@ -47,6 +55,8 @@ export const DEFAULT_CATEGORIES: DefaultCategory[] = [
       { key: 'KG', label: 'KG', formula: 'GRAMS / 1000' },
     ],
     purchaseStep: 'KG',
+    orderStep: null,
+    wholeUnits: false,
   },
 ];
 

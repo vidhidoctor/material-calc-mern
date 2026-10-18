@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { migrateMaterialRules } from '../src/db/migrations.js';
+import { migrateMaterialRules, migrateOrderUnits } from '../src/db/migrations.js';
+import { MaterialCategoryModel } from '../src/modules/material-categories/material-category.model.js';
 import { MaterialModel } from '../src/modules/materials/material.model.js';
 import { bearer, createActiveUser, startTestApp, type TestContext } from './helpers.js';
 import { createFixtureOrder, loadFixture, round2 } from './fixture.js';
@@ -37,6 +38,34 @@ describe('material categories (admin-configurable formulas)', () => {
       { key: 'CD', label: 'CD', formula: 'TOTAL / seqPerCd' },
       { key: 'ROLLS', label: 'Rolls', formula: 'CD / cdPerRoll' },
     ]);
+  });
+
+  it('orders show sequences in whole CDs, other categories in their purchase step', async () => {
+    const res = await ctx.api.get('/api/material-categories').set(bearer(ctx.adminToken));
+    assert.deepEqual(
+      res.body.map((c: { code: string; orderStep: string | null; wholeUnits: boolean }) => [c.code, c.orderStep, c.wholeUnits]),
+      [['SEQUENCE', 'CD', true], ['BEAD', null, false], ['CORD', null, false]],
+    );
+  });
+
+  it('existing databases get the order unit once (later Admin edits are kept)', async () => {
+    await MaterialCategoryModel.collection.updateMany({}, { $unset: { orderStep: '', wholeUnits: '' } });
+    assert.equal(await migrateOrderUnits(), 3);
+    const sequence = await MaterialCategoryModel.findOne({ code: 'SEQUENCE' });
+    assert.deepEqual([sequence!.orderStep, sequence!.wholeUnits], ['CD', true]);
+    await MaterialCategoryModel.updateOne({ code: 'SEQUENCE' }, { $set: { orderStep: 'ROLLS' } });
+    assert.equal(await migrateOrderUnits(), 0);
+    assert.equal((await MaterialCategoryModel.findOne({ code: 'SEQUENCE' }))!.orderStep, 'ROLLS');
+    await MaterialCategoryModel.updateOne({ code: 'SEQUENCE' }, { $set: { orderStep: 'CD' } });
+  });
+
+  it('the order unit must be one of the steps', async () => {
+    const bad = await ctx.api
+      .post('/api/material-categories')
+      .set(bearer(ctx.adminToken))
+      .send({ ...zardoshi, code: 'pipe', orderStep: 'cd' });
+    assert.equal(bad.status, 400);
+    assert.equal(bad.body.error, 'The unit shown on orders must be one of the formula steps.');
   });
 
   it('creates a new category; materials then use it in purchase', async () => {

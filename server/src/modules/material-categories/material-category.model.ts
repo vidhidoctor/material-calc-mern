@@ -22,6 +22,10 @@ export interface MaterialCategory {
   fields: CategoryField[];
   steps: CategoryStep[];
   purchaseStep: string;
+  /** Step shown in the order details (e.g. CD); null = the purchase step. */
+  orderStep: string | null;
+  /** The order total in that step is rounded up to whole units. */
+  wholeUnits: boolean;
   /** Types chosen per order in Production (e.g. sequence finish MATT, METAL); empty = none. */
   types: string[];
 }
@@ -54,6 +58,8 @@ const categorySchema = new Schema<MaterialCategory>(
     fields: { type: [fieldSchema], default: [] },
     steps: { type: [stepSchema], default: [] },
     purchaseStep: { type: String, required: true },
+    orderStep: { type: String, default: null },
+    wholeUnits: { type: Boolean, default: false },
     types: { type: [String], default: [] },
   },
   { versionKey: false },
