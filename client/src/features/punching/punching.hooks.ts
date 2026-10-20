@@ -7,7 +7,6 @@ import {
   deleteDesign,
   getDesign,
   getDesignBreakdown,
-  getDesignCost,
   listDesigns,
   putComponent,
   updateDesign,
@@ -23,8 +22,6 @@ export const useDesignBreakdown = (designNo: string, enabled: boolean) =>
   useQuery({ queryKey: [...queryKeys.design(designNo), 'breakdown'], queryFn: () => getDesignBreakdown(designNo), enabled });
 
 /** Only fetched for users who may see costs. */
-export const useDesignCost = (designNo: string, enabled: boolean) =>
-  useQuery({ queryKey: queryKeys.designCost(designNo), queryFn: () => getDesignCost(designNo), enabled });
 
 /** Orders follow the design, so design changes also refresh Production, order figures and Purchase. */
 function invalidateDesignDependents(queryClient: ReturnType<typeof useQueryClient>) {

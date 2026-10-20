@@ -1,4 +1,4 @@
-import { COMPANY_NAME, type PurchaseOrderDto, type PurchaseOrderSectionDto } from '@app/shared';
+import { APP_NAME, COMPANY_NAME, type PurchaseOrderDto, type PurchaseOrderSectionDto } from '@app/shared';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ErrorAlert, QueryState } from '../../components/ui';
@@ -156,7 +156,7 @@ export function PurchaseOrderPrintPage() {
   useEffect(() => {
     if (query.data) document.title = `PO ${query.data.designNo} ${query.data.party}-${query.data.partyOrderNo}`;
     return () => {
-      document.title = 'Material Calc';
+      document.title = APP_NAME;
     };
   }, [query.data]);
 

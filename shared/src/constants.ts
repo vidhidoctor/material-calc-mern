@@ -46,6 +46,9 @@ export function permissionGroup(code: PermissionCode): string {
  */
 export const isOrderEnteredField = (key: string): boolean => key.trim().toUpperCase() === 'DENIER';
 
+/** Name of the app (header, login, browser tab). */
+export const APP_NAME = 'Creative Embroidery ERP';
+
 /** Business name printed on the purchase order slip. */
 export const COMPANY_NAME = 'CREATIVE EMBROIDERY';
 

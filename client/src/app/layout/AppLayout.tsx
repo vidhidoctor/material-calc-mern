@@ -1,3 +1,4 @@
+import { APP_NAME } from '@app/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
@@ -36,7 +37,7 @@ export function AppLayout() {
         >
           ☰
         </button>
-        <span className="brand">Material Calc</span>
+        <span className="brand">{APP_NAME}</span>
         {appEnv && appEnv !== 'production' && (
           <span className={`env-badge env-${appEnv}`} title={appEnv === 'uat' ? 'Test website (UAT) — not the live site' : 'Running on this computer'}>
             {appEnv.toUpperCase()}

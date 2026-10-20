@@ -25,6 +25,5 @@ export const queryKeys = {
   /** Prefix for every ₹ query (rates, design cost, order cost). */
   costing: ['costing'] as const,
   rates: ['costing', 'rates'] as const,
-  designCost: (designNo: string) => ['costing', 'design', designNo] as const,
   orderCost: (orderNo: number) => ['costing', 'order', orderNo] as const,
 };

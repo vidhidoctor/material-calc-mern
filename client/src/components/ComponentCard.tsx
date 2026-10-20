@@ -2,12 +2,11 @@ import {
   parseVariantKey,
   variantLabel,
   type DesignComponentDto,
-  type DesignCostSizeDto,
   type DesignSizeDto,
   type MaterialColumnDto,
 } from '@app/shared';
 import { DataGrid, type Column } from './DataGrid';
-import { formatMoney, formatNumber } from '../lib/format';
+import { formatNumber } from '../lib/format';
 
 interface Props {
   component: DesignComponentDto;
@@ -15,12 +14,10 @@ interface Props {
   onEdit?: () => void;
   onRemove?: () => void;
   removing?: boolean;
-  /** Material cost per piece by size (Admin only); adds a "Cost / pc" column. */
-  costs?: DesignCostSizeDto[];
 }
 
 /** One component: its sizes, Stitch, Laser and per-piece consumption (only the columns chosen for it, incl. colours). */
-export function ComponentCard({ component, materials, onEdit, onRemove, removing, costs }: Props) {
+export function ComponentCard({ component, materials, onEdit, onRemove, removing }: Props) {
   const byCode = new Map(materials.map((m) => [m.code, m]));
   const used = component.columns.map((key) => {
     const material = byCode.get(parseVariantKey(key).code);
@@ -48,15 +45,6 @@ export function ComponentCard({ component, materials, onEdit, onRemove, removing
       },
     })),
   ];
-  if (costs) {
-    const bySize = new Map(costs.map((c) => [c.size, c.total]));
-    columns.push({
-      key: 'cost',
-      header: <span title="Material cost of one piece (today's rates)">Cost / pc</span>,
-      align: 'right',
-      render: (s) => <strong className="cost-figure">{formatMoney(bySize.get(s.size) ?? null)}</strong>,
-    });
-  }
 
   return (
     <section className="card">
