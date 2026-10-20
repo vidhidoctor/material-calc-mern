@@ -118,6 +118,8 @@ are decimal strings.
 | POST | `/orders` | `{ designNo, party, orderDate?, quantity }` or `{ designNo, party, orderDate?, lines: [{ component, size, quantity }] }` | PRODUCTION_CREATE |
 | GET | `/orders/:orderNo` | — | PRODUCTION_VIEW |
 | GET | `/orders/:orderNo/breakdown` | — (material detail per line: qty/pc, conversions e.g. cord grams/KG, target pcs, totals; rate + amount only with COST_VIEW) | PRODUCTION_VIEW |
+| PUT | `/orders/:orderNo/cords` | `{ cords: { <cord column key>: { denier?, ratePerUnit? } } }` (cord denier and ₹/KG incl. GST for this order; null clears) → recalculated summary with weight and cost | PRODUCTION_UPDATE (rate also needs COST_VIEW) |
+| POST | `/orders/:orderNo/cords/preview` | same body; weight and cost without saving | PRODUCTION_VIEW |
 | GET | `/orders/:orderNo/purchase-order` | — (print slip: sequences per component in whole CDs, other categories per order in KG …, total qty, saved names) | PRODUCTION_VIEW |
 | PUT | `/orders/:orderNo/purchase-order/names` | `{ names: { <row id>: name } }` (printed exactly as entered; blank removes) | PRODUCTION_UPDATE or PURCHASE_REQUIREMENT_VIEW |
 | GET | `/designs/:designNo/breakdown` | — (per-piece conversions per component, size and column) | PUNCHING_VIEW |

@@ -9,6 +9,9 @@ import {
   getOrderCost,
   getOrderSummary,
   getPurchaseOrder,
+  previewOrderCords,
+  saveOrderCords,
+  type OrderCordsBody,
   savePurchaseOrderNames,
   getProductionDesign,
   listOrders,
@@ -100,3 +103,23 @@ export function useSavePurchaseOrderNames(orderNo: number) {
     onSuccess: (data) => queryClient.setQueryData(queryKeys.purchaseOrder(orderNo), data),
   });
 }
+
+/**
+ * Saves the cord denier and rate per KG for an order; every figure of that order (summary, detail, slip,
+ * cost) and procurement are refreshed.
+ */
+export function useSaveOrderCords(orderNo: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (cords: OrderCordsBody) => saveOrderCords(orderNo, cords),
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.orderSummary(orderNo), data);
+      return Promise.all(
+        [queryKeys.orders, queryKeys.costing, queryKeys.purchase].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      );
+    },
+  });
+}
+
+/** Weight and cost with the values as typed, without saving (the cord popup). */
+export const usePreviewOrderCords = (orderNo: number) => useMutation({ mutationFn: (cords: OrderCordsBody) => previewOrderCords(orderNo, cords) });

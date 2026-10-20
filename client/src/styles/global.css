@@ -2283,3 +2283,194 @@ a {
     display: inline;
   }
 }
+
+/* Order drawer: cord denier per cord type (weight recalculated when saved). */
+.denier-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.denier-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+.denier-panel-head h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.denier-table td {
+  vertical-align: middle;
+}
+.denier-input {
+  width: 110px;
+  text-align: right;
+}
+.denier-source {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.cord-edit {
+  margin-left: auto;
+}
+/* Cord popup: order + cord line, "Cord details" card per cord, denier calculator card. */
+.cord-modal {
+  gap: 16px;
+}
+.cord-modal-sub {
+  margin: -6px 0 0;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+.cord-modal-sep {
+  margin: 0 12px;
+  color: var(--border-strong);
+}
+.cord-modal-formula {
+  margin: 0;
+}
+.cord-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.cord-card h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+.cord-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.cord-inputs-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cord-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+.cord-results-1 {
+  grid-template-columns: minmax(0, 1fr);
+}
+.cord-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.cord-label {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+.cord-readonly {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 48px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.cord-readonly strong {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+}
+.cord-result-box strong {
+  font-size: 1.2rem;
+}
+.input-lg {
+  min-height: 48px;
+  padding: 10px 16px;
+  font-size: 1rem;
+}
+.btn-outline-primary {
+  border-color: var(--primary);
+  background: transparent;
+  color: var(--primary);
+}
+.btn-outline-primary:hover:not(:disabled) {
+  background: var(--primary-soft);
+}
+/* Denier calculator as its own card in the cord popup. */
+.denier-calc-card {
+  margin-top: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-style: solid;
+  border-radius: 10px;
+}
+.denier-calc-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  color: var(--text);
+  font-weight: 400;
+  list-style: none;
+}
+.denier-calc-card > summary::-webkit-details-marker {
+  display: none;
+}
+.denier-calc-card > summary::after {
+  content: '⌄';
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+.denier-calc-card[open] > summary::after {
+  transform: rotate(180deg);
+}
+.denier-calc-title {
+  display: block;
+  font-size: 1.1rem;
+}
+.denier-calc-hint {
+  display: block;
+  margin-top: 2px;
+}
+.denier-calc-card .denier-calc-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: end;
+  gap: 16px;
+  margin: 0;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--border);
+}
+.denier-calc-card .denier-calc-row .input {
+  width: 100%;
+}
+.denier-calc-card .denier-result {
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.denier-calc-card .denier-result strong {
+  font-size: 1.2rem;
+}
+.denier-calc-card > .muted {
+  display: block;
+  padding: 0 20px 14px;
+}
+@media (max-width: 720px) {
+  .cord-inputs,
+  .cord-results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

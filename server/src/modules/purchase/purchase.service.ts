@@ -11,13 +11,16 @@ import {
 import {
   calculateRequirements,
   convertWithCategory,
+  Decimal,
   toDecimalString,
   type CalcLine,
+  type ConversionResult,
 } from '../../calculation/engine.js';
 import { consumptionLookup } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
-import { OrderModel, orderLabel } from '../orders/order.model.js';
+import { denierFieldKey, orderCords, rulesForOrder } from '../orders/order-cords.js';
+import { OrderModel, orderLabel, type OrderDocument } from '../orders/order.model.js';
 import { findOrder } from '../orders/orders.service.js';
 import type { PurchaseQuery } from './purchase.validation.js';
 
@@ -76,14 +79,46 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
   );
   const result = calculateRequirements(lines, keys);
   const errors = [...result.errors];
+
+  // Cords: each order's metres are weighed with that order's denier (never Material Master), then summed.
+  const cordParts = new Map<string, { order: OrderDocument; total: Decimal }[]>();
+  for (const order of orders) {
+    const lookup = lookups.get(order.designNo) ?? missingDesign;
+    const perKey = new Map<string, Decimal>();
+    for (const line of order.lines.filter((l) => wanted.size === 0 || wanted.has(l.component))) {
+      for (const [key, qty] of Object.entries(lookup(line.component, line.size) ?? {})) {
+        const material = byCode.get(parseVariantKey(key).code);
+        if (!material || !denierFieldKey(categories.get(material.category))) continue;
+        perKey.set(key, (perKey.get(key) ?? new Decimal(0)).plus(new Decimal(qty).times(line.quantity)));
+      }
+    }
+    for (const [key, total] of perKey) cordParts.set(key, [...(cordParts.get(key) ?? []), { order, total }]);
+  }
+  const cordConversion = (key: string, field: string, rules: Record<string, number>, category: NonNullable<ReturnType<typeof compiled.get>>): ConversionResult => {
+    const parts = (cordParts.get(key) ?? []).filter((p) => !p.total.isZero());
+    if (parts.length === 0) return { values: null, purchase: null };
+    const missing = parts.filter((p) => !orderCords(p.order).get(key)?.denier);
+    if (missing.length > 0) return { values: null, purchase: null, error: `enter the cord denier in order ${missing.map((p) => orderLabel(p.order)).join(', ')}.` };
+    const values = new Map<string, Decimal>();
+    for (const p of parts) {
+      const converted = convertWithCategory(category, rulesForOrder(rules, field, orderCords(p.order).get(key)!.denier), p.total);
+      if (!converted.values) return converted;
+      for (const [step, value] of converted.values) values.set(step, (values.get(step) ?? new Decimal(0)).plus(value));
+    }
+    return { values, purchase: values.get(category.purchaseStep.toUpperCase()) ?? null };
+  };
   const totals: PurchaseTotalDto[] = keys.map((key) => {
     const { code, color, type } = parseTypedKey(key);
     const material = byCode.get(code)!;
     const total = result.totals.get(key)!;
     const category = compiled.get(material.category) ?? null;
-    const conversion = category
-      ? convertWithCategory(category, material.rules ?? {}, total)
-      : { values: null, purchase: null, error: CATEGORY_MISSING };
+    const denierField = denierFieldKey(categories.get(material.category));
+    const rules = rulesForOrder(material.rules ?? {}, denierField, null);
+    const conversion: ConversionResult = !category
+      ? { values: null, purchase: null, error: CATEGORY_MISSING }
+      : denierField
+        ? cordConversion(key, denierField, rules, category)
+        : convertWithCategory(category, rules, total);
     if (conversion.error && !total.isZero()) errors.push(`${typedLabel(key)}: ${conversion.error}`);
     return {
       ...toMaterialColumn(material, categories),
@@ -91,7 +126,7 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
       color,
       type,
       total: toDecimalString(total),
-      rules: { ...(material.rules ?? {}) },
+      rules: { ...rules },
       values: conversion.values ? Object.fromEntries([...conversion.values].map(([k, v]) => [k, toDecimalString(v)])) : null,
       purchase: conversion.purchase ? toDecimalString(conversion.purchase) : null,
       ...(conversion.error ? { error: conversion.error } : {}),

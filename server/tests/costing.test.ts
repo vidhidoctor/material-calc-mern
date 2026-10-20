@@ -88,7 +88,8 @@ describe('material costing (₹, Admin only)', () => {
   it('reports materials without a rate instead of failing', async () => {
     await ctx.api.put('/api/designs/BL-102/components/BELT').set(admin()).send({ sizes: [{ size: 'ALL', stitch: 1, consumption: { CORD: 2 } }] });
     const res = await ctx.api.get('/api/costing/designs/BL-102').set(admin());
-    assert.ok(res.body.errors.some((e: string) => e.startsWith('CORD: no rate set')));
+    // Cords have no rate in Material Master: their cost is entered on each order.
+    assert.ok(res.body.errors.includes('Cord: cost is entered on each order (denier and rate per KG).'), JSON.stringify(res.body.errors));
     assert.equal(res.body.unitCosts.CORD, null);
   });
 });

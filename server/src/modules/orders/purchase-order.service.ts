@@ -25,7 +25,8 @@ export async function getPurchaseOrder(orderNo: number): Promise<PurchaseOrderDt
     const material = materialByCode.get(column.code);
     return {
       id,
-      label: material?.name?.trim() || column.code,
+      // Same as the order drawer: the material code (SEQ-3MM); cords their name (e.g. "PC"), as in Punching.
+      label: (column.cord && material?.name?.trim()) || column.code,
       detail: [column.color, types[column.key]].filter(Boolean).join(' · '),
       qty: column.orderUnit ? qty : null,
       unit: column.orderUnit,

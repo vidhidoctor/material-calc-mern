@@ -38,6 +38,8 @@ export interface Order {
   types?: Record<string, string>;
   /** Name written on the purchase order slip, per row id (see purchase-order.service.ts). */
   poNames?: { key: string; name: string }[];
+  /** Cord denier and rate per KG incl. GST entered on the order, per cord column key (see order-cords.ts). */
+  cords?: { key: string; denier: number | null; ratePerUnit: number | null }[];
 }
 
 const lineSchema = new Schema<OrderLine>(
@@ -65,6 +67,10 @@ const orderSchema = new Schema<Order>(
     unitRates: { type: Schema.Types.Mixed, default: undefined },
     types: { type: Schema.Types.Mixed, default: undefined },
     // A list, not an object: row ids contain material codes, which may contain dots.
+    cords: {
+      type: [new Schema({ key: { type: String, required: true }, denier: { type: Number, default: null }, ratePerUnit: { type: Number, default: null } }, { _id: false })],
+      default: undefined,
+    },
     poNames: { type: [new Schema({ key: { type: String, required: true }, name: { type: String, required: true } }, { _id: false })], default: undefined },
   },
   { versionKey: false },

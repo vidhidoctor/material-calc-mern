@@ -40,6 +40,12 @@ export function permissionGroup(code: PermissionCode): string {
   return Object.keys(PERMISSION_GROUPS).find((group) => PERMISSION_GROUPS[group]?.includes(code)) ?? 'Other';
 }
 
+/**
+ * Material fields entered on each order instead of in Material Master (cord denier): a category with
+ * such a field is a "cord" — its denier and rate per KG are entered per order, never in Material Master.
+ */
+export const isOrderEnteredField = (key: string): boolean => key.trim().toUpperCase() === 'DENIER';
+
 /** Business name printed on the purchase order slip. */
 export const COMPANY_NAME = 'CREATIVE EMBROIDERY';
 
@@ -59,6 +65,7 @@ export const MESSAGES = {
   CONSUMPTION_MISSING: 'Consumption master not available for this Design + Component + Size.',
   INVALID_ORDER_QUANTITY: 'Please enter a valid Order Quantity.',
   CONVERSION_RULE_MISSING: 'Material conversion rule is not configured.',
+  CORD_DENIER_FOR_ORDER: 'Enter the cord denier for this order.',
   CORD_DENIER_MISSING: 'Please configure Cord Denier before calculating Cord KG.',
 } as const;
 

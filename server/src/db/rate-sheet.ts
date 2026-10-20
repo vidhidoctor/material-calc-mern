@@ -100,37 +100,18 @@ export async function applyRateSheet({ force = false }: { force?: boolean } = {}
   return log;
 }
 
-/** CORDING DENIER-MTR-WEIGHT DETAIL: cord denier and rate per KG (no GST on the sheet). */
-export const CORD_SHEET: { code: string; aliases: string[]; name: string; denier: number; ratePerKg: number }[] = [
-  { code: 'PC-CORD', aliases: ['CORD-PC', 'PCCORD'], name: 'PC Cord', denier: 1250, ratePerKg: 550 },
-  { code: 'MOTI-CORD', aliases: ['CORD-MOTI', 'MOTICORD'], name: 'Moti Cord', denier: 1850, ratePerKg: 550 },
-];
+/** The cord material. Its denier and rate per KG (incl. GST) are entered on each order, not here. */
+export const CORD_MATERIAL = { code: 'CORD', name: 'Cord', category: 'CORD' } as const;
 
-/** Applies the cording sheet once (or again with force); later edits are kept. */
+/** Creates the material Cord once (or again with force) when no cord material exists; later edits are kept. */
 export async function applyCordSheet({ force = false }: { force?: boolean } = {}): Promise<string[]> {
   const settings = await SettingsModel.findOneAndUpdate({ _id: SETTINGS_ID }, { $setOnInsert: { adminEmails: [] } }, { upsert: true, new: true });
   if (settings.cordSheetAppliedAt && !force) return [];
   const log: string[] = [];
-  const last = await MaterialModel.findOne().sort({ sortOrder: -1 });
-  let sortOrder = last ? last.sortOrder + 1 : 0;
-  for (const c of CORD_SHEET) {
-    const existing = await MaterialModel.findOne({ code: { $in: [c.code, ...c.aliases] } });
-    let code = c.code;
-    if (existing) {
-      code = existing.code;
-      existing.set({ category: 'CORD', rules: { denier: c.denier } });
-      existing.markModified('rules');
-      await existing.save();
-      log.push(`Material ${code}: updated from the cording sheet`);
-    } else {
-      await MaterialModel.create({ code: c.code, name: c.name, category: 'CORD', sortOrder: sortOrder++, rules: { denier: c.denier } });
-      log.push(`Material ${code}: created from the cording sheet`);
-    }
-    await MaterialRateModel.updateOne(
-      { key: code },
-      { $set: { basicRate: c.ratePerKg, gstPercent: 0, updatedAt: new Date(), updatedBy: BY } },
-      { upsert: true },
-    );
+  if (!(await MaterialModel.exists({ category: CORD_MATERIAL.category }))) {
+    const last = await MaterialModel.findOne().sort({ sortOrder: -1 });
+    await MaterialModel.create({ ...CORD_MATERIAL, sortOrder: last ? last.sortOrder + 1 : 0, rules: {} });
+    log.push(`Material ${CORD_MATERIAL.code}: created (denier and rate are entered on each order)`);
   }
   await SettingsModel.updateOne({ _id: SETTINGS_ID }, { $set: { cordSheetAppliedAt: new Date() } });
   return log;

@@ -2,7 +2,8 @@ import type { OrderDto, OrderSummaryDto } from '@app/shared';
 import { Fragment } from 'react';
 import { Icon } from '../../../components/Icon';
 import { formatNumber } from '../../../lib/format';
-import { byLength, columnLabel, downloadPurchaseCsv, rowUnit, rowValue, totalToBuy } from '../purchase-sheet';
+import { CordPanel } from './CordPanel';
+import { byLength, columnLabel, columnTitle, downloadPurchaseCsv, rowUnit, rowValue, totalToBuy } from '../purchase-sheet';
 
 const empty = <span className="muted">—</span>;
 
@@ -55,8 +56,8 @@ export function PurchaseSummary({ summary, order }: { summary: OrderSummaryDto; 
                 <th className="po-size">Size</th>
                 {columns.map((m) => (
                   <th key={m.key} title={m.error ?? undefined}>
-                    <span className="po-material">{m.code}</span>
-                    {columnLabel(m, order.types) && <span className="po-variant">{columnLabel(m, order.types)}</span>}
+                    <span className="po-material">{columnTitle(m)}</span>
+                    {columnLabel(m, order.types, columns) && <span className="po-variant">{columnLabel(m, order.types, columns)}</span>}
                     <span className={`unit-pill ${!m.orderUnit ? 'unit-missing' : m.wholeUnits ? 'unit-count' : 'unit-weight'}`}>{rowUnit(m)}</span>
                   </th>
                 ))}
@@ -122,6 +123,8 @@ export function PurchaseSummary({ summary, order }: { summary: OrderSummaryDto; 
           </table>
         </div>
       )}
+
+      <CordPanel summary={summary} types={order.types} orderLabel={`${order.party}-${order.partyOrderNo}`} />
 
       <div className="po-note">
         <Icon name="info" size={20} />

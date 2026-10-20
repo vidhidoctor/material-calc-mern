@@ -1,4 +1,4 @@
-import type { MaterialColumnDto, MaterialDto } from '@app/shared';
+import { isOrderEnteredField, type MaterialColumnDto, type MaterialDto } from '@app/shared';
 import { compileCategory, type CompiledCategory } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
 import { DesignModel } from '../designs/design.model.js';
@@ -51,6 +51,7 @@ export function toMaterialColumn(material: Material, categories: CategoryMap): M
     category: material.category,
     unit: category?.unit ?? '',
     typed: (category?.types?.length ?? 0) > 0,
+    cord: category?.fields.some((f) => isOrderEnteredField(f.key)) ?? false,
   };
 }
 
@@ -63,13 +64,17 @@ function toMaterialDto(material: Material, categories: CategoryMap): MaterialDto
   };
 }
 
-/** Keeps only the category's fields; required ones must be present; all must be > 0. */
+/**
+ * Keeps only the category's fields; required ones must be present; all must be > 0. Fields entered on
+ * each order (cord denier) are not kept here.
+ */
 async function categoryRules(input: UpdateMaterialInput): Promise<{ category: string; rules: Record<string, number> }> {
   const category = await MaterialCategoryModel.findOne({ code: input.category });
   if (!category) throw new AppError(400, MATERIAL_MESSAGES.unknownCategory(input.category));
   const given = new Map(Object.entries(input.rules).map(([key, value]) => [key.toUpperCase(), value]));
   const rules: Record<string, number> = {};
   for (const field of category.fields) {
+    if (isOrderEnteredField(field.key)) continue;
     const value = given.get(field.key.toUpperCase());
     if (value === undefined || value === null) {
       if (field.required) throw new AppError(400, MATERIAL_MESSAGES.required(field.label, category.name));

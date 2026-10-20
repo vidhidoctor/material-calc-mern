@@ -44,6 +44,15 @@ export const getOrderCost = (orderNo: number) => api<OrderCostDto>(`/costing/ord
 export const listOrders = () => api<OrderListItemDto[]>('/orders');
 export const getOrder = (orderNo: number) => api<OrderDto>(`/orders/${orderNo}`);
 export const getOrderSummary = (orderNo: number) => api<OrderSummaryDto>(`/orders/${orderNo}/summary`);
+/** Denier of cords for this order (null = back to the Material Master value); returns the recalculated summary. */
+/** Cord column key → denier and rate per KG incl. GST for this order (null clears; left out = unchanged). */
+export type OrderCordsBody = Record<string, { denier?: number | null; ratePerUnit?: number | null }>;
+/** Saves the cord denier and rate for this order; returns the recalculated summary. */
+export const saveOrderCords = (orderNo: number, cords: OrderCordsBody) =>
+  api<OrderSummaryDto>(`/orders/${orderNo}/cords`, { method: 'PUT', body: { cords } });
+/** Weight and cost with these values, without saving. */
+export const previewOrderCords = (orderNo: number, cords: OrderCordsBody) =>
+  api<OrderSummaryDto>(`/orders/${orderNo}/cords/preview`, { method: 'POST', body: { cords } });
 /** The purchase order print slip (quantities from the order calculation, names entered by hand). */
 export const getPurchaseOrder = (orderNo: number) => api<PurchaseOrderDto>(`/orders/${orderNo}/purchase-order`);
 /** Saves slip names (row id → name; blank removes). */

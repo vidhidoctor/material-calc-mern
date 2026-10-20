@@ -1,6 +1,7 @@
 import { MESSAGES } from '@app/shared';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
+import { Decimal } from '../src/calculation/engine.js';
 import { MaterialModel } from '../src/modules/materials/material.model.js';
 import { bearer, createActiveUser, startTestApp, type TestContext } from './helpers.js';
 import { createFixtureOrder, fixture, loadFixture, round2 } from './fixture.js';
@@ -148,6 +149,82 @@ describe('production orders and purchase requirements', () => {
     await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { 'C:KALI::SEQ-3MM': '' } });
   });
 
+  it('cord: denier and rate per KG are entered on the order; weight = metres × denier ÷ 9,000,000, cost = weight × rate', async () => {
+    type Cord = { denier: number | null; ratePerUnit: string | null; cost: string | null; rateUnit: string };
+    type Column = { key: string; categoryName: string; cord?: Cord };
+    const cordOf = (body: { columns: Column[] }) => body.columns.find((c) => c.key === 'CORD')!;
+    const admin = bearer(ctx.adminToken);
+
+    const before = (await ctx.api.get('/api/orders/1/summary').set(bearer(prod))).body;
+    assert.equal(cordOf(before).categoryName, 'Cord');
+    // The fixture order has its cord denier (1,200) entered on the order.
+    assert.deepEqual(cordOf(before).cord, { denier: 1200, ratePerUnit: null, cost: null, rateUnit: 'KG' });
+    assert.equal(before.columns.find((c: Column) => c.key === 'SEQ-3MM').cord, undefined);
+
+    // Production enters the denier; only users who see costs may enter the rate.
+    const denied = await ctx.api.put('/api/orders/1/cords').set(bearer(prod)).send({ cords: { CORD: { ratePerUnit: 550 } } });
+    assert.equal(denied.status, 403);
+    const saved = await ctx.api.put('/api/orders/1/cords').set(bearer(prod)).send({ cords: { CORD: { denier: 150 } } });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    // 289,206.5 m × 150 ÷ 9,000,000 = 4.820108 KG.
+    assert.equal(saved.body.buy.CORD, '4.820108');
+
+    const priced = await ctx.api.put('/api/orders/1/cords').set(admin).send({ cords: { CORD: { ratePerUnit: 550 } } });
+    assert.equal(priced.status, 200, JSON.stringify(priced.body));
+    const cord = cordOf(priced.body).cord!;
+    assert.deepEqual([cord.denier, cord.ratePerUnit], [150, '550']);
+    // 4.8201083… KG × ₹550 = ₹2,651.06
+    assert.equal(round2(cord.cost!), 2651.06);
+    // Production sees the denier and weight, never ₹.
+    const prodView = (await ctx.api.get('/api/orders/1/summary').set(bearer(prod))).body;
+    assert.deepEqual(cordOf(prodView).cord, { denier: 150, ratePerUnit: null, cost: null, rateUnit: 'KG' });
+
+    // The popup's preview does not save.
+    const preview = await ctx.api.post('/api/orders/1/cords/preview').set(admin).send({ cords: { CORD: { denier: 300 } } });
+    assert.equal(preview.status, 200, JSON.stringify(preview.body));
+    assert.equal(round2(preview.body.buy.CORD), 9.64);
+    assert.equal(round2(cordOf(preview.body).cord!.cost!), 5302.12);
+    assert.equal((await ctx.api.get('/api/orders/1/summary').set(admin)).body.buy.CORD, '4.820108');
+
+    // The order's cost, component detail, slip and procurement all use the order's denier and rate.
+    const cost = (await ctx.api.get('/api/costing/orders/1').set(admin)).body;
+    assert.ok(!cost.errors.some((e: string) => e.startsWith('CORD')), JSON.stringify(cost.errors));
+    const breakdown = (await ctx.api.get('/api/orders/1/breakdown').set(admin)).body;
+    const cordRows = breakdown.rows.filter((r: { code: string }) => r.code === 'CORD');
+    assert.equal(cordRows[0].fields.denier, 150);
+    assert.equal(cordRows[0].ratePerPurchaseUnit, '550');
+    const amount = cordRows.reduce((sum: Decimal, r: { amount: string }) => sum.plus(r.amount), new Decimal(0));
+    assert.equal(round2(amount.toString()), 2651.06);
+    const slip = (await ctx.api.get('/api/orders/1/purchase-order').set(admin)).body;
+    const slipCord = slip.sections.flatMap((x: { rows: { id: string; qty: string }[] }) => x.rows).find((r: { id: string }) => r.id === 'K:CORD::CORD');
+    assert.equal(round2(slipCord.qty), 4.82);
+    assert.equal(round2(totalOf((await purchase({ orderNo: '1' })).totals, 'CORD').purchase!), 4.82);
+
+    // Only this order's cords; values must be positive.
+    assert.equal((await ctx.api.put('/api/orders/1/cords').set(admin).send({ cords: { 'SEQ-3MM': { denier: 5 } } })).status, 400);
+    assert.equal((await ctx.api.put('/api/orders/1/cords').set(admin).send({ cords: { CORD: { denier: 0 } } })).status, 400);
+
+    // Back to the fixture values for the other tests.
+    const reset = await ctx.api.put('/api/orders/1/cords').set(admin).send({ cords: { CORD: { denier: 1200, ratePerUnit: null } } });
+    assert.equal(round2(reset.body.buy.CORD), 38.56);
+  });
+
+  it('cord without a denier on the order: no weight, a clear message, procurement names the order', async () => {
+    const admin = bearer(ctx.adminToken);
+    await ctx.api.put('/api/orders/1/cords').set(admin).send({ cords: { CORD: { denier: null } } });
+    try {
+      const summary = (await ctx.api.get('/api/orders/1/summary').set(bearer(prod))).body;
+      const cord = summary.columns.find((c: { key: string }) => c.key === 'CORD');
+      assert.equal(cord.error, MESSAGES.CORD_DENIER_FOR_ORDER);
+      assert.equal(cord.orderUnit, null);
+      assert.equal(summary.buy.CORD, undefined);
+      const body = await purchase({ orderNo: '1' });
+      assert.match(totalOf(body.totals, 'CORD').error!, /enter the cord denier in order AB TRADERS-1|enter the cord denier in order/);
+    } finally {
+      await ctx.api.put('/api/orders/1/cords').set(admin).send({ cords: { CORD: { denier: 1200 } } });
+    }
+  });
+
   it('a material without its conversion rule keeps its consumption unit and reports why', async () => {
     const before = await MaterialModel.findOne({ code: 'SEQ-7MM' });
     await MaterialModel.updateOne({ code: 'SEQ-7MM' }, { $unset: { 'rules.seqPerCd': '' } });
@@ -293,17 +370,14 @@ describe('production orders and purchase requirements', () => {
 
     it('reports a missing conversion rule instead of crashing', async () => {
       // The API always requires rules; simulate legacy data with a rule missing in the DB.
-      await MaterialModel.updateOne({ code: 'CORD' }, { $unset: { 'rules.denier': '' } });
+      // (A cord's denier is entered on the order, so it is not a Material Master rule: see the cord tests.)
       await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $unset: { 'rules.pcsPerKg': '' } });
       try {
         const body = await purchase({ orderNo: '1' });
-        assert.equal(totalOf(body.totals, 'CORD').purchase, null);
-        assert.equal(totalOf(body.totals, 'CORD').error, MESSAGES.CORD_DENIER_MISSING);
+        assert.equal(totalOf(body.totals, 'PIPE-4MM').purchase, null);
         assert.equal(totalOf(body.totals, 'PIPE-4MM').error, MESSAGES.CONVERSION_RULE_MISSING);
-        // In material order: PIPE-4MM (sortOrder 8) before CORD (10).
-        assert.deepEqual(body.errors, [`PIPE-4MM: ${MESSAGES.CONVERSION_RULE_MISSING}`, `CORD: ${MESSAGES.CORD_DENIER_MISSING}`]);
+        assert.deepEqual(body.errors, [`PIPE-4MM: ${MESSAGES.CONVERSION_RULE_MISSING}`]);
       } finally {
-        await MaterialModel.updateOne({ code: 'CORD' }, { $set: { 'rules.denier': 1200 } });
         await MaterialModel.updateOne({ code: 'PIPE-4MM' }, { $set: { 'rules.pcsPerKg': 35000 } });
       }
     });

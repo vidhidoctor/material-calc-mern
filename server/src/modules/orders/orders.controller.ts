@@ -4,7 +4,7 @@ import { getAuth } from '../../middleware/auth.js';
 import { orderBreakdown } from './breakdown.service.js';
 import * as ordersService from './orders.service.js';
 import { getPurchaseOrder, savePurchaseOrderNames as saveNames } from './purchase-order.service.js';
-import type { CreateOrderInput, PurchaseOrderNamesInput, UpdateOrderInput } from './orders.validation.js';
+import type { CreateOrderInput, OrderCordsInput, PurchaseOrderNamesInput, UpdateOrderInput } from './orders.validation.js';
 
 /** After validate(), orderNo is a number. */
 const orderNoOf = (req: Request): number => (req.params as unknown as { orderNo: number }).orderNo;
@@ -39,7 +39,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
 }
 
 export async function summary(req: Request, res: Response): Promise<void> {
-  res.json(await ordersService.getOrderSummary(orderNoOf(req)));
+  res.json(await ordersService.getOrderSummary(orderNoOf(req), { includeCost: getAuth(req).permissions.has('COST_VIEW') }));
 }
 
 export async function purchaseOrder(req: Request, res: Response): Promise<void> {
@@ -48,4 +48,15 @@ export async function purchaseOrder(req: Request, res: Response): Promise<void> 
 
 export async function savePurchaseOrderNames(req: Request, res: Response): Promise<void> {
   res.json(await saveNames(orderNoOf(req), (req.body as PurchaseOrderNamesInput).names));
+}
+
+const canCost = (req: Request) => getAuth(req).permissions.has('COST_VIEW');
+
+export async function saveCords(req: Request, res: Response): Promise<void> {
+  res.json(await ordersService.saveOrderCords(orderNoOf(req), (req.body as OrderCordsInput).cords, { canCost: canCost(req) }));
+}
+
+/** Weight and cost with the values as typed, without saving (the drawer's popup). */
+export async function previewCords(req: Request, res: Response): Promise<void> {
+  res.json(await ordersService.saveOrderCords(orderNoOf(req), (req.body as OrderCordsInput).cords, { canCost: canCost(req), preview: true }));
 }

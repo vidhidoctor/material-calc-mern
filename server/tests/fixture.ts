@@ -50,11 +50,18 @@ export async function loadFixture(api: Api, token: string): Promise<void> {
   }
 }
 
-/** Creates the 37-line MATRIAL.xlsx order and returns its number. */
+/**
+ * Creates the 37-line MATRIAL.xlsx order and returns its number. The cord denier is entered on the
+ * order (cords keep no denier in Material Master), with the fixture's value.
+ */
 export async function createFixtureOrder(api: Api, token: string): Promise<number> {
   const res = await api.post('/api/orders').set(bearer(token)).send(fixture.order);
   assert.equal(res.status, 201, JSON.stringify(res.body));
-  return res.body.orderNo as number;
+  const orderNo = res.body.orderNo as number;
+  const cordDenier = fixture.materials.find((m) => m.code === 'CORD')!.denier!;
+  const cords = await api.put(`/api/orders/${orderNo}/cords`).set(bearer(token)).send({ cords: { CORD: { denier: cordDenier } } });
+  assert.equal(cords.status, 200, JSON.stringify(cords.body));
+  return orderNo;
 }
 
 /** Rounds a decimal string to 2 places, ROUND_HALF_UP (as the UI will display it). */

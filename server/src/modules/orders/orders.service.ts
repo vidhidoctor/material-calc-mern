@@ -18,8 +18,9 @@ import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import type { DesignDocument } from '../designs/design.model.js';
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
+import { denierFieldKey, orderCords, rulesForOrder, type OrderCordInput } from './order-cords.js';
 import { nextOrderNo, nextPartyOrderNo, OrderModel, type Order, type OrderDocument, type OrderLine } from './order.model.js';
-import type { CreateOrderInput, UpdateOrderInput } from './orders.validation.js';
+import type { CreateOrderInput, OrderCordsInput, UpdateOrderInput } from './orders.validation.js';
 
 export const ORDER_MESSAGES = {
   notFound: (orderNo: number) => `Order #${orderNo} not found.`,
@@ -199,13 +200,57 @@ export async function updateStatus(orderNo: number, status: OrderStatus): Promis
   return toOrderDto(order);
 }
 
+export const CORD_MESSAGES = {
+  notACord: (key: string) => `${key} is not a cord of this order.`,
+  rateNeedsCost: 'Only users who can see costs can enter the cord rate.',
+} as const;
+
+/** Merges entered cord values into the order's (undefined = unchanged; both empty = removed). */
+function mergeCords(current: Map<string, OrderCordInput>, input: OrderCordsInput['cords']): Map<string, OrderCordInput> {
+  const cords = new Map(current);
+  for (const [key, entry] of Object.entries(input)) {
+    const merged = { ...(cords.get(key) ?? { denier: null, ratePerUnit: null }) };
+    if (entry.denier !== undefined) merged.denier = entry.denier;
+    if (entry.ratePerUnit !== undefined) merged.ratePerUnit = entry.ratePerUnit;
+    if (merged.denier === null && merged.ratePerUnit === null) cords.delete(key);
+    else cords.set(key, merged);
+  }
+  return cords;
+}
+
+/**
+ * Saves the cord denier and rate per KG (incl. GST) for this order; weight and cost are recalculated.
+ * The rate needs COST_VIEW. With `preview`, nothing is saved: the summary is worked out with the values
+ * as entered (the drawer's popup shows weight and cost while typing).
+ */
+export async function saveOrderCords(
+  orderNo: number,
+  input: OrderCordsInput['cords'],
+  { canCost, preview = false }: { canCost: boolean; preview?: boolean },
+): Promise<OrderSummaryDto> {
+  const order = await findOrder(orderNo);
+  const cordKeys = new Set((await getOrderSummary(orderNo)).columns.filter((c) => c.cord).map((c) => c.key));
+  for (const [key, entry] of Object.entries(input)) {
+    if (!cordKeys.has(key)) throw new AppError(400, CORD_MESSAGES.notACord(key));
+    if (entry.ratePerUnit !== undefined && !canCost) throw new AppError(403, CORD_MESSAGES.rateNeedsCost);
+  }
+  const cords = mergeCords(orderCords(order), input);
+  if (preview) return getOrderSummary(orderNo, { includeCost: canCost, cords });
+  order.cords = [...cords].map(([key, c]) => ({ key, denier: c.denier, ratePerUnit: c.ratePerUnit }));
+  await order.save();
+  return getOrderSummary(orderNo, { includeCost: canCost });
+}
+
 /**
  * Requirement per row = the design's current consumption × quantity, in the category unit (e.g. PCS)
  * and in the unit the order shows (the category's order step, e.g. CD; else its purchase step).
  * Order totals are converted from the total consumption, never from rounded rows; whole-unit
  * categories round only that total up (what to buy).
  */
-export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto> {
+export async function getOrderSummary(
+  orderNo: number,
+  { includeCost = false, cords: cordsOverride }: { includeCost?: boolean; cords?: Map<string, OrderCordInput> } = {},
+): Promise<OrderSummaryDto> {
   const order = await findOrder(orderNo);
   const [design, { materials, categories }] = await Promise.all([
     DesignModel.findOne({ designNo: order.designNo }),
@@ -225,7 +270,8 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
   for (const [code, total] of result.totals) if (!total.isZero()) totals[code] = toDecimalString(total);
   const usedKeys = keys.filter((key) => totals[key] !== undefined);
 
-  // How each column converts to its order unit.
+  // How each column converts to its order unit. Cords use the denier entered on the order (never Material Master).
+  const cords = cordsOverride ?? orderCords(order);
   const converters = new Map(
     usedKeys.map((key) => {
       const material = materials.find((m) => m.code === parseVariantKey(key).code);
@@ -233,10 +279,23 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
       const formulas = category ? compiled.get(category.code) : null;
       const stepKey = category ? (category.orderStep ?? category.purchaseStep) : '';
       const step = category?.steps.find((st) => st.key === stepKey);
+      const denierField = denierFieldKey(category);
+      const cordInput = cords.get(key);
+      const rules = material ? rulesForOrder(material.rules ?? {}, denierField, cordInput?.denier) : {};
       const convert = (total: Decimal): Decimal | null =>
-        formulas && material ? (convertWithCategory(formulas, material.rules ?? {}, total).values?.get(stepKey) ?? null) : null;
-      const check = formulas && material ? convertWithCategory(formulas, material.rules ?? {}, new Decimal(1)) : null;
-      return [key, { material, category, unitLabel: step?.label ?? null, convert, error: check?.error ?? (formulas ? undefined : MESSAGES.CONVERSION_RULE_MISSING) }] as const;
+        formulas && material ? (convertWithCategory(formulas, rules, total).values?.get(stepKey) ?? null) : null;
+      const purchaseOf = (total: Decimal): Decimal | null => (formulas && material ? convertWithCategory(formulas, rules, total).purchase : null);
+      const check = formulas && material ? convertWithCategory(formulas, rules, new Decimal(1)) : null;
+      const error = !formulas
+        ? MESSAGES.CONVERSION_RULE_MISSING
+        : denierField && !cordInput?.denier
+          ? MESSAGES.CORD_DENIER_FOR_ORDER
+          : check?.error;
+      const rateStep = category?.steps.find((st) => st.key === category.purchaseStep);
+      const cord = denierField
+        ? { denier: cordInput?.denier ?? null, ratePerUnit: cordInput?.ratePerUnit ?? null, rateUnit: rateStep?.label ?? category?.purchaseStep ?? '' }
+        : null;
+      return [key, { material, category, unitLabel: step?.label ?? null, convert, purchaseOf, cord, error }] as const;
     }),
   );
   const toPurchase = (requirements: Map<string, Decimal>): Record<string, string> => {
@@ -274,6 +333,18 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
     buy[key] = whole ? new Decimal(value).toDecimalPlaces(0, Decimal.ROUND_UP).toString() : value;
   }
 
+  /** Cord: weight × rate per KG (purchase step), only for COST_VIEW. */
+  const cordDto = (key: string, cord: { denier: number | null; ratePerUnit: number | null; rateUnit: string }) => {
+    const weight = cord.denier ? converters.get(key)!.purchaseOf(result.totals.get(key)!) : null;
+    const showCost = includeCost && cord.ratePerUnit !== null;
+    return {
+      denier: cord.denier,
+      ratePerUnit: showCost ? toDecimalString(new Decimal(cord.ratePerUnit!)) : null,
+      cost: showCost && weight ? toDecimalString(weight.times(cord.ratePerUnit!)) : null,
+      rateUnit: cord.rateUnit,
+    };
+  };
+
   return {
     orderNo: order.orderNo,
     columns: usedKeys.map((key) => {
@@ -287,6 +358,8 @@ export async function getOrderSummary(orderNo: number): Promise<OrderSummaryDto>
         category: c.material?.category ?? '',
         orderUnit: c.error ? null : c.unitLabel,
         wholeUnits: c.category?.wholeUnits ?? false,
+        categoryName: c.category?.name ?? '',
+        ...(c.cord ? { cord: cordDto(key, c.cord) } : {}),
         ...(c.error ? { error: c.error } : {}),
       };
     }),

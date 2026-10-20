@@ -1,9 +1,21 @@
 import type { OrderDto, OrderSummaryColumnDto, OrderSummaryDto } from '@app/shared';
 import { formatDate, formatNumber } from '../../lib/format';
 
-/** Colour · type of a material column (e.g. WHITE · PURE GLASS). */
-export const columnLabel = (column: OrderSummaryColumnDto, types: Record<string, string>) =>
-  [column.color, types[column.key]].filter(Boolean).join(' · ');
+/** Cords (materials with a denier) are titled by their category, e.g. "Cord", instead of the code (PC-CORD). */
+const titledByCategory = (column: OrderSummaryColumnDto) => column.cord !== undefined && column.categoryName !== '';
+
+/** Column heading: the material code, or "Cord" for cords. */
+export const columnTitle = (column: OrderSummaryColumnDto) => (titledByCategory(column) ? column.categoryName : column.code);
+
+/**
+ * Colour · type of a material column (e.g. WHITE · PURE GLASS). A cord also shows its code when the order
+ * uses more than one cord material, so they stay apart.
+ */
+export function columnLabel(column: OrderSummaryColumnDto, types: Record<string, string>, columns: OrderSummaryColumnDto[] = []) {
+  const cordCodes = new Set(columns.filter((c) => titledByCategory(c) && c.category === column.category).map((c) => c.code));
+  const code = titledByCategory(column) && cordCodes.size > 1 ? column.code : null;
+  return [code, column.color, types[column.key]].filter(Boolean).join(' · ');
+}
 
 /**
  * Lengths (e.g. cord in MTR) are listed per size in their own unit and converted only in the total
@@ -35,7 +47,7 @@ const csvCell = (value: string) => (/[",\n]/.test(value) ? `"${value.replace(/"/
 /** The purchase requirement as a CSV sheet (opens in Excel): order details, sizes × materials, total. */
 export function purchaseCsv(summary: OrderSummaryDto, order: OrderDto): string {
   const columns = summary.columns;
-  const header = (m: OrderSummaryColumnDto) => [m.code, columnLabel(m, order.types), `(${rowUnit(m)})`].filter(Boolean).join(' ');
+  const header = (m: OrderSummaryColumnDto) => [columnTitle(m), columnLabel(m, order.types, columns), `(${rowUnit(m)})`].filter(Boolean).join(' ');
   const plain = (text: string | null) => (text ?? '').replace(/,/g, '');
   const lines: string[][] = [
     ['Purchase order'],

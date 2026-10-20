@@ -5,12 +5,16 @@ import { consumptionLookup, findDesign } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, type CategoryMap } from '../materials/materials.service.js';
 import type { MaterialDocument } from '../materials/material.model.js';
+import { MESSAGES } from '@app/shared';
+import { denierFieldKey, orderCords, rulesForOrder } from './order-cords.js';
 import { findOrder } from './orders.service.js';
 
 /**
  * Per-piece (design) and per-order material detail, e.g. the cording sheet: cord, metres per piece,
  * denier, grams/KG per piece, target pieces, total KG, rate per KG and amount.
  */
+
+const CORD_PER_ORDER = 'Cord weight is worked out on each order (denier entered on the order).';
 
 interface Context {
   materials: Map<string, MaterialDocument>;
@@ -54,7 +58,11 @@ export async function designBreakdown(designNo: string): Promise<MaterialBreakdo
         if (!material) continue;
         used.add(material.category);
         const category = ctx.compiled.get(material.category) ?? null;
-        const perPiece = category ? convertWithCategory(category, material.rules ?? {}, new Decimal(qty)) : null;
+        // Cords: no denier in a design (it is entered on each order), so only the metres are shown.
+        const isCord = denierFieldKey(ctx.categories.get(material.category)) !== null;
+        const rules = rulesForOrder(material.rules ?? {}, denierFieldKey(ctx.categories.get(material.category)), null);
+        const perPiece = category && !isCord ? convertWithCategory(category, rules, new Decimal(qty)) : null;
+        const error = isCord ? CORD_PER_ORDER : perPiece?.error;
         rows.push({
           category: material.category,
           component: component.name,
@@ -63,7 +71,7 @@ export async function designBreakdown(designNo: string): Promise<MaterialBreakdo
           code,
           color,
           type: null,
-          fields: { ...(material.rules ?? {}) },
+          fields: { ...rules },
           perPiece: toDecimalString(new Decimal(qty), 8),
           perPieceSteps: stringify(perPiece?.values ?? null),
           pieces: null,
@@ -71,7 +79,7 @@ export async function designBreakdown(designNo: string): Promise<MaterialBreakdo
           totalSteps: null,
           ratePerPurchaseUnit: null,
           amount: null,
-          ...(perPiece?.error ? { error: perPiece.error } : {}),
+          ...(error ? { error } : {}),
         });
       }
     }
@@ -95,6 +103,7 @@ export async function orderBreakdown(orderNo: number, includeCost: boolean): Pro
 
   // Rates saved with the order (else today's), only for Admin.
   const resolve = includeCost ? await orderUnitCosts(order) : null;
+  const cords = orderCords(order);
 
   const rows: MaterialBreakdownDto['rows'] = [];
   const used = new Set<string>();
@@ -105,7 +114,10 @@ export async function orderBreakdown(orderNo: number, includeCost: boolean): Pro
       if (!material) continue;
       used.add(material.category);
       const category = ctx.compiled.get(material.category) ?? null;
-      const rules = material.rules ?? {};
+      // Cords: the denier and rate entered on this order (never Material Master).
+      const denierField = denierFieldKey(ctx.categories.get(material.category));
+      const cord = denierField ? (cords.get(key) ?? { denier: null, ratePerUnit: null }) : null;
+      const rules = rulesForOrder(material.rules ?? {}, denierField, cord?.denier);
       const perPieceQty = new Decimal(qty);
       const totalQty = perPieceQty.times(line.quantity);
       const perPiece = category ? convertWithCategory(category, rules, perPieceQty) : null;
@@ -115,8 +127,11 @@ export async function orderBreakdown(orderNo: number, includeCost: boolean): Pro
 
       let ratePerPurchaseUnit: string | null = null;
       let amount: string | null = null;
-      const cost = resolve ? resolve(costKey) : null;
-      if (cost?.perUnit) {
+      const cost = resolve && !cord ? resolve(costKey) : null;
+      if (cord && includeCost && cord.ratePerUnit !== null) {
+        ratePerPurchaseUnit = toDecimalString(new Decimal(cord.ratePerUnit), 6);
+        if (total?.purchase) amount = toDecimalString(total.purchase.times(cord.ratePerUnit), 6);
+      } else if (cost?.perUnit) {
         amount = toDecimalString(cost.perUnit.times(totalQty), 6);
         if (cost.rateInclGst) {
           ratePerPurchaseUnit = toDecimalString(cost.rateInclGst, 6);
@@ -143,7 +158,7 @@ export async function orderBreakdown(orderNo: number, includeCost: boolean): Pro
         totalSteps: stringify(total?.values ?? null),
         ratePerPurchaseUnit,
         amount,
-        ...(perPiece?.error ? { error: perPiece.error } : {}),
+        ...(cord && !cord.denier ? { error: MESSAGES.CORD_DENIER_FOR_ORDER } : perPiece?.error ? { error: perPiece.error } : {}),
       });
     }
   }

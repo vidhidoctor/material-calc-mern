@@ -85,6 +85,31 @@ export const purchaseOrderNamesBody = z.object({
 });
 export type PurchaseOrderNamesInput = z.infer<typeof purchaseOrderNamesBody>;
 
+/** Cord denier and rate per KG (incl. GST) for this order, per cord column key; null clears a value. */
+export const orderCordsBody = z.object({
+  cords: z
+    .record(
+      z.string().max(200, 'Column key is too long.'),
+      z.object({
+        denier: z
+          .number({ error: 'Denier must be a number.' })
+          .positive('Denier must be greater than 0.')
+          .max(1_000_000, 'Denier is too large.')
+          .nullable()
+          .optional(),
+        ratePerUnit: z
+          .number({ error: 'Rate must be a number.' })
+          .positive('Rate must be greater than 0.')
+          .max(10_000_000, 'Rate is too large.')
+          .nullable()
+          .optional(),
+      }),
+      { error: 'Cords must be an object.' },
+    )
+    .refine((c) => Object.keys(c).length <= 100, 'Too many cords.'),
+});
+export type OrderCordsInput = z.infer<typeof orderCordsBody>;
+
 export const updateStatusBody = z.object({
   status: z.enum(ORDER_STATUSES, { error: 'Choose a valid status: PENDING, IN_PROGRESS, COMPLETED or CANCELLED.' }),
 });

@@ -140,6 +140,8 @@ export interface MaterialColumnDto {
    * enter a colour for every column of this material.
    */
   typed: boolean;
+  /** A cord: denier and rate are entered on each order; columns show the material name (e.g. "PC"). */
+  cord: boolean;
 }
 
 export interface MaterialDto extends MaterialColumnDto {
@@ -267,6 +269,24 @@ export interface OrderSummaryColumnDto extends VariantColumnDto {
   wholeUnits: boolean;
   /** Why the conversion could not be made (e.g. a missing rule), if so. */
   error?: string;
+  /** Category name, e.g. "Cord". */
+  categoryName: string;
+  /**
+   * Only for cords (materials whose category has a Denier field): denier and rate are entered on each
+   * order, never taken from Material Master. Weight = this column's buy value.
+   */
+  cord?: OrderCordDto;
+}
+
+export interface OrderCordDto {
+  /** Denier entered for this order; null = not entered yet (no weight). */
+  denier: number | null;
+  /** Rate per purchase unit incl. GST (e.g. ₹ per KG) entered for this order; only with COST_VIEW. */
+  ratePerUnit: DecimalString | null;
+  /** Weight × rate; only with COST_VIEW, null until denier and rate are entered. */
+  cost: DecimalString | null;
+  /** Label of the purchase unit the rate is per, e.g. "KG". */
+  rateUnit: string;
 }
 
 export interface OrderSummaryComponentDto {

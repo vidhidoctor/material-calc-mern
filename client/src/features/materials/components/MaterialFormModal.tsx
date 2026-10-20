@@ -1,7 +1,6 @@
-import type { MaterialCategoryDto, MaterialDto } from '@app/shared';
+import { isOrderEnteredField, type MaterialCategoryDto, type MaterialDto } from '@app/shared';
 import { useState } from 'react';
 import { Modal } from '../../../components/Modal';
-import { DenierCalculator } from '../../../components/DenierCalculator';
 import { ErrorAlert, Field, NumberInput, parseNumberInput } from '../../../components/ui';
 import type { MaterialBody } from '../materials.api';
 import { useSaveMaterial } from '../materials.hooks';
@@ -22,13 +21,16 @@ export function MaterialFormModal({ material, categories, onClose }: Props) {
   );
 
   const category = categories.find((c) => c.code === categoryCode);
-  const missing = !category || category.fields.some((f) => f.required && !(parseNumberInput(rules[f.key] ?? '') ?? 0));
+  // Fields entered on each order (cord denier) are not filled in here.
+  const fields = category?.fields.filter((f) => !isOrderEnteredField(f.key)) ?? [];
+  const perOrder = (category?.fields.length ?? 0) > fields.length;
+  const missing = !category || fields.some((f) => f.required && !(parseNumberInput(rules[f.key] ?? '') ?? 0));
 
   const onSubmit = () => {
     if (!category) return;
     const body: MaterialBody = {
       category: category.code,
-      rules: Object.fromEntries(category.fields.map((f) => [f.key, parseNumberInput(rules[f.key] ?? '')])),
+      rules: Object.fromEntries(fields.map((f) => [f.key, parseNumberInput(rules[f.key] ?? '')])),
     };
     save.mutate({ code: code.trim().toUpperCase(), body, isNew: material === null }, { onSuccess: onClose });
   };
@@ -75,19 +77,21 @@ export function MaterialFormModal({ material, categories, onClose }: Props) {
         {category && (
           <fieldset className="fieldset">
             <legend>Conversion rule</legend>
-            {category.fields.length === 0 ? (
-              <p className="muted small">This category has no fields to fill in.</p>
+            {perOrder && (
+              <p className="muted small">
+                Denier and rate per KG (incl. GST) are entered on each order (Order Master → order → Purchase Requirement → Cord), not here.
+              </p>
+            )}
+            {fields.length === 0 ? (
+              !perOrder && <p className="muted small">This category has no fields to fill in.</p>
             ) : (
               <div className="grid-2">
-                {category.fields.map((field) => (
+                {fields.map((field) => (
                   <Field key={field.key} label={field.label} required={field.required} hint={field.required ? undefined : 'Optional'}>
                     <NumberInput decimal value={rules[field.key] ?? ''} onChange={(value) => setRules((r) => ({ ...r, [field.key]: value }))} />
                   </Field>
                 ))}
               </div>
-            )}
-            {category.fields.some((f) => f.key === 'denier') && (
-              <DenierCalculator onUse={(denier) => setRules((r) => ({ ...r, denier: String(denier) }))} />
             )}
             <div className="formula-list">
               {category.steps.map((s) => (

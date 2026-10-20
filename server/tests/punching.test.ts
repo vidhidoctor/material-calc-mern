@@ -36,8 +36,10 @@ describe('materials and designs (Punching)', () => {
       const res = await ctx.api.get('/api/designs/26-49').set(bearer(punching));
       assert.equal(res.status, 200);
       assert.equal(res.body.materials.length, 11);
-      assert.deepEqual(res.body.materials[0], { code: 'SEQ-3MM', name: '3-MM Sequence', category: 'SEQUENCE', unit: 'PCS', typed: false });
+      assert.deepEqual(res.body.materials[0], { code: 'SEQ-3MM', name: '3-MM Sequence', category: 'SEQUENCE', unit: 'PCS', typed: false, cord: false });
       assert.equal(res.body.materials.at(-1).unit, 'MTR');
+      // The cord: its columns show the material name.
+      assert.equal(res.body.materials.at(-1).cord, true);
     });
   });
 
@@ -229,7 +231,6 @@ describe('materials and designs (Punching)', () => {
       assert.equal((await post({ code: 'SEQ-5MM', name: '5-MM Sequence', category: 'SEQUENCE', rules: { seqPerCd: 100 } })).body.error,
         'CD per roll is required for Sequence materials.');
       assert.equal((await post({ code: 'B1', name: 'B', category: 'BEAD', rules: { pcsPerKg: 0 } })).body.error, 'Pieces per KG must be greater than 0.');
-      assert.equal((await post({ code: 'C1', name: 'C', category: 'CORD' })).body.error, 'Denier is required for Cord materials.');
       assert.equal((await post({ code: 'Z1', category: 'NOPE', rules: {} })).body.error, 'Unknown category NOPE. Add it under Material Master → Categories first.');
       assert.equal((await post({ code: 'seq-3mm', name: 'Dup', category: 'BEAD', rules: { pcsPerKg: 1 } })).status, 409);
     });
@@ -251,7 +252,8 @@ describe('materials and designs (Punching)', () => {
         .send({ name: '5-MM Moti Gold', category: 'CORD', rules: { denier: 600, pcsPerKg: 30000 } });
       assert.equal(updated.status, 200);
       assert.equal(updated.body.code, 'MOTI-5MM');
-      assert.deepEqual(updated.body.rules, { denier: 600 });
+      // A cord keeps no denier in Material Master: it is entered on each order.
+      assert.deepEqual(updated.body.rules, {});
       assert.equal(updated.body.unit, 'MTR');
     });
 

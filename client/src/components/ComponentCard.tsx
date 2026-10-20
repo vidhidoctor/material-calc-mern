@@ -21,8 +21,13 @@ interface Props {
 
 /** One component: its sizes, Stitch, Laser and per-piece consumption (only the columns chosen for it, incl. colours). */
 export function ComponentCard({ component, materials, onEdit, onRemove, removing, costs }: Props) {
-  const units = new Map(materials.map((m) => [m.code, m.unit]));
-  const used = component.columns.map((key) => ({ key, ...parseVariantKey(key), unit: units.get(parseVariantKey(key).code) ?? '' }));
+  const byCode = new Map(materials.map((m) => [m.code, m]));
+  const used = component.columns.map((key) => {
+    const material = byCode.get(parseVariantKey(key).code);
+    // Cords show their name (e.g. "PC" instead of PC-CORD); other materials their code.
+    const title = material?.cord && material.name ? material.name : parseVariantKey(key).code;
+    return { key, ...parseVariantKey(key), title, unit: material?.unit ?? '' };
+  });
 
   const columns: Column<DesignSizeDto>[] = [
     { key: 'size', header: 'Size', render: (s) => <strong>{s.size}</strong> },
@@ -32,7 +37,7 @@ export function ComponentCard({ component, materials, onEdit, onRemove, removing
       key: c.key,
       header: (
         <span title={`${variantLabel(c.key)} (${c.unit} per piece)`}>
-          {c.code}
+          {c.title}
           <span className="th-unit">{c.color ? `${c.color} · ${c.unit}` : c.unit}</span>
         </span>
       ),

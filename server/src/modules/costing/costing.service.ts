@@ -18,6 +18,7 @@ import { consumptionLookup, findDesign, selectedColumns } from '../designs/desig
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, type CategoryMap } from '../materials/materials.service.js';
 import type { MaterialDocument } from '../materials/material.model.js';
+import { denierFieldKey, orderCords, rulesForOrder } from '../orders/order-cords.js';
 import { OrderModel } from '../orders/order.model.js';
 import { MaterialRateModel, type MaterialRate } from './material-rate.model.js';
 import type { SetRateInput } from './costing.validation.js';
@@ -29,6 +30,8 @@ export const COSTING_MESSAGES = {
   unknownCategory: (code: string) => `Unknown category ${code}.`,
   unknownType: (category: string, type: string) => `${type} is not a ${category} type.`,
   orderNotFound: (orderNo: number) => `Order #${orderNo} not found.`,
+  cordPerOrder: (category: string) => `${category}: cost is entered on each order (denier and rate per KG).`,
+  cordMissing: (key: string) => `${typedLabel(key)}: enter the denier and rate per KG for this order.`,
 } as const;
 
 /** Unit costs keep 10 decimals in transport (bead costs are fractions of a rupee). */
@@ -70,6 +73,9 @@ function currentUnitCost(ctx: CostContext, key: string): { perUnit: Decimal | nu
   const material = ctx.materials.get(code);
   if (!material) return { perUnit: null, rateInclGst: null, error: COSTING_MESSAGES.unknownMaterial(code) };
   const materialCategory = ctx.categories.get(material.category);
+  if (denierFieldKey(materialCategory)) {
+    return { perUnit: null, rateInclGst: null, error: COSTING_MESSAGES.cordPerOrder(materialCategory!.name) };
+  }
   // Typed categories (e.g. sequence finish): the rate comes from the type chosen in the order.
   let rate: MaterialRate | null;
   if ((materialCategory?.types?.length ?? 0) > 0) {
@@ -148,8 +154,11 @@ export async function listRates(): Promise<MaterialRateDto[]> {
   const colourKeys = designs.flatMap((d) => d.components.flatMap((c) => selectedColumns(c))).filter((k) => parseVariantKey(k).color);
   const rateKeys = [...ctx.rates.keys()];
   const order = [...ctx.materials.keys()];
+  // Typed materials are priced per type; cords on each order: neither has a rate here.
   const typedCodes = new Set(
-    [...ctx.materials.values()].filter((m) => (ctx.categories.get(m.category)?.types?.length ?? 0) > 0).map((m) => m.code),
+    [...ctx.materials.values()]
+      .filter((m) => (ctx.categories.get(m.category)?.types?.length ?? 0) > 0 || denierFieldKey(ctx.categories.get(m.category)) !== null)
+      .map((m) => m.code),
   );
   const keys = sortVariantKeys([...order, ...colourKeys, ...rateKeys.filter((k) => !k.startsWith('@'))], order).filter(
     (k) => ctx.materials.has(parseVariantKey(k).code) && !typedCodes.has(parseVariantKey(k).code),
@@ -258,8 +267,26 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
   const costKey = (key: string) => (isTyped(key) ? typedKey(key, types[key] ?? null) : key);
   const errors = new Set<string>();
   let usesCurrentRates = false;
+  const cords = orderCords(order);
+
+  /** Cord: ₹ per metre = KG in one metre (order denier) × rate per KG entered on the order. */
+  const cordUnit = (key: string): Decimal | null | undefined => {
+    const material = ctx.materials.get(parseVariantKey(key).code);
+    const denierField = denierFieldKey(ctx.categories.get(material?.category ?? ''));
+    if (!material || !denierField) return undefined;
+    const cord = cords.get(key);
+    const category = ctx.compiled.get(material.category) ?? null;
+    const one = category && cord?.denier ? convertWithCategory(category, rulesForOrder(material.rules ?? {}, denierField, cord.denier), new Decimal(1)).purchase : null;
+    if (!one || cord?.ratePerUnit == null) {
+      errors.add(COSTING_MESSAGES.cordMissing(key));
+      return null;
+    }
+    return one.times(cord.ratePerUnit);
+  };
 
   const unit = (key: string): Decimal | null => {
+    const cordCost = cordUnit(key);
+    if (cordCost !== undefined) return cordCost;
     const cost = resolve(key);
     if (cost.current) usesCurrentRates = true;
     if (cost.error) errors.add(cost.error);
