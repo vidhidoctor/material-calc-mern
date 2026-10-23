@@ -17,6 +17,8 @@ export interface Settings {
   rateSheetAppliedAt?: Date | null;
   /** When the cording sheet (PC / Moti cord) was applied. */
   cordSheetAppliedAt?: Date | null;
+  /** When Punching's component list was first filled (defaults + components already used). */
+  componentNamesSeededAt?: Date | null;
 }
 
 const adminEmailSchema = new Schema<AdminEmailEntry>(
@@ -36,6 +38,7 @@ const settingsSchema = new Schema<Settings>(
     adminEmails: { type: [adminEmailSchema], default: [] },
     rateSheetAppliedAt: { type: Date, default: null },
     cordSheetAppliedAt: { type: Date, default: null },
+    componentNamesSeededAt: { type: Date, default: null },
   },
   { versionKey: false },
 );

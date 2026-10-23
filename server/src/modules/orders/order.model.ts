@@ -24,6 +24,12 @@ export interface Order {
   createdAt: Date;
   lines: OrderLine[];
   /**
+   * The design's components when the order was created or last edited (see order-lines.ts): a component
+   * added to the design later joins the order automatically; one left out on purpose stays out.
+   * Missing on older orders.
+   */
+  components?: string[];
+  /**
    * Cost of one consumption unit per column key, saved when the order is created, so later rate
    * changes do not alter this order. Missing on older orders (then today's rates are used).
    */
@@ -63,6 +69,7 @@ const orderSchema = new Schema<Order>(
     status: { type: String, enum: ORDER_STATUSES, default: 'PENDING' },
     createdAt: { type: Date, default: () => new Date() },
     lines: { type: [lineSchema], default: [] },
+    components: { type: [String], default: undefined },
     unitCosts: { type: Schema.Types.Mixed, default: undefined },
     unitRates: { type: Schema.Types.Mixed, default: undefined },
     types: { type: Schema.Types.Mixed, default: undefined },

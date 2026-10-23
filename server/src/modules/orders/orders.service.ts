@@ -19,6 +19,7 @@ import type { DesignDocument } from '../designs/design.model.js';
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
 import { denierFieldKey, orderCords, rulesForOrder, type OrderCordInput } from './order-cords.js';
+import { effectiveLines, type DesignComponents } from './order-lines.js';
 import { nextOrderNo, nextPartyOrderNo, OrderModel, type Order, type OrderDocument, type OrderLine } from './order.model.js';
 import type { CreateOrderInput, OrderCordsInput, UpdateOrderInput } from './orders.validation.js';
 
@@ -44,7 +45,8 @@ export function totalPieces(lines: readonly OrderLine[]): number {
   return lines.reduce((sum, line) => sum + line.quantity, 0);
 }
 
-export function toOrderListItem(order: Order): OrderListItemDto {
+/** Totals count the components added to the design after the order too (see order-lines.ts). */
+export function toOrderListItem(order: Order, design: DesignComponents | null): OrderListItemDto {
   return {
     orderNo: order.orderNo,
     partyOrderNo: order.partyOrderNo,
@@ -53,16 +55,19 @@ export function toOrderListItem(order: Order): OrderListItemDto {
     party: order.party,
     orderDate: toDateOnly(order.orderDate),
     quantity: order.quantity ?? null,
-    totalPieces: totalPieces(order.lines),
+    totalPieces: totalPieces(effectiveLines(order, design).lines),
     status: order.status,
     createdAt: order.createdAt.toISOString(),
   };
 }
 
-function toOrderDto(order: Order): OrderDto {
+function toOrderDto(order: Order, design: DesignComponents | null): OrderDto {
+  const { lines, added, pending } = effectiveLines(order, design);
   return {
-    ...toOrderListItem(order),
-    lines: order.lines.map((line) => ({ component: line.component, size: line.size, quantity: line.quantity })),
+    ...toOrderListItem(order, design),
+    lines: lines.map((line) => ({ component: line.component, size: line.size, quantity: line.quantity, ...(line.fromDesign ? { fromDesign: true } : {}) })),
+    addedComponents: added,
+    pendingComponents: pending,
     types: { ...(order.types ?? {}) },
   };
 }
@@ -141,10 +146,11 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
     quantity: content.quantity,
     status: 'PENDING',
     lines: content.lines,
+    components: design.components.map((c) => c.name),
     types: content.types,
     unitRates,
   });
-  return toOrderDto(order);
+  return toOrderDto(order, design);
 }
 
 /**
@@ -168,20 +174,26 @@ export async function updateOrder(orderNo: number, input: UpdateOrderInput): Pro
   if (input.orderDate) order.orderDate = new Date(`${input.orderDate}T00:00:00Z`);
   order.quantity = content.quantity;
   order.lines = content.lines;
+  order.components = design.components.map((c) => c.name);
   order.types = content.types;
   order.unitRates = saved;
   order.markModified('types');
   order.markModified('unitRates');
   await order.save();
-  return toOrderDto(order);
+  return toOrderDto(order, design);
 }
 
 export async function listOrders(): Promise<OrderListItemDto[]> {
-  return (await OrderModel.find().sort({ orderNo: -1 })).map(toOrderListItem);
+  const orders = await OrderModel.find().sort({ orderNo: -1 });
+  const designs = new Map(
+    (await DesignModel.find({ designNo: { $in: [...new Set(orders.map((o) => o.designNo))] } }, { designNo: 1, components: 1 })).map((d) => [d.designNo, d]),
+  );
+  return orders.map((order) => toOrderListItem(order, designs.get(order.designNo) ?? null));
 }
 
 export async function getOrder(orderNo: number): Promise<OrderDto> {
-  return toOrderDto(await findOrder(orderNo));
+  const order = await findOrder(orderNo);
+  return toOrderDto(order, await DesignModel.findOne({ designNo: order.designNo }));
 }
 
 /**
@@ -197,7 +209,7 @@ export async function updateStatus(orderNo: number, status: OrderStatus): Promis
   const order = await findOrder(orderNo);
   order.status = status;
   await order.save();
-  return toOrderDto(order);
+  return toOrderDto(order, await DesignModel.findOne({ designNo: order.designNo }));
 }
 
 export const CORD_MESSAGES = {
@@ -258,7 +270,8 @@ export async function getOrderSummary(
   ]);
   const compiled = compileCategories(categories);
   const lookup = consumptionLookup(design);
-  const lines = order.lines.map(({ component, size, quantity }) => ({ component, size, quantity, consumption: lookup(component, size) }));
+  // Saved lines + components added to the design after the order.
+  const lines = effectiveLines(order, design).lines.map(({ component, size, quantity }) => ({ component, size, quantity, consumption: lookup(component, size) }));
   // Columns = material + colour variants the order's lines use, in Material Master order.
   const keys = sortVariantKeys(
     lines.flatMap((l) => Object.keys(l.consumption ?? {})),
@@ -359,6 +372,7 @@ export async function getOrderSummary(
         orderUnit: c.error ? null : c.unitLabel,
         wholeUnits: c.category?.wholeUnits ?? false,
         categoryName: c.category?.name ?? '',
+        typed: (c.category?.types?.length ?? 0) > 0,
         ...(c.cord ? { cord: cordDto(key, c.cord) } : {}),
         ...(c.error ? { error: c.error } : {}),
       };

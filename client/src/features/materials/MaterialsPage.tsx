@@ -6,6 +6,7 @@ import { EmptyState, ErrorAlert, PageHeader, QueryState, StatusBadge } from '../
 import { useAuth } from '../../lib/auth';
 import { formatNumber } from '../../lib/format';
 import { CategoriesTab } from './components/CategoriesTab';
+import { ComponentNamesTab } from './components/ComponentNamesTab';
 import { MaterialFormModal } from './components/MaterialFormModal';
 import { RatesTab } from './components/RatesTab';
 import { useCategories, useDeleteMaterial, useMaterials } from './materials.hooks';
@@ -91,18 +92,20 @@ function MaterialsTab() {
   );
 }
 
-type Tab = 'materials' | 'categories' | 'rates';
+type Tab = 'materials' | 'categories' | 'components' | 'rates';
 
 export function MaterialsPage() {
   const auth = useAuth();
   const canCost = auth.can('COST_VIEW');
   const [params, setParams] = useSearchParams();
   const requested = params.get('tab');
-  const tab: Tab = requested === 'categories' ? 'categories' : requested === 'rates' && canCost ? 'rates' : 'materials';
+  const tab: Tab =
+    requested === 'categories' || requested === 'components' ? requested : requested === 'rates' && canCost ? 'rates' : 'materials';
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'materials', label: 'Materials' },
     { id: 'categories', label: 'Categories' },
+    { id: 'components', label: 'Components' },
     ...(canCost ? [{ id: 'rates' as const, label: 'Rates & costs' }] : []),
   ];
 
@@ -123,7 +126,7 @@ export function MaterialsPage() {
           </button>
         ))}
       </div>
-      {tab === 'materials' ? <MaterialsTab /> : tab === 'categories' ? <CategoriesTab /> : <RatesTab />}
+      {tab === 'materials' ? <MaterialsTab /> : tab === 'categories' ? <CategoriesTab /> : tab === 'components' ? <ComponentNamesTab /> : <RatesTab />}
     </>
   );
 }

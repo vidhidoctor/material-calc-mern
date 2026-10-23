@@ -1,4 +1,4 @@
-import type { MaterialCategoryDto, MaterialDto } from '@app/shared';
+import type { ComponentNameDto, MaterialCategoryDto, MaterialDto } from '@app/shared';
 import { api } from '../../api/client';
 
 export interface MaterialBody {
@@ -33,3 +33,9 @@ export const createCategory = (body: CategoryBody & { code: string }) =>
 export const updateCategory = (code: string, body: CategoryBody) =>
   api<MaterialCategoryDto>(`/material-categories/${encodeURIComponent(code)}`, { method: 'PUT', body });
 export const deleteCategory = (code: string) => api<void>(`/material-categories/${encodeURIComponent(code)}`, { method: 'DELETE' });
+
+/** Punching's component list (the "Component" dropdown). */
+export const listComponentNames = () => api<ComponentNameDto[]>('/component-names');
+export const addComponentName = (name: string) => api<ComponentNameDto[]>('/component-names', { method: 'POST', body: { name } });
+export const deleteComponentName = (name: string) =>
+  api<ComponentNameDto[]>(`/component-names/${encodeURIComponent(name)}`, { method: 'DELETE' });

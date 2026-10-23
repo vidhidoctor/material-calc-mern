@@ -6,8 +6,7 @@ import { formatDate } from '../../lib/format';
 import { ComponentCard } from '../../components/ComponentCard';
 import { ComponentEditor } from './components/ComponentEditor';
 import { EditDesignModal } from './components/EditDesignModal';
-import { MaterialBreakdown } from '../../components/MaterialBreakdown';
-import { useDeleteComponent, useDeleteDesign, useDesign, useDesignBreakdown } from './punching.hooks';
+import { useDeleteComponent, useDeleteDesign, useDesign } from './punching.hooks';
 
 export function DesignPage() {
   const designNo = useParams().designNo ?? '';
@@ -20,8 +19,6 @@ export function DesignPage() {
   const [params, setParams] = useSearchParams();
   const editing = params.get('component');
   const [renaming, setRenaming] = useState(false);
-  const [showWeights, setShowWeights] = useState(false);
-  const breakdown = useDesignBreakdown(designNo, showWeights);
 
   const canEditComponents = auth.can('PUNCHING_CREATE', 'PUNCHING_UPDATE');
   const canUpdate = auth.can('PUNCHING_UPDATE');
@@ -101,21 +98,6 @@ export function DesignPage() {
                   />
                 ))}
               </>
-            )}
-
-            {d.components.length > 0 && (
-              <section className="card">
-                <header className="card-header">
-                  <div>
-                    <h2>Per-piece weight &amp; conversion</h2>
-                    <span className="muted small">Worked out from what you punched, e.g. cord grams per piece = metres × denier ÷ 9000.</span>
-                  </div>
-                  <button type="button" className="btn btn-sm" aria-expanded={showWeights} onClick={() => setShowWeights((s) => !s)}>
-                    {showWeights ? 'Hide' : 'Show'}
-                  </button>
-                </header>
-                {showWeights && <div className="section-body">{breakdown.data ? <MaterialBreakdown data={breakdown.data} mode="design" /> : null}</div>}
-              </section>
             )}
 
             {editing && canEditComponents && (

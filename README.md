@@ -107,6 +107,9 @@ are decimal strings.
 | POST | `/material-categories` | `{ code, name, unit, fields: [{ key, label, required }], steps: [{ key, label, formula }], purchaseStep, orderStep?, wholeUnits? }` (orderStep = unit shown on orders, e.g. CD) | MATERIAL_MASTER_MANAGE |
 | PUT | `/material-categories/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
 | DELETE | `/material-categories/:code` | — (409 while a material uses it) | MATERIAL_MASTER_MANAGE |
+| GET | `/component-names` | — (Punching's component list with how many designs use each) | PUNCHING_VIEW or MATERIAL_MASTER_VIEW |
+| POST | `/component-names` | `{ name }` (added at the end; names typed in Punching are added automatically) | MATERIAL_MASTER_MANAGE |
+| DELETE | `/component-names/:name` | — (only hides it from the dropdown; designs keep it) | MATERIAL_MASTER_MANAGE |
 | GET | `/designs` | `?q=` (ignores case, spaces, dashes) | PUNCHING_VIEW |
 | POST | `/designs` | `{ designNo, productName }` | PUNCHING_CREATE |
 | GET | `/designs/:designNo` | — (design + material columns) | PUNCHING_VIEW |

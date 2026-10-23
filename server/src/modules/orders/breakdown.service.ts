@@ -7,6 +7,7 @@ import { compileCategories, loadMaterialsWithCategories, type CategoryMap } from
 import type { MaterialDocument } from '../materials/material.model.js';
 import { MESSAGES } from '@app/shared';
 import { denierFieldKey, orderCords, rulesForOrder } from './order-cords.js';
+import { effectiveLines } from './order-lines.js';
 import { findOrder } from './orders.service.js';
 
 /**
@@ -107,7 +108,7 @@ export async function orderBreakdown(orderNo: number, includeCost: boolean): Pro
 
   const rows: MaterialBreakdownDto['rows'] = [];
   const used = new Set<string>();
-  for (const line of order.lines) {
+  for (const line of effectiveLines(order, design).lines) {
     for (const [key, qty] of Object.entries(lookup(line.component, line.size) ?? {})) {
       const { code, color } = parseVariantKey(key);
       const material = ctx.materials.get(code);

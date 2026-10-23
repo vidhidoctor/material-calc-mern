@@ -2,6 +2,7 @@ import type { ProductionDesignDetailDto, ProductionDesignListItemDto } from '@ap
 import { getDesignDetail, searchDesigns, toDesignListItem } from '../designs/designs.service.js';
 import { loadCategoryMap } from '../materials/materials.service.js';
 import { OrderModel } from '../orders/order.model.js';
+import { effectiveLines } from '../orders/order-lines.js';
 import { toDateOnly, totalPieces } from '../orders/orders.service.js';
 
 /** Designs with at least one component, with their row count and previous order count. */
@@ -38,7 +39,7 @@ export async function getProductionDesign(designNo: string): Promise<ProductionD
       partyOrderNo: order.partyOrderNo,
       party: order.party,
       quantity: order.quantity ?? null,
-      totalPieces: totalPieces(order.lines),
+      totalPieces: totalPieces(effectiveLines(order, detail).lines),
       status: order.status,
       orderDate: toDateOnly(order.orderDate),
     })),

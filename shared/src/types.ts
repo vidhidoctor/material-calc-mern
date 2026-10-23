@@ -127,6 +127,14 @@ export interface MaterialCategoryDto {
   materialCount: number;
 }
 
+// ---- Component list (Punching's "Component" dropdown, managed in Material Master) ----
+
+export interface ComponentNameDto {
+  name: string;
+  /** How many designs have a component with this name. */
+  designCount: number;
+}
+
 // ---- Materials ----
 
 export interface MaterialColumnDto {
@@ -226,6 +234,8 @@ export interface OrderLineDto {
   component: string;
   size: string;
   quantity: number;
+  /** Component added to the design after this order: included automatically (not saved on the order). */
+  fromDesign?: boolean;
 }
 
 export interface OrderListItemDto {
@@ -245,7 +255,12 @@ export interface OrderListItemDto {
 }
 
 export interface OrderDto extends OrderListItemDto {
+  /** Saved lines plus components added to the design after the order (fromDesign). */
   lines: OrderLineDto[];
+  /** Components added to the design after this order, included automatically. */
+  addedComponents: string[];
+  /** Components added after this order whose sizes match nothing ordered: enter them with Edit order. */
+  pendingComponents: string[];
   /** Type chosen for each typed column of this order (column key "SEQ-3MM|PINK" → "MATT"). */
   types: Record<string, string>;
 }
@@ -271,6 +286,8 @@ export interface OrderSummaryColumnDto extends VariantColumnDto {
   error?: string;
   /** Category name, e.g. "Cord". */
   categoryName: string;
+  /** The category has types chosen per order (e.g. sequence finish); then order.types must name one. */
+  typed: boolean;
   /**
    * Only for cords (materials whose category has a Denier field): denier and rate are entered on each
    * order, never taken from Material Master. Weight = this column's buy value.

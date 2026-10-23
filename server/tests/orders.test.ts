@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import { Decimal } from '../src/calculation/engine.js';
 import { MaterialModel } from '../src/modules/materials/material.model.js';
+import { OrderModel } from '../src/modules/orders/order.model.js';
 import { bearer, createActiveUser, startTestApp, type TestContext } from './helpers.js';
 import { createFixtureOrder, fixture, loadFixture, round2 } from './fixture.js';
 
@@ -102,7 +103,7 @@ describe('production orders and purchase requirements', () => {
     assert.equal(round2(String(cds)), 280.43);
   });
 
-  it('purchase order slip: sequences per component in whole CDs, beads and cord per category for the order', async () => {
+  it('purchase order slip: one section per component with every material it uses', async () => {
     const res = await ctx.api.get('/api/orders/1/purchase-order').set(bearer(prod));
     assert.equal(res.status, 200, JSON.stringify(res.body));
     type Row = { id: string; label: string; qty: string | null; unit: string | null; totalQty: string; totalUnit: string; name: string };
@@ -110,43 +111,64 @@ describe('production orders and purchase requirements', () => {
     const sections = res.body.sections as Section[];
     assert.equal(res.body.designNo, '26-49');
 
-    const kali = sections.find((s) => s.id === 'C:KALI')!;
-    assert.deepEqual([kali.title, kali.itemHeader, kali.unit], ['KALI', 'Sequence', 'CD']);
-    for (const row of kali.rows) assert.match(row.qty!, /^\d+$/, 'whole CDs');
+    // Sections follow the order's components; every section is a component.
+    const summary = (await ctx.api.get('/api/orders/1/summary').set(bearer(prod))).body;
+    assert.deepEqual(sections.map((x) => x.id), summary.components.map((c: { component: string }) => `C:${c.component}`));
 
-    // Per component: each rounded up, so their sum is at least the order total (280.43 CD).
-    const seq3 = sections.flatMap((s) => s.rows.filter((r) => r.id.endsWith('::SEQ-3MM')));
-    assert.ok(seq3.reduce((sum, r) => sum + Number(r.qty), 0) >= 281);
-    assert.equal(seq3.reduce((sum, r) => sum + Number(r.totalQty), 0), 8861475);
+    // KALI: sequences (whole CDs) and cord (KG) together.
+    const kali = sections.find((x) => x.id === 'C:KALI')!;
+    assert.deepEqual([kali.title, kali.itemHeader, kali.unit], ['KALI', 'Material', null]);
+    // Materials in Material Master order: sequences first … cord last.
+    assert.deepEqual(kali.rows.slice(0, 2).map((r) => r.id), ['C:KALI::SEQ-3MM', 'C:KALI::SEQ-4MM']);
+    assert.match(kali.rows[0]!.qty!, /^\d+$/, 'whole CDs');
+    const kaliCord = kali.rows.at(-1)!;
+    assert.deepEqual([kaliCord.id, kaliCord.unit, kaliCord.totalUnit], ['C:KALI::CORD', 'KG', 'MTR']);
 
-    const beads = sections.find((s) => s.id === 'K:BEAD')!;
-    assert.equal(beads.title, 'BEADS & DECORATIVE');
-    assert.equal(round2(beads.rows.find((r) => r.id === 'K:BEAD::BEAD-2.5MM')!.qty!), 21.94);
-    const cord = sections.find((s) => s.id === 'K:CORD')!.rows[0]!;
-    assert.deepEqual([round2(cord.qty!), cord.unit, cord.totalQty, cord.totalUnit], [38.56, 'KG', '289206.5', 'MTR']);
-    // Sections: components first, then the categories in Material Master order.
-    assert.ok(sections.findIndex((s) => s.id === 'K:BEAD') > sections.findIndex((s) => s.id === 'C:KALI'));
+    // Totals over all components match the order: sequences rounded up per component, KG as worked out.
+    const rows = (key: string) => sections.flatMap((x) => x.rows.filter((r) => r.id.endsWith(`::${key}`)));
+    assert.ok(rows('SEQ-3MM').reduce((sum, r) => sum + Number(r.qty), 0) >= 281);
+    assert.equal(rows('SEQ-3MM').reduce((sum, r) => sum + Number(r.totalQty), 0), 8861475);
+    const kg = (key: string) => round2(String(rows(key).reduce((sum, r) => sum + Number(r.qty), 0)));
+    assert.equal(kg('BEAD-2.5MM'), 21.94);
+    assert.equal(kg('CORD'), 38.56);
+    assert.equal(rows('CORD').reduce((sum, r) => sum + Number(r.totalQty), 0), 289206.5);
   });
 
-  it('purchase order names are saved on the order and printed exactly as entered', async () => {
-    const key = 'K:BEAD::BEAD-2.5MM';
+  it('purchase order names are saved per component row and printed exactly as entered', async () => {
+    const rowOf = (body: { sections: { rows: { id: string; name: string }[] }[] }, id: string) =>
+      body.sections.flatMap((x) => x.rows).find((r) => r.id === id)!;
     const saved = await ctx.api
       .put('/api/orders/1/purchase-order/names')
       .set(bearer(prod))
-      .send({ names: { [key]: 'Ramesh bhai (Surat)', 'C:KALI::SEQ-3MM': 'Shree Sequins' } });
+      .send({ names: { 'C:KALI::CORD': 'Ramesh bhai (Surat)', 'C:KALI::SEQ-3MM': 'Shree Sequins' } });
     assert.equal(saved.status, 200, JSON.stringify(saved.body));
-    const rowOf = (body: { sections: { rows: { id: string; name: string }[] }[] }, id: string) =>
-      body.sections.flatMap((s) => s.rows).find((r) => r.id === id)!;
-    assert.equal(rowOf(saved.body, key).name, 'Ramesh bhai (Surat)');
+    assert.equal(rowOf(saved.body, 'C:KALI::CORD').name, 'Ramesh bhai (Surat)');
 
     // Blank removes; others are kept.
-    const cleared = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { [key]: '  ' } });
-    assert.equal(rowOf(cleared.body, key).name, '');
+    const cleared = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { 'C:KALI::CORD': '  ' } });
+    assert.equal(rowOf(cleared.body, 'C:KALI::CORD').name, '');
     assert.equal(rowOf(cleared.body, 'C:KALI::SEQ-3MM').name, 'Shree Sequins');
 
-    const tooLong = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { [key]: 'x'.repeat(101) } });
+    const tooLong = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { 'C:KALI::CORD': 'x'.repeat(101) } });
     assert.equal(tooLong.status, 400);
     await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { 'C:KALI::SEQ-3MM': '' } });
+  });
+
+  it('names written on the old per-category slip still show on each component row, and can be changed per row', async () => {
+    await OrderModel.updateOne({ orderNo: 1 }, { $set: { poNames: [{ key: 'K:CORD::CORD', name: 'Old cord supplier' }] } });
+    const res = (await ctx.api.get('/api/orders/1/purchase-order').set(bearer(prod))).body;
+    const cordRows = res.sections.flatMap((x: { rows: { id: string; name: string }[] }) => x.rows).filter((r: { id: string }) => r.id.endsWith('::CORD'));
+    assert.ok(cordRows.length > 1);
+    for (const r of cordRows) assert.equal(r.name, 'Old cord supplier');
+
+    // Clearing one row clears only that row; the old category entry is gone.
+    const saved = await ctx.api.put('/api/orders/1/purchase-order/names').set(bearer(prod)).send({ names: { 'C:KALI::CORD': '' } });
+    const after = saved.body.sections.flatMap((x: { rows: { id: string; name: string }[] }) => x.rows).filter((r: { id: string }) => r.id.endsWith('::CORD'));
+    assert.equal(after.find((r: { id: string }) => r.id === 'C:KALI::CORD').name, '');
+    assert.ok(after.filter((r: { id: string }) => r.id !== 'C:KALI::CORD').every((r: { name: string }) => r.name === 'Old cord supplier'));
+    const stored = (await OrderModel.findOne({ orderNo: 1 }).lean())!.poNames!;
+    assert.equal(stored.some((n) => n.key.startsWith('K:')), false);
+    await OrderModel.updateOne({ orderNo: 1 }, { $unset: { poNames: '' } });
   });
 
   it('cord: denier and rate per KG are entered on the order; weight = metres × denier ÷ 9,000,000, cost = weight × rate', async () => {
@@ -196,8 +218,8 @@ describe('production orders and purchase requirements', () => {
     const amount = cordRows.reduce((sum: Decimal, r: { amount: string }) => sum.plus(r.amount), new Decimal(0));
     assert.equal(round2(amount.toString()), 2651.06);
     const slip = (await ctx.api.get('/api/orders/1/purchase-order').set(admin)).body;
-    const slipCord = slip.sections.flatMap((x: { rows: { id: string; qty: string }[] }) => x.rows).find((r: { id: string }) => r.id === 'K:CORD::CORD');
-    assert.equal(round2(slipCord.qty), 4.82);
+    const slipCord = slip.sections.flatMap((x: { rows: { id: string; qty: string }[] }) => x.rows).filter((r: { id: string }) => r.id.endsWith('::CORD'));
+    assert.equal(round2(String(slipCord.reduce((sum: number, r: { qty: string }) => sum + Number(r.qty), 0))), 4.82);
     assert.equal(round2(totalOf((await purchase({ orderNo: '1' })).totals, 'CORD').purchase!), 4.82);
 
     // Only this order's cords; values must be positive.

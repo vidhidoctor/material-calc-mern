@@ -4,10 +4,11 @@ import { loadMaterialsWithCategories } from '../materials/materials.service.js';
 import { findOrder, getOrderSummary, toDateOnly } from './orders.service.js';
 
 /**
- * The purchase order slip, built from the order summary (no calculation of its own):
- * - materials bought in whole units (e.g. sequences in CD) are listed per component (1. KALI, 2. BLOUSE …),
- *   each rounded up to whole units for that component;
- * - every other category (beads, cords …) is totalled for the whole order in one section per category.
+ * The purchase order slip, built from the order summary (no calculation of its own): one section per
+ * component (1. DUPATTA, 2. KALI …) in the order's component order, each listing every material that
+ * component uses, in Material Master order: total quantity (PCS, MTR) and Series in VC in its purchase
+ * unit — whole units (CD) rounded up for that component, weights (KG) as worked out (cord with this
+ * order's denier). Components added to the design after the order are included (see order-lines.ts).
  * Only the Name of each row is entered by hand (saved on the order, printed exactly as entered).
  */
 
@@ -32,44 +33,24 @@ export async function getPurchaseOrder(orderNo: number): Promise<PurchaseOrderDt
       unit: column.orderUnit,
       totalQty,
       totalUnit: column.unit,
-      name: names.get(id) ?? '',
+      // Names written when the slip listed beads, cords … per category (K:<category>) still show.
+      name: names.get(id) ?? names.get(rowId(`K:${column.category}`, column.key)) ?? '',
     };
   };
   const categoryName = (code: string) => categories.get(code)?.name ?? code;
 
-  const sections: PurchaseOrderSectionDto[] = [];
-
-  // Per component: whole-unit materials (sequences in CD), rounded up per component.
-  const perComponent = summary.columns.filter((c) => c.wholeUnits);
-  for (const component of summary.components) {
-    const columns = perComponent.filter((c) => component.requirements[c.key] !== undefined);
-    if (columns.length === 0) continue;
+  const sections: PurchaseOrderSectionDto[] = summary.components.flatMap((component) => {
+    const columns = summary.columns.filter((c) => component.requirements[c.key] !== undefined);
+    if (columns.length === 0) return [];
     const id = `C:${component.component}`;
     const rows = columns.map((c) => {
       const purchase = component.purchase[c.key];
-      return row(id, c, purchase ? new Decimal(purchase).toDecimalPlaces(0, Decimal.ROUND_UP).toString() : null, component.requirements[c.key]!);
+      const qty = purchase && c.wholeUnits ? new Decimal(purchase).toDecimalPlaces(0, Decimal.ROUND_UP).toString() : (purchase ?? null);
+      return row(id, c, qty, component.requirements[c.key]!);
     });
     const used = new Set(columns.map((c) => c.category));
-    sections.push({ id, title: component.component, itemHeader: used.size === 1 ? categoryName([...used][0]!) : 'Material', unit: sharedUnit(rows), rows });
-  }
-
-  // Whole order, one section per category (beads, cords …), in Material Master order.
-  const others = summary.columns.filter((c) => !c.wholeUnits);
-  const sorted = [...categories.values()].sort((a, b) => a.sortOrder - b.sortOrder);
-  for (const category of sorted) {
-    const columns = others.filter((c) => c.category === category.code);
-    if (columns.length === 0) continue;
-    const id = `K:${category.code}`;
-    const rows = columns.map((c) => row(id, c, summary.buy[c.key] ?? null, summary.totals[c.key]!));
-    sections.push({ id, title: category.name.toUpperCase(), itemHeader: 'Material', unit: sharedUnit(rows), rows });
-  }
-  // Columns whose material or category no longer exists.
-  const orphans = others.filter((c) => !categories.has(c.category));
-  if (orphans.length > 0) {
-    const id = 'K:OTHER';
-    const rows = orphans.map((c) => row(id, c, summary.buy[c.key] ?? null, summary.totals[c.key]!));
-    sections.push({ id, title: 'OTHER', itemHeader: 'Material', unit: sharedUnit(rows), rows });
-  }
+    return [{ id, title: component.component, itemHeader: used.size === 1 ? categoryName([...used][0]!) : 'Material', unit: sharedUnit(rows), rows }];
+  });
 
   return {
     orderNo: order.orderNo,
@@ -82,10 +63,16 @@ export async function getPurchaseOrder(orderNo: number): Promise<PurchaseOrderDt
   };
 }
 
-/** Saves the names written on the slip (blank removes a name). Names are kept exactly as entered. */
+/**
+ * Saves the names written on the slip (blank removes a name). Names are kept exactly as entered. Names
+ * from the old per-category layout (K:…) become names of the component rows that show them, so each row
+ * can then be changed or cleared on its own.
+ */
 export async function savePurchaseOrderNames(orderNo: number, input: Record<string, string>): Promise<PurchaseOrderDto> {
   const order = await findOrder(orderNo);
-  const names = new Map((order.poNames ?? []).map((n) => [n.key, n.name]));
+  const shown = (await getPurchaseOrder(orderNo)).sections.flatMap((s) => s.rows);
+  const names = new Map((order.poNames ?? []).filter((n) => !n.key.startsWith('K:')).map((n) => [n.key, n.name]));
+  for (const row of shown) if (row.name && !names.has(row.id)) names.set(row.id, row.name);
   for (const [key, name] of Object.entries(input)) {
     if (name.trim() === '') names.delete(key);
     else names.set(key, name);

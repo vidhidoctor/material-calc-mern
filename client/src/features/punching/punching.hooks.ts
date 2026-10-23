@@ -6,7 +6,6 @@ import {
   deleteComponent,
   deleteDesign,
   getDesign,
-  getDesignBreakdown,
   listDesigns,
   putComponent,
   updateDesign,
@@ -18,8 +17,6 @@ export const useDesigns = (q: string) =>
 
 export const useDesign = (designNo: string) => useQuery({ queryKey: queryKeys.design(designNo), queryFn: () => getDesign(designNo) });
 
-export const useDesignBreakdown = (designNo: string, enabled: boolean) =>
-  useQuery({ queryKey: [...queryKeys.design(designNo), 'breakdown'], queryFn: () => getDesignBreakdown(designNo), enabled });
 
 /** Only fetched for users who may see costs. */
 
@@ -72,10 +69,12 @@ export function useDeleteDesign() {
 
 export function usePutComponent(designNo: string) {
   const saved = useDesignSaved();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ name, columns, sizes }: { name: string; columns: string[]; sizes: SizeRowBody[] }) =>
       putComponent(designNo, name, columns, sizes),
-    onSuccess: saved,
+    // A new name typed under "Other…" joins the component list.
+    onSuccess: (design) => Promise.all([saved(design), queryClient.invalidateQueries({ queryKey: queryKeys.componentNames })]),
   });
 }
 

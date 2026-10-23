@@ -7,6 +7,7 @@ export const queryKeys = {
   departments: ['admin', 'departments'] as const,
   materials: ['materials'] as const,
   materialCategories: ['material-categories'] as const,
+  componentNames: ['component-names'] as const,
   settings: ['settings'] as const,
   /** Prefix for every design query (list and detail). */
   designs: ['designs'] as const,

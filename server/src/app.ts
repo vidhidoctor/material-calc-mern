@@ -9,6 +9,7 @@ import { authRoutes } from './modules/auth/auth.routes.js';
 import { costingRoutes } from './modules/costing/costing.routes.js';
 import { designsRoutes } from './modules/designs/designs.routes.js';
 import { materialCategoriesRoutes } from './modules/material-categories/material-categories.routes.js';
+import { componentNamesRoutes } from './modules/component-names/component-names.routes.js';
 import { materialsRoutes } from './modules/materials/materials.routes.js';
 import { ordersRoutes } from './modules/orders/orders.routes.js';
 import { productionRoutes } from './modules/production/production.routes.js';
@@ -30,6 +31,7 @@ export function createApp(): Express {
   app.use('/api/admin', adminRoutes);
   app.use('/api/materials', materialsRoutes);
   app.use('/api/material-categories', materialCategoriesRoutes);
+  app.use('/api/component-names', componentNamesRoutes);
   app.use('/api/designs', designsRoutes);
   app.use('/api/production', productionRoutes);
   app.use('/api/orders', ordersRoutes);

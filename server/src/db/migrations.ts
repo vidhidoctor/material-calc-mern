@@ -4,6 +4,7 @@ import { RoleModel } from '../modules/roles/role.model.js';
 import { MaterialCategoryModel } from '../modules/material-categories/material-category.model.js';
 import { MaterialModel } from '../modules/materials/material.model.js';
 import { Decimal } from '../calculation/engine.js';
+import { seedComponentNames } from '../modules/component-names/component-names.service.js';
 import { DesignModel } from '../modules/designs/design.model.js';
 import { consumptionLookup } from '../modules/designs/designs.service.js';
 import { backfillPartyOrderNos, OrderModel } from '../modules/orders/order.model.js';
@@ -170,6 +171,8 @@ export async function runStartupMigrations(): Promise<string[]> {
   const cordValues = await removeCordMasterValues();
   if (cordValues > 0) log.push(`Cords: removed ${cordValues} denier/rate value(s) from Material Master (entered on each order now).`);
   if (materials > 0) log.push(`Moved conversion rules of ${materials} material(s) to the category format.`);
+  const componentNames = await seedComponentNames();
+  if (componentNames > 0) log.push(`Component list: added ${componentNames} name(s) for Punching.`);
   const orders = await backfillPartyOrderNos();
   if (orders > 0) log.push(`Numbered ${orders} existing order(s) per design + party.`);
   return log;

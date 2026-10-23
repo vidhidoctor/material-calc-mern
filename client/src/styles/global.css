@@ -1536,6 +1536,13 @@ a {
 .alert-info {
   background: var(--info-soft);
 }
+.alert-warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.design-changes {
+  gap: 8px;
+}
 .badge {
   display: inline-block;
   padding: 2px 8px;

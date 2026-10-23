@@ -1,4 +1,4 @@
-import type { OrderCostDto, OrderDto } from '@app/shared';
+import { variantLabel, type OrderCostDto, type OrderDto, type OrderSummaryDto } from '@app/shared';
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Drawer } from '../../../components/Drawer';
 import { Icon, type IconName } from '../../../components/Icon';
@@ -53,6 +53,40 @@ function piecesBySize(order: OrderDto): { size: string; pieces: number }[] {
   const bySize = new Map<string, number>();
   for (const line of order.lines) bySize.set(line.size, (bySize.get(line.size) ?? 0) + line.quantity);
   return [...bySize].map(([size, pieces]) => ({ size, pieces }));
+}
+
+const list = (names: string[]) => names.join(', ');
+
+/**
+ * Components added to the design in Punching after this order: included automatically (quantities from
+ * this order), or waiting for quantities; and new sequence colours that still need their type.
+ */
+function DesignChanges({ order, summary }: { order: OrderDto; summary?: OrderSummaryDto }) {
+  const missingTypes = (summary?.columns ?? []).filter((c) => c.typed && !order.types[c.key]).map((c) => variantLabel(c.key));
+  if (order.addedComponents.length === 0 && order.pendingComponents.length === 0 && missingTypes.length === 0) return null;
+  return (
+    <div className="stack design-changes">
+      {order.addedComponents.length > 0 && (
+        <div className="alert alert-info small">
+          <strong>{list(order.addedComponents)}</strong> {order.addedComponents.length === 1 ? 'was' : 'were'} added to design {order.designNo} after
+          this order and {order.addedComponents.length === 1 ? 'is' : 'are'} included automatically, with this order's quantities
+          {order.quantity !== null ? ` (${order.quantity} per size)` : ' for the same sizes'}. Use Edit order to change them.
+        </div>
+      )}
+      {order.pendingComponents.length > 0 && (
+        <div className="alert alert-warning small">
+          <strong>{list(order.pendingComponents)}</strong> {order.pendingComponents.length === 1 ? 'was' : 'were'} added to design{' '}
+          {order.designNo} after this order, but {order.pendingComponents.length === 1 ? 'its' : 'their'} sizes match none ordered here.
+          Use Edit order to enter quantities.
+        </div>
+      )}
+      {missingTypes.length > 0 && (
+        <div className="alert alert-warning small">
+          Choose the type for <strong>{list(missingTypes)}</strong> with Edit order; until then its cost is not counted.
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Material cost per component and size (Admin), with the rates saved with the order. */
@@ -230,6 +264,8 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
                 </StatCard>
               )}
             </div>
+
+            <DesignChanges order={o} summary={summary.data} />
 
             <div className="order-tabs" role="tablist" aria-label="Order details">
               {tabs.map((t) => (

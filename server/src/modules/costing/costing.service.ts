@@ -19,6 +19,7 @@ import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, type CategoryMap } from '../materials/materials.service.js';
 import type { MaterialDocument } from '../materials/material.model.js';
 import { denierFieldKey, orderCords, rulesForOrder } from '../orders/order-cords.js';
+import { effectiveLines } from '../orders/order-lines.js';
 import { OrderModel } from '../orders/order.model.js';
 import { MaterialRateModel, type MaterialRate } from './material-rate.model.js';
 import type { SetRateInput } from './costing.validation.js';
@@ -295,7 +296,7 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
 
   let total = new Decimal(0);
   let pieces = 0;
-  const rows = order.lines.map(({ component, size, quantity }) => {
+  const rows = effectiveLines(order, design).lines.map(({ component, size, quantity }) => {
     const consumption = lookup(component, size);
     let cost = new Decimal(0);
     for (const [key, qty] of Object.entries(consumption ?? {})) {
@@ -447,7 +448,7 @@ export async function refreshOrderRates(orderNo: number): Promise<OrderCostDto> 
   const lookup = consumptionLookup(design);
   const types = order.types ?? {};
   const isTyped = (key: string) => (ctx.categories.get(ctx.materials.get(parseVariantKey(key).code)?.category ?? '')?.types?.length ?? 0) > 0;
-  const keys = order.lines.flatMap(({ component, size }) =>
+  const keys = effectiveLines(order, design).lines.flatMap(({ component, size }) =>
     Object.keys(lookup(component, size) ?? {}).map((key) => (isTyped(key) ? typedKey(key, types[key] ?? null) : key)),
   );
   order.unitRates = await currentUnitRates(keys);

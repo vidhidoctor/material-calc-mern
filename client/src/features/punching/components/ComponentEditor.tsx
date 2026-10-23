@@ -2,10 +2,10 @@ import { COLOR_PATTERN, normalizeColor, parseVariantKey, sortVariantKeys, varian
 import { useMemo, useRef, useState } from 'react';
 import { Modal } from '../../../components/Modal';
 import { ErrorAlert, Field, NumberInput, parseNumberInput } from '../../../components/ui';
+import { useComponentNames } from '../../materials/materials.hooks';
 import { usePutComponent } from '../punching.hooks';
 import type { SizeRowBody } from '../punching.api';
 
-const SUGGESTED_COMPONENTS = ['FROCK', 'KALI', 'BLOUSE', 'BELT', 'GALISH'];
 const OTHER = '__other__';
 /** Suggested colours; any other colour can be typed. */
 const COMMON_COLORS = ['WHITE', 'BLACK', 'RED', 'GOLD', 'SILVER', 'COPPER', 'LIGHT PINK', 'DARK PINK', 'MAROON', 'GREEN', 'BLUE', 'CREAM'];
@@ -34,6 +34,7 @@ interface Props {
  */
 export function ComponentEditor({ design, componentName, onClose }: Props) {
   const save = usePutComponent(design.designNo);
+  const componentNames = useComponentNames();
   const nextKey = useRef(0);
   const existing = design.components.find((c) => c.name === componentName) ?? null;
   const isNew = existing === null;
@@ -89,7 +90,8 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
   };
 
   const taken = new Set(design.components.map((c) => c.name));
-  const suggestions = SUGGESTED_COMPONENTS.filter((c) => !taken.has(c));
+  // The component list from Material Master → Components, minus the ones this design already has.
+  const suggestions = (componentNames.data ?? []).map((c) => c.name).filter((c) => !taken.has(c));
 
   // Completely empty rows are ignored on save; in other rows a missing/duplicate Size or a missing
   // Stitch is outlined in red (no message list).
@@ -180,7 +182,7 @@ export function ComponentEditor({ design, componentName, onClose }: Props) {
                   }}
                 >
                   <option value="" disabled>
-                    Select a component…
+                    {componentNames.isPending ? 'Loading components…' : 'Select a component…'}
                   </option>
                   {suggestions.map((s) => (
                     <option key={s} value={s}>

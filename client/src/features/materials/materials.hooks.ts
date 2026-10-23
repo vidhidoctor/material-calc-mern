@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/query-keys';
 import {
+  addComponentName,
   createCategory,
+  deleteComponentName,
+  listComponentNames,
   createMaterial,
   deleteCategory,
   deleteMaterial,
@@ -53,4 +56,22 @@ export function useSaveCategory() {
 export function useDeleteCategory() {
   const invalidate = useInvalidateMaterials();
   return useMutation({ mutationFn: deleteCategory, onSuccess: invalidate });
+}
+
+/** Punching's component list; also used by the component editor's dropdown. */
+export const useComponentNames = (enabled = true) => useQuery({ queryKey: queryKeys.componentNames, queryFn: listComponentNames, enabled });
+
+function useSetComponentNames() {
+  const queryClient = useQueryClient();
+  return (list: Awaited<ReturnType<typeof listComponentNames>>) => queryClient.setQueryData(queryKeys.componentNames, list);
+}
+
+export function useAddComponentName() {
+  const set = useSetComponentNames();
+  return useMutation({ mutationFn: addComponentName, onSuccess: set });
+}
+
+export function useDeleteComponentName() {
+  const set = useSetComponentNames();
+  return useMutation({ mutationFn: deleteComponentName, onSuccess: set });
 }

@@ -20,6 +20,7 @@ import { consumptionLookup } from '../designs/designs.service.js';
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, toMaterialColumn } from '../materials/materials.service.js';
 import { denierFieldKey, orderCords, rulesForOrder } from '../orders/order-cords.js';
+import { effectiveLines } from '../orders/order-lines.js';
 import { OrderModel, orderLabel, type OrderDocument } from '../orders/order.model.js';
 import { findOrder } from '../orders/orders.service.js';
 import type { PurchaseQuery } from './purchase.validation.js';
@@ -42,6 +43,7 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
     loadMaterialsWithCategories(),
   ]);
   const lookups = new Map(designs.map((d) => [d.designNo, consumptionLookup(d)]));
+  const designByNo = new Map(designs.map((d) => [d.designNo, d]));
   const missingDesign = consumptionLookup(null);
 
   const typedCodes = new Set(materials.filter((m) => (categories.get(m.category)?.types?.length ?? 0) > 0).map((m) => m.code));
@@ -57,7 +59,8 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
   const lines: CalcLine[] = orders.flatMap((order) => {
     const lookup = lookups.get(order.designNo) ?? missingDesign;
     const types = order.types ?? {};
-    return order.lines
+    // Saved lines + components added to the design after the order.
+    return effectiveLines(order, designByNo.get(order.designNo) ?? null).lines
       .filter((line) => wanted.size === 0 || wanted.has(line.component))
       .map(({ component, size, quantity }) => ({
         component,
@@ -85,7 +88,7 @@ export async function getPurchaseRequirements({ orderNo, components }: PurchaseQ
   for (const order of orders) {
     const lookup = lookups.get(order.designNo) ?? missingDesign;
     const perKey = new Map<string, Decimal>();
-    for (const line of order.lines.filter((l) => wanted.size === 0 || wanted.has(l.component))) {
+    for (const line of effectiveLines(order, designByNo.get(order.designNo) ?? null).lines.filter((l) => wanted.size === 0 || wanted.has(l.component))) {
       for (const [key, qty] of Object.entries(lookup(line.component, line.size) ?? {})) {
         const material = byCode.get(parseVariantKey(key).code);
         if (!material || !denierFieldKey(categories.get(material.category))) continue;

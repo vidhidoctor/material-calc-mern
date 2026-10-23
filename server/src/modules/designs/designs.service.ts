@@ -9,6 +9,7 @@ import {
   type DesignListItemDto,
 } from '@app/shared';
 import { AppError } from '../../lib/app-error.js';
+import { rememberComponentName } from '../component-names/component-names.service.js';
 import { listMaterialColumns, loadCategoryMap } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
 import { OrderModel, orderLabel } from '../orders/order.model.js';
@@ -228,6 +229,8 @@ export async function putComponent(designNo: string, name: string, input: PutCom
     design.components.push({ name, materials, sizes });
   }
   await design.save();
+  // A new name (typed under "Other…") is offered in the dropdown from now on.
+  if (!existing) await rememberComponentName(name);
   return getDesignDetail(designNo);
 }
 
