@@ -1988,7 +1988,139 @@ a {
   padding-bottom: 8px;
 }
 
-/* ---- Purchase order print slip (A4 portrait, two slips per page when one fits in half) ---- */
+/* ---- Design Costing ---- */
+.costing-pending summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.costing-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.costing-tab-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.costing-tab-head h2 {
+  margin: 0;
+}
+.costing-tab-head > p,
+.costing-tab-head > div:first-child {
+  flex: 1 1 320px;
+  margin: 0;
+}
+.costing-component-total {
+  margin-left: auto;
+  font-weight: 600;
+}
+.costing-note-input {
+  width: 100%;
+  min-width: 180px;
+}
+.costing-table .input.costing-note-input {
+  width: 100%;
+  min-width: 180px;
+}
+.costing-panel {
+  padding: 16px;
+}
+.costing-notes {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.costing-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px 24px;
+  margin-top: 12px;
+}
+.costing-cord {
+  display: inline-flex;
+  gap: 8px;
+}
+.costing-cord label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-weight: 400;
+}
+.costing-cord .input {
+  width: 90px;
+  min-width: 90px;
+}
+.costing-table .input {
+  width: 90px;
+  min-width: 90px;
+  margin-left: auto;
+}
+.costing-table .input.costing-heads-input {
+  width: 64px;
+  min-width: 64px;
+}
+.costing-strong {
+  font-weight: 700;
+}
+/* Job work: the most columns of any table; compact inputs and headings that wrap. */
+.job-work-table th {
+  white-space: normal;
+  vertical-align: bottom;
+}
+.job-work-table th,
+.job-work-table td {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.costing-table.job-work-table .input {
+  width: 62px;
+  min-width: 62px;
+}
+.costing-table.job-work-table .input.job-work-qty {
+  width: 76px;
+  min-width: 76px;
+}
+/* A blank quantity follows the Punching Master, so its number reads like a value. */
+.job-work-qty::placeholder {
+  color: var(--text);
+  opacity: 1;
+}
+.order-stats[hidden] {
+  display: none;
+}
+.costing-subtotal td {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.costing-percents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 12px 0;
+}
+.costing-percents .input {
+  width: 120px;
+}
+
+/* Price list: the purchase order template with its own columns. */
+.po-price-table .po-col-size {
+  width: 18%;
+}
+.po-price-table .po-col-price {
+  width: 24%;
+}
+.po-price-table .po-col-remarks {
+  width: 58%;
+}
+.po-slip-table td.po-remarks {
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Purchase order print slip (A4 portrait, one copy per department, each from a new page) ---- */
 .po-print {
   min-height: 100vh;
   padding: 0 16px 32px;
@@ -2034,43 +2166,6 @@ a {
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
-.po-two-up {
-  display: flex;
-  flex-direction: column;
-}
-/* Each slip takes half the page so the cut line sits in the middle; content is never clipped. */
-.po-two-up .po-slip {
-  min-height: calc((281mm - 8mm) / 2);
-}
-/* Off-screen copy at the printable width, used to measure one slip. */
-.po-measure {
-  position: absolute;
-  left: -10000px;
-  top: 0;
-  width: 194mm;
-  visibility: hidden;
-  font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
-}
-.po-cut {
-  position: relative;
-  height: 8mm;
-  display: flex;
-  align-items: center;
-  border: none;
-}
-.po-cut::before {
-  content: '';
-  flex: 1;
-  border-top: 1px dashed #555;
-}
-.po-cut span {
-  position: absolute;
-  left: -2mm;
-  font-size: 14pt;
-  line-height: 1;
-  background: #fff;
-  color: #333;
-}
 .po-slip {
   box-sizing: border-box;
   font-size: 9pt;
@@ -2081,18 +2176,6 @@ a {
   align-items: start;
   gap: 3mm;
   margin-bottom: 2mm;
-}
-.po-ornament {
-  width: 20mm;
-  height: 16mm;
-  fill: none;
-  stroke: #d99a8c;
-  stroke-width: 1.2;
-}
-.po-ornament ellipse {
-  fill: #f1c9bf;
-  stroke: #d99a8c;
-  stroke-width: 0.6;
 }
 .po-slip-title {
   text-align: center;
@@ -2123,15 +2206,45 @@ a {
   border-top: 1px solid var(--po-line);
 }
 .po-order-ref {
-  margin: 1mm 0 0;
+  margin: 1.5mm 0 0;
   color: var(--po-muted);
-  font-size: 8pt;
+  font-size: 11pt;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+}
+.po-order-ref + .po-order-ref {
+  margin-top: 0.5mm;
 }
 .po-order-ref strong {
   color: var(--po-ink);
 }
+/* Right of the title: department of this copy, date, who printed it. */
+.po-head-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5mm;
+  margin-top: 1mm;
+}
+.po-department {
+  color: var(--po-maroon);
+  font-size: 10pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-align: center;
+}
+.po-printed-by {
+  color: var(--po-muted);
+  font-size: 8.5pt;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.po-printed-by strong {
+  color: var(--po-ink);
+  font-weight: 600;
+}
 .po-date {
-  margin-top: 2mm;
   padding: 2mm 3mm;
   border-radius: 1.5mm;
   background: var(--po-rose);
@@ -2167,19 +2280,34 @@ a {
   table-layout: fixed;
 }
 .po-slip-table .po-col-item {
-  width: 22%;
-}
-.po-slip-table .po-col-total {
-  width: 17%;
+  width: 28%;
 }
 .po-slip-table .po-col-qty {
-  width: 16%;
+  width: 22%;
 }
 .po-slip-table .po-col-name {
-  width: 27%;
+  width: 32%;
 }
 .po-slip-table .po-col-sample {
   width: 18%;
+}
+.po-slip-table .po-col-total,
+.po-slip-table .po-col-buy {
+  width: 27%;
+}
+/* Material Requirements: below the sheet, set apart from the component tables. */
+.po-requirements {
+  margin-top: 5mm;
+  padding-top: 2mm;
+  border-top: 1px solid var(--po-line);
+  break-inside: auto;
+}
+.po-requirements .po-section-tab {
+  break-after: avoid;
+}
+/* Only the first copy is shown on screen; every copy prints. */
+.po-copy-extra {
+  display: none;
 }
 .po-slip-table th,
 .po-slip-table td {
@@ -2259,7 +2387,9 @@ a {
     size: A4 portrait;
     margin: 8mm;
   }
+  html,
   body,
+  #root,
   .po-print {
     background: #fff !important;
   }
@@ -2277,8 +2407,8 @@ a {
     padding: 0;
     box-shadow: none;
   }
-  .po-two-up {
-    break-inside: avoid;
+  .po-copy-extra {
+    display: block;
   }
   .po-page-break {
     break-before: page;
@@ -2481,3 +2611,121 @@ a {
   }
 }
 
+
+/* ---- Audit log and record history ---- */
+.audit-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px 12px;
+  align-items: end;
+  padding: 14px 16px;
+}
+.audit-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.audit-filter-actions {
+  display: flex;
+  gap: 8px;
+}
+.audit-table td {
+  vertical-align: top;
+}
+.audit-row {
+  cursor: pointer;
+}
+.audit-row.is-open td {
+  background: var(--primary-soft);
+}
+.audit-sub {
+  display: block;
+  margin-top: 2px;
+}
+.audit-detail td {
+  padding: 0 16px 14px;
+  background: var(--primary-soft);
+}
+.audit-alert {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.audit-pager {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+.nowrap {
+  white-space: nowrap;
+}
+.change-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--surface);
+}
+.change-table th,
+.change-table td {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.change-table th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+.change-field {
+  width: 40%;
+  color: var(--text-muted);
+}
+.change-from {
+  color: var(--danger);
+  text-decoration: line-through;
+  text-decoration-color: rgb(196 55 47 / 0.35);
+}
+.change-to {
+  color: var(--success);
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0 0 0 14px;
+  list-style: none;
+  border-left: 2px solid var(--border);
+}
+.history-event {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.history-event::before {
+  content: '';
+  position: absolute;
+  left: -20px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+.history-when {
+  margin-left: auto;
+}
+.last-changed {
+  display: inline-block;
+  margin-left: 6px;
+}

@@ -127,6 +127,37 @@ export interface MaterialCategoryDto {
   materialCount: number;
 }
 
+// ---- Audit log ----
+
+export interface AuditChangeDto {
+  /** e.g. "lines › KALI 18 › quantity" */
+  field: string;
+  from: string | null;
+  to: string | null;
+}
+
+export interface AuditEventDto {
+  id: string;
+  /** ISO date-time. */
+  at: string;
+  actor: { id: string | null; name: string; email: string; role: string | null } | null;
+  action: string;
+  actionLabel: string;
+  module: string;
+  entity: { type: string; id: string; label: string } | null;
+  /** Extra context, e.g. the component saved or the URL refused. */
+  detail: string | null;
+  changes: AuditChangeDto[];
+  ip: string | null;
+}
+
+export interface AuditPageDto {
+  items: AuditEventDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // ---- Component list (Punching's "Component" dropdown, managed in Material Master) ----
 
 export interface ComponentNameDto {
@@ -246,6 +277,8 @@ export interface OrderListItemDto {
   designNo: string;
   item: string;
   party: string;
+  /** Colour entered on the order (free text); null = none. */
+  color: string | null;
   orderDate: string;
   /** null = quantities differ per row. */
   quantity: number | null;
@@ -368,8 +401,29 @@ export interface PurchaseOrderDto {
   designNo: string;
   item: string;
   party: string;
+  /** Colour entered on the order; null = none (no Color line printed). */
+  color: string | null;
   orderDate: string;
   sections: PurchaseOrderSectionDto[];
+  /** Material Requirements below the sheet: whole-order totals per material + colour (+ type), from the order summary. */
+  totals: PurchaseOrderTotalDto[];
+}
+
+export interface PurchaseOrderTotalDto {
+  /** Column key, e.g. "SEQ-3MM|WHITE". */
+  key: string;
+  /** Same label as the sheet rows (material code, or the cord name). */
+  label: string;
+  /** Colour · type, e.g. "WHITE · PURE GLASS"; empty when none. */
+  detail: string;
+  /** Total consumption for the order (pieces, metres). */
+  totalQty: DecimalString;
+  /** Consumption unit, e.g. PCS or MTR. */
+  totalUnit: string;
+  /** What to buy for the whole order (order summary "buy": whole CDs rounded up, KG); null when not convertible. */
+  qty: DecimalString | null;
+  /** Purchase unit, e.g. CD or KG; null when not convertible. */
+  unit: string | null;
 }
 
 // ---- Purchase requirements ----
@@ -461,6 +515,147 @@ export interface OrderCostDto {
   /** True when some rates were not saved with the order (older orders): current rates were used. */
   usesCurrentRates: boolean;
   errors: string[];
+}
+
+// ---- Design Costing (punching details, per-size rates, markup) ----
+
+export interface DesignCostingRateRowDto {
+  component: string;
+  size: string;
+  /** ₹ per 1000 stitches; null = not entered. */
+  stitchRate: number | null;
+  /** ₹ per 1000 laser; null = not entered. */
+  laserRate: number | null;
+  stitchHeads: number;
+  laserHeads: number;
+  /** Remarks typed by the owner, printed as entered on the price list. */
+  note: string;
+}
+
+/** What the Manager enters: the body of a save or a preview. */
+export interface DesignCostingInputDto {
+  markupPercent: number;
+  rows: DesignCostingRateRowDto[];
+  /** Type costed for each typed column ("SEQ-3MM|PINK" → "MATT"); orders still choose their own. */
+  types: Record<string, string>;
+  /** Denier and ₹ per purchase unit costed for each cord column; orders still enter their own. */
+  cords: Record<string, { denier: number | null; ratePerUnit: number | null }>;
+}
+
+export interface DesignCostingAmountsDto {
+  stitchCost: DecimalString;
+  laserCost: DecimalString;
+  materialCost: DecimalString;
+  /** Stitch + laser + material. */
+  base: DecimalString;
+  markup: DecimalString;
+  /** Base + markup. */
+  finalPrice: DecimalString;
+}
+
+export interface DesignCostingSizeDto extends DesignCostingAmountsDto {
+  size: string;
+  stitch: number;
+  laser: number | null;
+}
+
+/** What one piece of every size consumes of one material column, across all components. */
+export interface DesignCostingMaterialDto {
+  key: string;
+  label: string;
+  /** Colour · type, e.g. "WHITE · MATT"; empty when none. */
+  detail: string;
+  unit: string;
+  qty: DecimalString;
+  /** null = no rate yet (see errors). */
+  cost: DecimalString | null;
+}
+
+export interface DesignCostingCalculationDto {
+  materials: DesignCostingMaterialDto[];
+  components: {
+    name: string;
+    /** Per piece of each size. */
+    sizes: DesignCostingSizeDto[];
+    /** One piece of every size of the component. */
+    total: DesignCostingAmountsDto;
+  }[];
+  /** All components. */
+  total: DesignCostingAmountsDto;
+  /** What is missing from the figures (e.g. a material without a rate). */
+  errors: string[];
+}
+
+export interface DesignCostingListItemDto extends DesignListItemDto {
+  /** null = no costing saved yet. */
+  savedAt: string | null;
+  savedBy: string | null;
+}
+
+export interface DesignCostingDto {
+  design: DesignDetailDto;
+  saved: DesignCostingInputDto;
+  savedAt: string | null;
+  savedBy: string | null;
+  /** Typed columns of the design: the type to cost each with is chosen here. */
+  typed: { key: string; label: string; categoryName: string; types: string[] }[];
+  /** Cord columns of the design: denier and rate are entered here. */
+  cords: { key: string; label: string; rateUnit: string }[];
+  calculation: DesignCostingCalculationDto;
+}
+
+// ---- Job Work Costing (what a job worker is paid; separate from the design costing) ----
+
+/** What the user enters: the body of a save or a preview. */
+export interface JobWorkInputDto {
+  rows: {
+    component: string;
+    size: string;
+    /** ₹ per piece agreed with the job worker; null = not entered. */
+    rate: number | null;
+    /** For this job work only; null = the Punching Master quantity. */
+    stitch: number | null;
+    laser: number | null;
+    stitchRate: number | null;
+    laserRate: number | null;
+    stitchHeads: number;
+    laserHeads: number;
+  }[];
+  /** Column keys of materials the job worker's rate already covers. */
+  excluded: string[];
+}
+
+export interface JobWorkAmountsDto {
+  rate: DecimalString;
+  stitchCost: DecimalString;
+  laserCost: DecimalString;
+  includedMaterials: DecimalString;
+  /** For reference: already covered by the job worker's rate. */
+  excludedMaterials: DecimalString;
+  /** Rate + stitch cost + laser cost + included materials. */
+  finalCost: DecimalString;
+}
+
+export interface JobWorkCalculationDto {
+  /** One piece of every size, per material column. */
+  materials: (DesignCostingMaterialDto & { included: boolean })[];
+  components: {
+    name: string;
+    /** stitch and laser as used in the figures; punchingStitch and punchingLaser as in the Punching Master. */
+    sizes: (JobWorkAmountsDto & { size: string; stitch: number; laser: number | null; punchingStitch: number; punchingLaser: number | null })[];
+    /** One piece of every size of the component. */
+    total: JobWorkAmountsDto;
+  }[];
+  total: JobWorkAmountsDto;
+  errors: string[];
+}
+
+export interface JobWorkCostingDto {
+  designNo: string;
+  saved: JobWorkInputDto;
+  savedAt: string | null;
+  savedBy: string | null;
+  calculation: JobWorkCalculationDto;
 }
 
 /** Rate of one type of a category (e.g. Sequence · PURE GLASS ₹8,000 per roll + 5%), Admin only. */

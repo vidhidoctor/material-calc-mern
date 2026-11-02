@@ -2,6 +2,7 @@ import type { ErrorRequestHandler, RequestHandler } from 'express';
 import mongoose from 'mongoose';
 import { AppError } from '../lib/app-error.js';
 import { logger } from '../lib/logger.js';
+import { recordAudit } from '../modules/audit/audit.service.js';
 
 export const notFound: RequestHandler = (req) => {
   throw new AppError(404, `Not found: ${req.method} ${req.path}`);
@@ -15,8 +16,12 @@ function isDuplicateKey(error: unknown): error is { code: 11000; keyValue?: Reco
   return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 }
 
-export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   if (error instanceof AppError) {
+    // A logged-in user refused by permissions: recorded for security monitoring.
+    if (error.status === 403 && req.auth) {
+      void recordAudit({ req, action: 'ACCESS_DENIED', module: 'Auth', detail: `${req.method} ${req.originalUrl}` });
+    }
     res.status(error.status).json(error.details === undefined ? { error: error.message } : { error: error.message, details: error.details });
     return;
   }

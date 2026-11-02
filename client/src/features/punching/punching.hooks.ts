@@ -67,12 +67,12 @@ export function useDeleteDesign() {
   });
 }
 
-export function usePutComponent(designNo: string) {
+export function usePutComponent(designNo: string, viaCosting = false) {
   const saved = useDesignSaved();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ name, columns, sizes }: { name: string; columns: string[]; sizes: SizeRowBody[] }) =>
-      putComponent(designNo, name, columns, sizes),
+      putComponent(designNo, name, columns, sizes, viaCosting),
     // A new name typed under "Other…" joins the component list.
     onSuccess: (design) => Promise.all([saved(design), queryClient.invalidateQueries({ queryKey: queryKeys.componentNames })]),
   });

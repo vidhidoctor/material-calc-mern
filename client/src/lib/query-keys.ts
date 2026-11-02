@@ -8,6 +8,10 @@ export const queryKeys = {
   materials: ['materials'] as const,
   materialCategories: ['material-categories'] as const,
   componentNames: ['component-names'] as const,
+  /** Prefix for the audit log and every record's history. */
+  audit: ['audit'] as const,
+  auditLog: (filters: object) => ['audit', 'log', filters] as const,
+  entityHistory: (type: string, id: string) => ['audit', 'entity', type, id] as const,
   settings: ['settings'] as const,
   /** Prefix for every design query (list and detail). */
   designs: ['designs'] as const,
@@ -27,4 +31,13 @@ export const queryKeys = {
   costing: ['costing'] as const,
   rates: ['costing', 'rates'] as const,
   orderCost: (orderNo: number) => ['costing', 'order', orderNo] as const,
+  /** Under the ₹ prefix, so a punching edit refreshes it too. */
+  designCostingPrefix: ['costing', 'design-costing'] as const,
+  designCostingList: (q: string) => ['costing', 'design-costing', 'list', q] as const,
+  designCosting: (designNo: string) => ['costing', 'design-costing', 'detail', designNo] as const,
+  designCostingPreview: (designNo: string, body: object) => ['costing', 'design-costing', 'preview', designNo, body] as const,
+  /** Also under the ₹ prefix: a punching edit changes its figures too. */
+  jobWorkPrefix: ['costing', 'job-work'] as const,
+  jobWork: (designNo: string) => ['costing', 'job-work', 'detail', designNo] as const,
+  jobWorkPreview: (designNo: string, body: object) => ['costing', 'job-work', 'preview', designNo, body] as const,
 };

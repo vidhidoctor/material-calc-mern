@@ -28,6 +28,10 @@ export const NAV: NavSection[] = [
     ],
   },
   {
+    title: 'Costing',
+    items: [{ to: '/design-costing', label: 'Design Costing', icon: 'rupee', any: ['DESIGN_COSTING_VIEW'] }],
+  },
+  {
     title: 'Administration',
     items: [
       { to: '/admin/users', label: 'User Management', icon: 'users', any: ['USER_VIEW'] },
@@ -35,6 +39,7 @@ export const NAV: NavSection[] = [
       { to: '/admin/departments', label: 'Departments', icon: 'building', any: ['DEPARTMENT_MANAGE'] },
       { to: '/admin/materials', label: 'Material Master', icon: 'package', any: ['MATERIAL_MASTER_VIEW'] },
       { to: '/admin/settings', label: 'Global config', icon: 'sliders', any: ['SETTINGS_MANAGE'] },
+      { to: '/admin/audit', label: 'Audit Log', icon: 'history', any: ['AUDIT_VIEW'] },
     ],
   },
 ];

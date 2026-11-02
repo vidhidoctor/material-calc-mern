@@ -1,4 +1,4 @@
-import type { OrderSummaryColumnDto, PurchaseOrderDto, PurchaseOrderRowDto, PurchaseOrderSectionDto } from '@app/shared';
+import type { OrderSummaryColumnDto, PurchaseOrderDto, PurchaseOrderTotalDto, PurchaseOrderRowDto, PurchaseOrderSectionDto } from '@app/shared';
 import { Decimal } from '../../calculation/engine.js';
 import { loadMaterialsWithCategories } from '../materials/materials.service.js';
 import { findOrder, getOrderSummary, toDateOnly } from './orders.service.js';
@@ -10,6 +10,7 @@ import { findOrder, getOrderSummary, toDateOnly } from './orders.service.js';
  * unit — whole units (CD) rounded up for that component, weights (KG) as worked out (cord with this
  * order's denier). Components added to the design after the order are included (see order-lines.ts).
  * Only the Name of each row is entered by hand (saved on the order, printed exactly as entered).
+ * Below the sheet, Material Requirements: the order summary totals per column (consumption and what to buy).
  */
 
 const rowId = (sectionId: string, columnKey: string) => `${sectionId}::${columnKey}`;
@@ -23,11 +24,10 @@ export async function getPurchaseOrder(orderNo: number): Promise<PurchaseOrderDt
 
   const row = (sectionId: string, column: OrderSummaryColumnDto, qty: string | null, totalQty: string): PurchaseOrderRowDto => {
     const id = rowId(sectionId, column.key);
-    const material = materialByCode.get(column.code);
     return {
       id,
       // Same as the order drawer: the material code (SEQ-3MM); cords their name (e.g. "PC"), as in Punching.
-      label: (column.cord && material?.name?.trim()) || column.code,
+      label: label(column),
       detail: [column.color, types[column.key]].filter(Boolean).join(' · '),
       qty: column.orderUnit ? qty : null,
       unit: column.orderUnit,
@@ -37,6 +37,7 @@ export async function getPurchaseOrder(orderNo: number): Promise<PurchaseOrderDt
       name: names.get(id) ?? names.get(rowId(`K:${column.category}`, column.key)) ?? '',
     };
   };
+  const label = (column: OrderSummaryColumnDto) => (column.cord && materialByCode.get(column.code)?.name?.trim()) || column.code;
   const categoryName = (code: string) => categories.get(code)?.name ?? code;
 
   const sections: PurchaseOrderSectionDto[] = summary.components.flatMap((component) => {
@@ -52,14 +53,28 @@ export async function getPurchaseOrder(orderNo: number): Promise<PurchaseOrderDt
     return [{ id, title: component.component, itemHeader: used.size === 1 ? categoryName([...used][0]!) : 'Material', unit: sharedUnit(rows), rows }];
   });
 
+  const totals: PurchaseOrderTotalDto[] = summary.columns
+    .filter((c) => summary.totals[c.key] !== undefined && !new Decimal(summary.totals[c.key]!).isZero())
+    .map((c) => ({
+      key: c.key,
+      label: label(c),
+      detail: [c.color, types[c.key]].filter(Boolean).join(' · '),
+      totalQty: summary.totals[c.key]!,
+      totalUnit: c.unit,
+      qty: c.orderUnit ? (summary.buy[c.key] ?? null) : null,
+      unit: c.orderUnit,
+    }));
+
   return {
     orderNo: order.orderNo,
     partyOrderNo: order.partyOrderNo,
     designNo: order.designNo,
     item: order.item,
     party: order.party,
+    color: order.color || null,
     orderDate: toDateOnly(order.orderDate),
     sections,
+    totals,
   };
 }
 

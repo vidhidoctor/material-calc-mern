@@ -5,6 +5,7 @@ import { EmptyState, ErrorAlert, PageHeader, QueryState, StatusBadge } from '../
 import { useAuth } from '../../lib/auth';
 import { formatDate } from '../../lib/format';
 import { UserFormModal } from './components/UserFormModal';
+import { HistoryButton } from '../audit/components/HistoryPanel';
 import { useDeleteUser, useDepartmentOptions, useRoleOptions, useUsers } from './users.hooks';
 
 function statusOf(user: UserDto) {
@@ -47,6 +48,7 @@ export function UsersPage() {
       align: 'right',
       render: (u) => (
         <div className="row-actions">
+          <HistoryButton small type="User" id={u.id} title={u.email} />
           {canEdit && (
             <button type="button" className={`btn btn-sm ${u.pending ? 'btn-primary' : ''}`} onClick={() => setEditing(u)}>
               {u.pending ? 'Review' : 'Edit'}

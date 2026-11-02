@@ -1,7 +1,7 @@
 import type { MaterialCategoryDto, MaterialDto } from '@app/shared';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
 import { DataGrid, type Column } from '../../components/DataGrid';
+import { Tabs, useTabParam, type TabItem } from '../../components/Tabs';
 import { EmptyState, ErrorAlert, PageHeader, QueryState, StatusBadge } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatNumber } from '../../lib/format';
@@ -9,6 +9,7 @@ import { CategoriesTab } from './components/CategoriesTab';
 import { ComponentNamesTab } from './components/ComponentNamesTab';
 import { MaterialFormModal } from './components/MaterialFormModal';
 import { RatesTab } from './components/RatesTab';
+import { HistoryButton } from '../audit/components/HistoryPanel';
 import { useCategories, useDeleteMaterial, useMaterials } from './materials.hooks';
 
 const TONES = ['blue', 'amber', 'green', 'grey'] as const;
@@ -52,6 +53,7 @@ function MaterialsTab() {
       align: 'right',
       render: (m) => (
         <div className="row-actions">
+          <HistoryButton small type="Material" id={m.code} title={`Material ${m.code}`} />
           <button type="button" className="btn btn-sm" onClick={() => setEditing(m)}>
             Edit
           </button>
@@ -97,35 +99,18 @@ type Tab = 'materials' | 'categories' | 'components' | 'rates';
 export function MaterialsPage() {
   const auth = useAuth();
   const canCost = auth.can('COST_VIEW');
-  const [params, setParams] = useSearchParams();
-  const requested = params.get('tab');
-  const tab: Tab =
-    requested === 'categories' || requested === 'components' ? requested : requested === 'rates' && canCost ? 'rates' : 'materials';
-
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: TabItem<Tab>[] = [
     { id: 'materials', label: 'Materials' },
     { id: 'categories', label: 'Categories' },
     { id: 'components', label: 'Components' },
     ...(canCost ? [{ id: 'rates' as const, label: 'Rates & costs' }] : []),
   ];
+  const [tab, setTab] = useTabParam(tabs);
 
   return (
     <>
       <PageHeader title="Material Master" subtitle="Materials are the consumption columns everywhere; categories decide how purchase quantities are calculated." />
-      <div className="segmented" role="tablist" aria-label="Material Master">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            aria-pressed={tab === t.id}
-            onClick={() => setParams(t.id === 'materials' ? {} : { tab: t.id })}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs label="Material Master" tabs={tabs} active={tab} onChange={setTab} />
       {tab === 'materials' ? <MaterialsTab /> : tab === 'categories' ? <CategoriesTab /> : tab === 'components' ? <ComponentNamesTab /> : <RatesTab />}
     </>
   );

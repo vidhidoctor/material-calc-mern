@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth';
 import { formatDate } from '../../lib/format';
 import { ComponentCard } from '../../components/ComponentCard';
 import { ComponentEditor } from './components/ComponentEditor';
+import { HistoryButton, LastChanged } from '../audit/components/HistoryPanel';
 import { EditDesignModal } from './components/EditDesignModal';
 import { useDeleteComponent, useDeleteDesign, useDesign } from './punching.hooks';
 
@@ -48,11 +49,12 @@ export function DesignPage() {
               title={`Design ${d.designNo}`}
               subtitle={
                 <>
-                  <strong>{d.productName}</strong> · created {formatDate(d.createdAt)}
+                  <strong>{d.productName}</strong> · created {formatDate(d.createdAt)} <LastChanged type="Design" id={d.designNo} />
                 </>
               }
               actions={
                 <>
+                  <HistoryButton type="Design" id={d.designNo} title={`Design ${d.designNo}`} />
                   {canUpdate && (
                     <>
                       <button type="button" className="btn btn-danger-ghost" disabled={removeDesign.isPending} onClick={onDeleteDesign}>

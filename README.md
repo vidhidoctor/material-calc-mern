@@ -107,6 +107,8 @@ are decimal strings.
 | POST | `/material-categories` | `{ code, name, unit, fields: [{ key, label, required }], steps: [{ key, label, formula }], purchaseStep, orderStep?, wholeUnits? }` (orderStep = unit shown on orders, e.g. CD) | MATERIAL_MASTER_MANAGE |
 | PUT | `/material-categories/:code` | same without `code` (code cannot change) | MATERIAL_MASTER_MANAGE |
 | DELETE | `/material-categories/:code` | — (409 while a material uses it) | MATERIAL_MASTER_MANAGE |
+| GET | `/audit-logs` | `?from&to` (ISO instants) `&user&module&action&entityType&entityId&q&page&pageSize` (≤ 5,000 for export) → `{ items, total, page, pageSize }`, newest first | AUDIT_VIEW |
+| GET | `/audit-logs/entity/:type/:id` | — (one record's history; costs hidden without COST_VIEW) | AUDIT_VIEW or the permission that shows that record |
 | GET | `/component-names` | — (Punching's component list with how many designs use each) | PUNCHING_VIEW or MATERIAL_MASTER_VIEW |
 | POST | `/component-names` | `{ name }` (added at the end; names typed in Punching are added automatically) | MATERIAL_MASTER_MANAGE |
 | DELETE | `/component-names/:name` | — (only hides it from the dropdown; designs keep it) | MATERIAL_MASTER_MANAGE |

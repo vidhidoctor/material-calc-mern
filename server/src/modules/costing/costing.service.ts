@@ -7,6 +7,7 @@ import {
   typedLabel,
   variantKey,
   type DesignCostDto,
+  type DesignCostingDto,
   type MaterialRateDto,
   type OrderCostDto,
   type TypeRateDto,
@@ -18,7 +19,7 @@ import { consumptionLookup, findDesign, selectedColumns } from '../designs/desig
 import { DesignModel } from '../designs/design.model.js';
 import { compileCategories, loadMaterialsWithCategories, type CategoryMap } from '../materials/materials.service.js';
 import type { MaterialDocument } from '../materials/material.model.js';
-import { denierFieldKey, orderCords, rulesForOrder } from '../orders/order-cords.js';
+import { denierFieldKey, orderCords, rulesForOrder, type OrderCordInput } from '../orders/order-cords.js';
 import { effectiveLines } from '../orders/order-lines.js';
 import { OrderModel } from '../orders/order.model.js';
 import { MaterialRateModel, type MaterialRate } from './material-rate.model.js';
@@ -33,6 +34,8 @@ export const COSTING_MESSAGES = {
   orderNotFound: (orderNo: number) => `Order #${orderNo} not found.`,
   cordPerOrder: (category: string) => `${category}: cost is entered on each order (denier and rate per KG).`,
   cordMissing: (key: string) => `${typedLabel(key)}: enter the denier and rate per KG for this order.`,
+  designCordMissing: (key: string) => `${typedLabel(key)}: enter the denier and rate per KG to include it.`,
+  designTypeMissing: (key: string, category: string) => `${typedLabel(key)}: choose the ${category} type to include it.`,
 } as const;
 
 /** Unit costs keep 10 decimals in transport (bead costs are fractions of a rupee). */
@@ -136,6 +139,58 @@ export async function orderUnitCosts(order: { unitRates?: Record<string, string>
     const now = currentUnitCost(ctx, key);
     return { perUnit: now.perUnit, rateInclGst: now.rateInclGst, current: true, ...(now.error ? { error: now.error } : {}) };
   };
+}
+
+/** Cord: ₹ per metre = KG in one metre (entered denier) × entered rate per KG. Undefined for other materials; null when not entered. */
+function cordUnitCost(ctx: CostContext, key: string, cord: OrderCordInput | undefined): Decimal | null | undefined {
+  const material = ctx.materials.get(parseVariantKey(key).code);
+  const denierField = denierFieldKey(ctx.categories.get(material?.category ?? ''));
+  if (!material || !denierField) return undefined;
+  const category = ctx.compiled.get(material.category) ?? null;
+  const one = category && cord?.denier ? convertWithCategory(category, rulesForOrder(material.rules ?? {}, denierField, cord.denier), new Decimal(1)).purchase : null;
+  return one && cord?.ratePerUnit != null ? one.times(cord.ratePerUnit) : null;
+}
+
+/**
+ * Design Costing: cost of one consumption unit of a design column at today's rates, with the type and
+ * cord values the Manager entered there (a design has none of its own: orders choose theirs).
+ */
+export async function designColumnCoster(
+  types: Record<string, string>,
+  cords: ReadonlyMap<string, OrderCordInput>,
+): Promise<(key: string) => { perUnit: Decimal | null; error?: string }> {
+  const ctx = await loadContext();
+  return (key) => {
+    const cord = cordUnitCost(ctx, key, cords.get(key));
+    if (cord === null) return { perUnit: null, error: COSTING_MESSAGES.designCordMissing(key) };
+    if (cord) return { perUnit: cord };
+    const material = ctx.materials.get(parseVariantKey(key).code);
+    const category = ctx.categories.get(material?.category ?? '');
+    const typed = (category?.types?.length ?? 0) > 0;
+    if (typed && !types[key]) return { perUnit: null, error: COSTING_MESSAGES.designTypeMissing(key, category!.name) };
+    const { perUnit, error } = currentUnitCost(ctx, typed ? typedKey(key, types[key]) : key);
+    return { perUnit, ...(error ? { error } : {}) };
+  };
+}
+
+/** The columns of a design that need an entry before they can be costed: typed ones and cords. */
+export async function designCostColumns(keys: readonly string[]): Promise<Pick<DesignCostingDto, 'typed' | 'cords'>> {
+  const ctx = await loadContext();
+  const typed: DesignCostingDto['typed'] = [];
+  const cords: DesignCostingDto['cords'] = [];
+  for (const key of sortVariantKeys([...keys], [...ctx.materials.keys()])) {
+    const { code, color } = parseVariantKey(key);
+    const material = ctx.materials.get(code);
+    const category = ctx.categories.get(material?.category ?? '');
+    if (!material || !category) continue;
+    if (denierFieldKey(category)) {
+      const step = category.steps.find((s) => s.key === category.purchaseStep);
+      cords.push({ key, label: [material.name?.trim() || code, color].filter(Boolean).join(' · '), rateUnit: step?.label ?? category.purchaseStep });
+    } else if ((category.types?.length ?? 0) > 0) {
+      typed.push({ key, label: typedLabel(key), categoryName: category.name, types: [...category.types] });
+    }
+  }
+  return { typed, cords };
 }
 
 /** Current unit costs for the given column keys. */
@@ -272,17 +327,9 @@ export async function orderCost(orderNo: number): Promise<OrderCostDto> {
 
   /** Cord: ₹ per metre = KG in one metre (order denier) × rate per KG entered on the order. */
   const cordUnit = (key: string): Decimal | null | undefined => {
-    const material = ctx.materials.get(parseVariantKey(key).code);
-    const denierField = denierFieldKey(ctx.categories.get(material?.category ?? ''));
-    if (!material || !denierField) return undefined;
-    const cord = cords.get(key);
-    const category = ctx.compiled.get(material.category) ?? null;
-    const one = category && cord?.denier ? convertWithCategory(category, rulesForOrder(material.rules ?? {}, denierField, cord.denier), new Decimal(1)).purchase : null;
-    if (!one || cord?.ratePerUnit == null) {
-      errors.add(COSTING_MESSAGES.cordMissing(key));
-      return null;
-    }
-    return one.times(cord.ratePerUnit);
+    const cost = cordUnitCost(ctx, key, cords.get(key));
+    if (cost === null) errors.add(COSTING_MESSAGES.cordMissing(key));
+    return cost;
   };
 
   const unit = (key: string): Decimal | null => {

@@ -24,7 +24,7 @@ server/   Express API
   src/config/env.ts        Zod-validated env (loads server/.env)
   src/middleware/          error-handler, validate (Zod), auth (authenticate / requirePermission / guard)
   src/modules/<m>/         <m>.model / .validation / .service / .controller / .routes
-                           auth, users, roles, departments, admin, materials, designs, orders, production, purchase
+                           auth, users, roles, departments, admin, materials, designs, design-costing, job-work-costing, orders, production, purchase
   src/calculation/         pure engine (decimal.js) — must not import mongoose, express or modules/
   src/lib/                 AppError, crypto (scrypt, tokens), zod helpers, logger
   scripts/seed.ts          npm run seed;  tests/  node:test + supertest + mongodb-memory-server
@@ -50,6 +50,20 @@ Imports in server/ and shared/ end in `.js` (NodeNext ESM).
 - Category types (e.g. sequence finish MATT/METAL/GLASS) are defined by Admin; Punching must give typed materials a
   colour; Production picks the type per order (`order.types`, key `CODE|COLOUR^TYPE`); purchase and cost follow the type.
 - Don't seed sample data (fixture 26-49) into Atlas; the fixture is for tests only. The user enters real data.
+- Design Costing (modules/design-costing, one record per design): stitch and laser rates are entered per component + size
+  and never go in Material Master; base cost, markup and final price are pure maths in calculation/design-costing.ts. It
+  chooses its own type/denier/rate for typed and cord columns (orders still choose theirs). Figures on screen come from the
+  server (`/preview`), not client maths.
+- Job Work Costing (modules/job-work-costing, a tab of Design Costing, its own record per design): per size: job worker rate, stitch and laser
+  rates and heads, and its own stitch/laser quantities (blank = Punching Master); materials excluded because the rate covers them.
+  Final cost = job worker rate + stitch cost + laser cost + included materials. It only reads punching details, material costs and the
+  design costing's type/cord choices, and never writes to them.
+- Shared UI: tabs use components/Tabs (`useTabParam` keeps the tab in the address), figures use components/StatCard, printed
+  sheets use components/PrintHeader + the `.po-*` styles (purchase order, price list). Don't make new versions of these.
+- Audit (modules/audit): every route that changes data gets `audited({ action, entity, id })` (before → after snapshot
+  diff, recorded only on success); new actions go in `AUDIT_ACTIONS`, new record kinds in `audit.entities.ts`. The audit
+  log is append-only (no update/delete, enforced in the model); passwords/tokens are never logged; Admin → Audit Log
+  needs AUDIT_VIEW, a record's History needs the permission that shows the record (costs masked without COST_VIEW).
 
 ## Git
 

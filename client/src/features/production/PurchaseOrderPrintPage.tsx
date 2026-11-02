@@ -1,37 +1,13 @@
-import { APP_NAME, COMPANY_NAME, type PurchaseOrderDto, type PurchaseOrderSectionDto } from '@app/shared';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { APP_NAME, PURCHASE_ORDER_COPIES, type PurchaseOrderDto, type PurchaseOrderSectionDto } from '@app/shared';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
+import { PrintHeader } from '../../components/PrintHeader';
 import { ErrorAlert, QueryState } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
-import { formatDate, formatNumber } from '../../lib/format';
+import { formatNumber } from '../../lib/format';
 import { usePurchaseOrder, useSavePurchaseOrderNames } from './production.hooks';
 
-/** A4 portrait with 8 mm margins: printable 194 × 281 mm. Two slips fit when one is at most half of it. */
-const MM = 96 / 25.4;
-const PRINTABLE_HEIGHT_MM = 281;
-const CUT_LINE_MM = 8;
-const HALF_PAGE_PX = ((PRINTABLE_HEIGHT_MM - CUT_LINE_MM) / 2) * MM;
-
 type Names = Record<string, string>;
-
-function Ornament() {
-  return (
-    <svg className="po-ornament" viewBox="0 0 80 64" aria-hidden="true">
-      <path d="M6 60 C24 44 40 30 74 6" />
-      {[
-        [18, 50, -40],
-        [28, 42, 30],
-        [36, 35, -45],
-        [46, 27, 25],
-        [54, 21, -50],
-        [63, 14, 20],
-        [70, 9, -30],
-      ].map(([x, y, r], i) => (
-        <ellipse key={i} cx={x} cy={y} rx="7" ry="2.6" transform={`rotate(${r} ${x} ${y}) translate(${i % 2 ? 5 : -5} ${i % 2 ? -4 : 4})`} />
-      ))}
-    </svg>
-  );
-}
 
 function SectionTable({ section, index, names, onName }: { section: PurchaseOrderSectionDto; index: number; names: Names; onName: (id: string, name: string) => void }) {
   return (
@@ -42,7 +18,6 @@ function SectionTable({ section, index, names, onName }: { section: PurchaseOrde
       <table className="po-slip-table">
         <colgroup>
           <col className="po-col-item" />
-          <col className="po-col-total" />
           <col className="po-col-qty" />
           <col className="po-col-name" />
           <col className="po-col-sample" />
@@ -50,7 +25,6 @@ function SectionTable({ section, index, names, onName }: { section: PurchaseOrde
         <thead>
           <tr>
             <th>{section.itemHeader}</th>
-            <th>Total Qty</th>
             <th>Series in VC{section.unit ? ` (${section.unit})` : ''}</th>
             <th>Name</th>
             <th>Sample</th>
@@ -62,9 +36,6 @@ function SectionTable({ section, index, names, onName }: { section: PurchaseOrde
               <td>
                 <span className="po-item">{row.label}</span>
                 {row.detail && <span className="po-item-detail">{row.detail}</span>}
-              </td>
-              <td>
-                {formatNumber(row.totalQty, 2)} <span className="po-unit">{row.totalUnit}</span>
               </td>
               <td className="po-qty">
                 {row.qty === null ? (
@@ -97,36 +68,91 @@ function SectionTable({ section, index, names, onName }: { section: PurchaseOrde
   );
 }
 
-function Slip({ data, names, onName }: { data: PurchaseOrderDto; names: Names; onName: (id: string, name: string) => void }) {
+/** Material Requirements: whole-order totals per material + colour (+ type), below the sheet. */
+function RequirementsTable({ totals }: { totals: PurchaseOrderDto['totals'] }) {
+  if (totals.length === 0) return null;
+  return (
+    <section className="po-section po-requirements">
+      <h3 className="po-section-tab">Material Requirements</h3>
+      <table className="po-slip-table">
+        <colgroup>
+          <col className="po-col-item" />
+          <col className="po-col-total" />
+          <col className="po-col-buy" />
+          <col className="po-col-sample" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Total Required</th>
+            <th>To Buy</th>
+            <th>Sample</th>
+          </tr>
+        </thead>
+        <tbody>
+          {totals.map((t) => (
+            <tr key={t.key}>
+              <td>
+                <span className="po-item">{t.label}</span>
+                {t.detail && <span className="po-item-detail">{t.detail}</span>}
+              </td>
+              <td>
+                {formatNumber(t.totalQty, 2)} <span className="po-unit">{t.totalUnit}</span>
+              </td>
+              <td className="po-qty">
+                {t.qty === null ? (
+                  '—'
+                ) : (
+                  <>
+                    {formatNumber(t.qty, 3)} <span className="po-unit">{t.unit}</span>
+                  </>
+                )}
+              </td>
+              <td>
+                <span className="po-sample-box" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+interface SlipProps {
+  data: PurchaseOrderDto;
+  /** Department this copy is for (PURCHASE_ORDER_COPIES). */
+  department: string;
+  names: Names;
+  onName: (id: string, name: string) => void;
+}
+
+function Slip({ data, department, names, onName }: SlipProps) {
   return (
     <article className="po-slip">
-      <header className="po-slip-head">
-        <Ornament />
-        <div className="po-slip-title">
-          <h1 className="po-company">{COMPANY_NAME}</h1>
-          <p className="po-doc-title">
-            <span>PURCHASE ORDER</span>
-          </p>
+      <PrintHeader title="PURCHASE ORDER" department={department} date={data.orderDate}>
+        <p className="po-order-ref">
+          D.N. <strong>{data.designNo}</strong> · {data.item} · Party <strong>{data.party}</strong> · Order <strong>#{data.partyOrderNo}</strong>
+        </p>
+        {data.color && (
           <p className="po-order-ref">
-            D.N. <strong>{data.designNo}</strong> · {data.item} · Party <strong>{data.party}</strong> · Order <strong>#{data.partyOrderNo}</strong>
+            Color: <strong>{data.color}</strong>
           </p>
-        </div>
-        <div className="po-date">
-          DATE : <strong>{formatDate(data.orderDate)}</strong>
-        </div>
-      </header>
+        )}
+      </PrintHeader>
       {data.sections.map((section, i) => (
         <SectionTable key={section.id} section={section} index={i} names={names} onName={onName} />
       ))}
       {data.sections.length === 0 && <p className="po-empty">No material needed for this order.</p>}
+      <RequirementsTable totals={data.totals} />
     </article>
   );
 }
 
 /**
- * Printable purchase order: two slips per A4 page (cut line between) when one slip fits in half a page,
- * otherwise each slip on its own page(s), never cut off. Quantities come from the order calculation;
- * only the Name of each row is typed here (saved on the order, printed exactly as entered).
+ * Printable purchase order: one copy per department (PURCHASE_ORDER_COPIES), each starting on a new
+ * A4 page and never cut off. Quantities come from the order calculation; only the Name of each row is
+ * typed here (saved on the order, printed exactly as entered). The screen shows the first copy.
  */
 export function PurchaseOrderPrintPage() {
   const orderNo = Number(useParams().orderNo);
@@ -144,14 +170,6 @@ export function PurchaseOrderPrintPage() {
   const changed = Object.fromEntries(Object.entries(names).filter(([id, name]) => (savedNames[id] ?? '') !== name));
   const dirty = Object.keys(changed).length > 0;
   const onName = (id: string, name: string) => setNames((n) => ({ ...n, [id]: name }));
-
-  // Two slips per page only when one slip is at most half the printable height (measured at print width).
-  const measureRef = useRef<HTMLDivElement>(null);
-  const [twoUp, setTwoUp] = useState(true);
-  useLayoutEffect(() => {
-    const height = measureRef.current?.offsetHeight ?? 0;
-    setTwoUp(height > 0 && height <= HALF_PAGE_PX);
-  }, [query.data]);
 
   useEffect(() => {
     if (query.data) document.title = `PO ${query.data.designNo} ${query.data.party}-${query.data.partyOrderNo}`;
@@ -172,7 +190,8 @@ export function PurchaseOrderPrintPage() {
           ← Order Master
         </Link>
         <span className="muted small po-toolbar-note">
-          Type the names, then print. {twoUp ? 'Two slips on one A4 page.' : 'One slip per page (too long for half a page).'}
+          Type the names, then print. Prints {PURCHASE_ORDER_COPIES.length} copies, one per page:{' '}
+          {PURCHASE_ORDER_COPIES.map((d) => d.replace(/ DEPARTMENT$/, '').toLowerCase()).join(', ')}.
         </span>
         {canSave && (
           <button type="button" className="btn" disabled={!dirty || save.isPending} onClick={() => save.mutate(changed)}>
@@ -190,30 +209,11 @@ export function PurchaseOrderPrintPage() {
       <QueryState query={query}>
         {(data) => (
           <>
-            {/* Invisible copy at print width, to measure one slip. */}
-            <div className="po-measure" aria-hidden="true" inert>
-              <div ref={measureRef}>
-                <Slip data={data} names={names} onName={() => undefined} />
+            {PURCHASE_ORDER_COPIES.map((department, i) => (
+              <div key={department} className={i === 0 ? 'po-page' : 'po-page po-page-break po-copy-extra'}>
+                <Slip data={data} department={department} names={names} onName={onName} />
               </div>
-            </div>
-            {twoUp ? (
-              <div className="po-page po-two-up">
-                <Slip data={data} names={names} onName={onName} />
-                <div className="po-cut" aria-hidden="true">
-                  <span>✂</span>
-                </div>
-                <Slip data={data} names={names} onName={onName} />
-              </div>
-            ) : (
-              <>
-                <div className="po-page">
-                  <Slip data={data} names={names} onName={onName} />
-                </div>
-                <div className="po-page po-page-break">
-                  <Slip data={data} names={names} onName={onName} />
-                </div>
-              </>
-            )}
+            ))}
           </>
         )}
       </QueryState>

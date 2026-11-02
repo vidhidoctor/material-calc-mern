@@ -545,4 +545,60 @@ describe('production orders and purchase requirements', () => {
       assert.equal((await ctx.api.put('/api/designs/26-49/components/BELT').set(bearer(ctx.adminToken)).send({ sizes: belt })).status, 200);
     });
   });
+
+  it('colour: free text saved on the order, shown in the order and on the purchase order slip; optional', async () => {
+    // Older orders (and orders without a colour) have none.
+    assert.equal((await ctx.api.get('/api/orders/1').set(bearer(prod))).body.color, null);
+    assert.equal((await ctx.api.get('/api/orders/1/purchase-order').set(bearer(prod))).body.color, null);
+
+    const lines = [{ component: 'BELT', size: 'ALL', quantity: 5 }];
+    const created = await ctx.api.post('/api/orders').set(bearer(prod)).send({ designNo: '26-49', party: 'HUE', color: '  Rani Pink / gold border ', lines });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    assert.equal(created.body.color, 'Rani Pink / gold border');
+    const orderNo = created.body.orderNo as number;
+    assert.equal((await ctx.api.get(`/api/orders/${orderNo}/purchase-order`).set(bearer(prod))).body.color, 'Rani Pink / gold border');
+    assert.equal((await ctx.api.get('/api/orders').set(bearer(prod))).body.find((o: { orderNo: number }) => o.orderNo === orderNo).color, 'Rani Pink / gold border');
+
+    const edit = (body: object) => ctx.api.put(`/api/orders/${orderNo}`).set(bearer(prod)).send({ party: 'HUE', lines, ...body });
+    // Not sent: kept. Changed: saved. Blank: removed.
+    assert.equal((await edit({})).body.color, 'Rani Pink / gold border');
+    assert.equal((await edit({ color: 'Maroon' })).body.color, 'Maroon');
+    assert.equal((await edit({ color: '  ' })).body.color, null);
+    assert.equal((await edit({ color: 'x'.repeat(101) })).status, 400);
+  });
+
+  it('purchase order Material Requirements: whole-order totals = sum of the component rows, to buy = order summary', async () => {
+    // Several components, different quantities per row, several materials.
+    const lines = [
+      { component: 'KALI', size: '18', quantity: 120 },
+      { component: 'KALI', size: '20', quantity: 75 },
+      { component: 'BLOUSE', size: '18', quantity: 40 },
+      { component: 'GALISH', size: '20', quantity: 33 },
+      { component: 'BELT', size: 'ALL', quantity: 9 },
+    ];
+    const created = await ctx.api.post('/api/orders').set(bearer(prod)).send({ designNo: '26-49', party: 'MIX', lines });
+    assert.equal(created.status, 201, JSON.stringify(created.body));
+    const orderNo = created.body.orderNo as number;
+    const slip = (await ctx.api.get(`/api/orders/${orderNo}/purchase-order`).set(bearer(prod))).body;
+    const summary = (await ctx.api.get(`/api/orders/${orderNo}/summary`).set(bearer(prod))).body;
+    type Total = { key: string; totalQty: string; totalUnit: string; qty: string | null; unit: string | null };
+    type Row = { id: string; totalQty: string };
+    const totals = slip.totals as Total[];
+
+    assert.ok(slip.sections.length > 1);
+    assert.ok(totals.length > 1);
+    // Only materials the order uses, in the summary column order.
+    assert.deepEqual(totals.map((t) => t.key), Object.keys(summary.totals).filter((k) => !new Decimal(summary.totals[k]).isZero()).sort((a, b) =>
+      summary.columns.findIndex((c: { key: string }) => c.key === a) - summary.columns.findIndex((c: { key: string }) => c.key === b)));
+    for (const total of totals) {
+      const fromRows = (slip.sections as { rows: Row[] }[])
+        .flatMap((sec) => sec.rows)
+        .filter((r) => r.id.endsWith(`::${total.key}`))
+        .reduce((sum, r) => sum.plus(r.totalQty), new Decimal(0));
+      assert.equal(new Decimal(total.totalQty).toString(), fromRows.toString(), total.key);
+      assert.equal(total.totalQty, summary.totals[total.key]);
+      assert.equal(total.qty, summary.buy[total.key] ?? null, total.key);
+    }
+    assert.ok(totals.some((t) => t.unit === 'CD') && totals.some((t) => t.unit === 'KG'));
+  });
 });

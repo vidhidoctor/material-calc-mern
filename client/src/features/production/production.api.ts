@@ -18,12 +18,12 @@ export interface OrderLineBody {
 }
 
 /** Either one quantity for every row, or a quantity per row; plus the type of each typed column. */
-export type OrderBody = { party: string; orderDate: string; types: Record<string, string> } & (
+export type OrderBody = { party: string; color: string; orderDate: string; types: Record<string, string> } & (
   | { quantity: number; lines?: undefined }
   | { quantity?: undefined; lines: OrderLineBody[] }
 );
 
-export type CreateOrderBody = { designNo: string; party: string; orderDate: string; types?: Record<string, string> } & (
+export type CreateOrderBody = { designNo: string; party: string; color: string; orderDate: string; types?: Record<string, string> } & (
   | { quantity: number; lines?: undefined }
   | { quantity?: undefined; lines: OrderLineBody[] }
 );

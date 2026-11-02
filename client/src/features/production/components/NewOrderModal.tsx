@@ -28,13 +28,14 @@ interface Props {
   order?: OrderDto;
 }
 
-/** New order / Edit order: party, date, quantities and the type of every typed column (e.g. sequence finish). */
+/** New order / Edit order: party, date, quantities, colour (free text) and the type of every typed column (e.g. sequence finish). */
 export function NewOrderModal({ design, parties, onClose, onCreated, order }: Props) {
   const create = useCreateOrder();
   const update = useUpdateOrder(order?.orderNo ?? 0);
   const mutation = order ? update : create;
 
   const [party, setParty] = useState(order?.party ?? '');
+  const [color, setColor] = useState(order?.color ?? '');
   const [orderDate, setOrderDate] = useState(order?.orderDate ?? today);
   const [mode, setMode] = useState<Mode>(order && order.quantity === null ? 'rows' : 'same');
   const [quantity, setQuantity] = useState(order?.quantity != null ? String(order.quantity) : '');
@@ -76,7 +77,7 @@ export function NewOrderModal({ design, parties, onClose, onCreated, order }: Pr
   const onSubmit = () => {
     if (!canSave) return;
     const chosen = Object.fromEntries(typedColumns.map((key) => [key, types[key]!]));
-    const base = { party: party.trim(), orderDate, types: chosen };
+    const base = { party: party.trim(), color: color.trim(), orderDate, types: chosen };
     const body =
       mode === 'same'
         ? { ...base, quantity: parseNumberInput(quantity) ?? 0 }
@@ -142,6 +143,9 @@ export function NewOrderModal({ design, parties, onClose, onCreated, order }: Pr
               placeholder={mode === 'rows' ? 'Per row' : '0'}
               onChange={setQuantity}
             />
+          </Field>
+          <Field label="Color">
+            <input className="input" maxLength={100} placeholder="Optional" value={color} onChange={(e) => setColor(e.target.value)} />
           </Field>
         </div>
 

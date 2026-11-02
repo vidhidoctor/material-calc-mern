@@ -10,6 +10,8 @@ import {
 } from '@app/shared';
 import { AppError } from '../../lib/app-error.js';
 import { rememberComponentName } from '../component-names/component-names.service.js';
+import { DesignCostingModel } from '../design-costing/design-costing.model.js';
+import { JobWorkCostingModel } from '../job-work-costing/job-work-costing.model.js';
 import { listMaterialColumns, loadCategoryMap } from '../materials/materials.service.js';
 import { MaterialModel } from '../materials/material.model.js';
 import { OrderModel, orderLabel } from '../orders/order.model.js';
@@ -149,6 +151,8 @@ export async function updateDesign(designNo: string, input: UpdateDesignInput): 
     const used = await firstOrderOf(design.designNo);
     if (used !== null) throw new AppError(409, DESIGN_MESSAGES.renameInUse(design.designNo, used));
     if (await DesignModel.exists({ designNo: input.designNo })) throw new AppError(409, DESIGN_MESSAGES.exists(input.designNo));
+    await DesignCostingModel.updateOne({ designNo: design.designNo }, { $set: { designNo: input.designNo } });
+    await JobWorkCostingModel.updateOne({ designNo: design.designNo }, { $set: { designNo: input.designNo } });
     design.designNo = input.designNo;
     design.searchKey = toSearchKey(input.designNo);
   }
@@ -163,6 +167,8 @@ export async function deleteDesign(designNo: string): Promise<void> {
   const used = await firstOrderOf(design.designNo);
   if (used !== null) throw new AppError(409, DESIGN_MESSAGES.designInUse(design.designNo, used));
   await design.deleteOne();
+  await DesignCostingModel.deleteOne({ designNo: design.designNo });
+  await JobWorkCostingModel.deleteOne({ designNo: design.designNo });
 }
 
 /** First order (lowest orderNo) that uses the component, optionally only one of its sizes. */

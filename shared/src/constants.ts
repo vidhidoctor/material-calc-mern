@@ -19,6 +19,9 @@ export const PERMISSIONS = {
   DEPARTMENT_MANAGE: 'Create departments',
   SETTINGS_MANAGE: 'Manage global config (admin emails)',
   COST_VIEW: 'See and set material rates and costs (₹)',
+  AUDIT_VIEW: 'View the audit log (every change, who made it and when)',
+  DESIGN_COSTING_VIEW: 'See Design Costing: punching details, costs and prices (₹) of every design',
+  DESIGN_COSTING_MANAGE: 'Edit punching details, rates and markup in Design Costing, and job work rates',
 } as const;
 
 export type PermissionCode = keyof typeof PERMISSIONS;
@@ -34,7 +37,62 @@ export const PERMISSION_GROUPS: Record<string, readonly PermissionCode[]> = {
   'Roles & departments': ['ROLE_MANAGE', 'PERMISSION_MANAGE', 'DEPARTMENT_MANAGE'],
   Settings: ['SETTINGS_MANAGE'],
   Costing: ['COST_VIEW'],
+  'Design Costing': ['DESIGN_COSTING_VIEW', 'DESIGN_COSTING_MANAGE'],
+  Audit: ['AUDIT_VIEW'],
 };
+
+/** What is recorded in the audit log, with the label shown. */
+export const AUDIT_ACTIONS = {
+  LOGIN: 'Logged in',
+  LOGIN_FAILED: 'Login failed',
+  LOGOUT: 'Logged out',
+  SIGNUP: 'Signed up',
+  PASSWORD_RESET_REQUESTED: 'Password reset requested',
+  PASSWORD_RESET: 'Password reset',
+  ACCESS_DENIED: 'Access denied',
+  USER_CREATED: 'User created',
+  USER_UPDATED: 'User updated',
+  USER_DELETED: 'User deleted',
+  ROLE_CREATED: 'Role created',
+  ROLE_PERMISSIONS_CHANGED: 'Role permissions changed',
+  DEPARTMENT_CREATED: 'Department created',
+  ADMIN_EMAIL_ADDED: 'Admin email added',
+  ADMIN_EMAIL_REMOVED: 'Admin email removed',
+  MATERIAL_CREATED: 'Material created',
+  MATERIAL_UPDATED: 'Material updated',
+  MATERIAL_DELETED: 'Material deleted',
+  CATEGORY_CREATED: 'Category created',
+  CATEGORY_UPDATED: 'Category updated',
+  CATEGORY_DELETED: 'Category deleted',
+  COMPONENT_NAME_ADDED: 'Component added to list',
+  COMPONENT_NAME_REMOVED: 'Component removed from list',
+  RATE_SET: 'Rate set',
+  RATE_REMOVED: 'Rate removed',
+  TYPE_RATE_SET: 'Type rate set',
+  DESIGN_CREATED: 'Design created',
+  DESIGN_UPDATED: 'Design updated',
+  DESIGN_DELETED: 'Design deleted',
+  COMPONENT_SAVED: 'Component saved',
+  COMPONENT_REMOVED: 'Component removed',
+  ORDER_CREATED: 'Order created',
+  ORDER_UPDATED: 'Order updated',
+  ORDER_DELETED: 'Order deleted',
+  ORDER_STATUS_CHANGED: 'Order status changed',
+  ORDER_REPRICED: "Order re-priced with today's rates",
+  ORDER_CORDS_SAVED: 'Cord denier / rate saved',
+  PO_NAMES_SAVED: 'Purchase order names saved',
+  DESIGN_COSTING_SAVED: 'Design costing saved',
+  JOB_WORK_COSTING_SAVED: 'Job work costing saved',
+} as const;
+export type AuditAction = keyof typeof AUDIT_ACTIONS;
+
+/** Kinds of records the audit log refers to (their History is shown on that record). */
+export const AUDIT_ENTITY_TYPES = ['Order', 'Design', 'Material', 'Category', 'ComponentName', 'Rate', 'DesignCosting', 'JobWorkCosting', 'User', 'Role', 'Department', 'Settings'] as const;
+export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
+
+/** Areas of the app, for filtering the audit log. */
+export const AUDIT_MODULES = ['Auth', 'Users', 'Roles & departments', 'Global config', 'Material Master', 'Costing', 'Punching', 'Orders'] as const;
+export type AuditModule = (typeof AUDIT_MODULES)[number];
 
 export function permissionGroup(code: PermissionCode): string {
   return Object.keys(PERMISSION_GROUPS).find((group) => PERMISSION_GROUPS[group]?.includes(code)) ?? 'Other';
@@ -48,6 +106,15 @@ export const isOrderEnteredField = (key: string): boolean => key.trim().toUpperC
 
 /** Name of the app (header, login, browser tab). */
 export const APP_NAME = 'Creative Embroidery ERP';
+
+/** Markup a design starts with until its costing is saved (the Manager can change it per design). */
+export const DEFAULT_COSTING_MARKUP_PERCENT = 7;
+
+/** Stitch and laser heads of a size until the Manager enters others. */
+export const DEFAULT_COSTING_HEADS = 1;
+
+/** Copies printed of every purchase order, one per page, each headed with its department (in this order). */
+export const PURCHASE_ORDER_COPIES = ['ACCOUNTS DEPARTMENT', 'PURCHASE DEPARTMENT', 'PRODUCTION DEPARTMENT', 'JOB DEPARTMENT'] as const;
 
 /** Business name printed on the purchase order slip. */
 export const COMPANY_NAME = 'CREATIVE EMBROIDERY';

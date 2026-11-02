@@ -25,6 +25,8 @@ interface Props {
   /** null = add a new component. */
   componentName: string | null;
   onClose: () => void;
+  /** Opened from Design Costing: saved with that module's permission. */
+  viaCosting?: boolean;
 }
 
 /**
@@ -32,8 +34,8 @@ interface Props {
  * component (shared by all its sizes). A column is a material, optionally in a colour (SEQ-3MM · WHITE).
  * Saving replaces the sizes.
  */
-export function ComponentEditor({ design, componentName, onClose }: Props) {
-  const save = usePutComponent(design.designNo);
+export function ComponentEditor({ design, componentName, onClose, viaCosting }: Props) {
+  const save = usePutComponent(design.designNo, viaCosting);
   const componentNames = useComponentNames();
   const nextKey = useRef(0);
   const existing = design.components.find((c) => c.name === componentName) ?? null;

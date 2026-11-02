@@ -16,6 +16,8 @@ export interface Order {
   designNo: string;
   item: string;
   party: string;
+  /** Colour entered on the order (free text, printed on the purchase order). Missing on older orders. */
+  color?: string;
   /** Date only, stored as UTC midnight. */
   orderDate: Date;
   /** null = quantities differ per row. */
@@ -64,6 +66,7 @@ const orderSchema = new Schema<Order>(
     designNo: { type: String, required: true, index: true },
     item: { type: String, required: true },
     party: { type: String, required: true },
+    color: { type: String, default: undefined },
     orderDate: { type: Date, required: true },
     quantity: { type: Number, default: null },
     status: { type: String, enum: ORDER_STATUSES, default: 'PENDING' },

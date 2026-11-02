@@ -2,6 +2,7 @@ import { variantLabel, type OrderCostDto, type OrderDto, type OrderSummaryDto } 
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Drawer } from '../../../components/Drawer';
 import { Icon, type IconName } from '../../../components/Icon';
+import { StatCard } from '../../../components/StatCard';
 import { MaterialBreakdown } from '../../../components/MaterialBreakdown';
 import { ErrorAlert, QueryState } from '../../../components/ui';
 import { useAuth } from '../../../lib/auth';
@@ -17,10 +18,11 @@ import {
   useProductionDesign,
   useRefreshOrderRates,
 } from '../production.hooks';
+import { HistoryPanel, LastChanged } from '../../audit/components/HistoryPanel';
 import { NewOrderModal } from './NewOrderModal';
 import { PurchaseSummary } from './PurchaseSummary';
 
-type Tab = 'purchase' | 'components' | 'cost';
+type Tab = 'purchase' | 'components' | 'cost' | 'history';
 
 function InfoItem({ icon, label, value }: { icon: IconName; label: string; value: ReactNode }) {
   return (
@@ -29,20 +31,6 @@ function InfoItem({ icon, label, value }: { icon: IconName; label: string; value
       <div>
         <span className="muted small">{label}</span>
         <strong>{value}</strong>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ icon, label, children }: { icon: IconName; label: string; children: ReactNode }) {
-  return (
-    <div className="order-stat">
-      <span className="order-stat-icon">
-        <Icon name={icon} size={22} />
-      </span>
-      <div className="order-stat-body">
-        <span className="muted small">{label}</span>
-        {children}
       </div>
     </div>
   );
@@ -182,6 +170,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
     { id: 'purchase', label: 'Purchase Requirement' },
     { id: 'components', label: 'Component Details' },
     ...(cost.data ? [{ id: 'cost' as const, label: 'Cost Breakup' }] : []),
+    { id: 'history', label: 'History' },
   ];
 
   return (
@@ -225,8 +214,10 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
               <InfoItem icon="code" label="Design No." value={o.designNo} />
               <InfoItem icon="bag" label="Item" value={o.item} />
               <InfoItem icon="users" label="Party" value={o.party} />
+              {o.color && <InfoItem icon="layers" label="Color" value={o.color} />}
               <InfoItem icon="calendar" label="Order Date" value={formatDate(o.orderDate)} />
             </div>
+            <LastChanged type="Order" id={String(orderNo)} />
 
             <div className="order-stats">
               <StatCard icon="package" label="Total Pieces">
@@ -283,6 +274,7 @@ export function OrderDrawer({ orderNo, onClose }: { orderNo: number; onClose: ()
               </div>
             )}
             {tab === 'cost' && cost.data && <CostBreakup cost={cost.data} />}
+            {tab === 'history' && <HistoryPanel type="Order" id={String(orderNo)} />}
           </div>
         )}
       </QueryState>

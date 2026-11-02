@@ -4,16 +4,18 @@ import { guard, guardAny } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import * as controller from './roles.controller.js';
 import { createRoleBody, setPermissionsBody } from './roles.validation.js';
+import { audited, param } from '../audit/audit.middleware.js';
 
 /** Mounted at /api/admin/roles. The Users screen also needs the role list (USER_VIEW). */
 export const rolesRoutes = Router();
 
 rolesRoutes.get('/', guardAny('ROLE_MANAGE', 'PERMISSION_MANAGE', 'USER_VIEW'), controller.list);
-rolesRoutes.post('/', guard('ROLE_MANAGE'), validate({ body: createRoleBody }), controller.create);
+rolesRoutes.post('/', guard('ROLE_MANAGE'), validate({ body: createRoleBody }), audited({ action: 'ROLE_CREATED', entity: 'Role', id: (_req, body) => (body as { id?: unknown } | undefined)?.id as string | undefined }), controller.create);
 rolesRoutes.put(
   '/:id/permissions',
   guard('PERMISSION_MANAGE'),
   validate({ params: idParams, body: setPermissionsBody }),
+  audited({ action: 'ROLE_PERMISSIONS_CHANGED', entity: 'Role', id: param('id') }),
   controller.setPermissions,
 );
 

@@ -53,6 +53,7 @@ export function toOrderListItem(order: Order, design: DesignComponents | null): 
     designNo: order.designNo,
     item: order.item,
     party: order.party,
+    color: order.color || null,
     orderDate: toDateOnly(order.orderDate),
     quantity: order.quantity ?? null,
     totalPieces: totalPieces(effectiveLines(order, design).lines),
@@ -142,6 +143,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
     designNo: design.designNo,
     item: design.productName,
     party: input.party,
+    color: input.color || undefined,
     orderDate: new Date(`${input.orderDate ?? today()}T00:00:00Z`),
     quantity: content.quantity,
     status: 'PENDING',
@@ -154,7 +156,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDto> {
 }
 
 /**
- * Edits party, date, quantities and types (the design cannot change). A new party gets the next
+ * Edits party, colour, date, quantities and types (the design cannot change). A new party gets the next
  * number in that party's series. Saved rates are kept; new columns/types get today's rate.
  */
 export async function updateOrder(orderNo: number, input: UpdateOrderInput): Promise<OrderDto> {
@@ -172,6 +174,7 @@ export async function updateOrder(orderNo: number, input: UpdateOrderInput): Pro
     order.party = input.party;
   }
   if (input.orderDate) order.orderDate = new Date(`${input.orderDate}T00:00:00Z`);
+  if (input.color !== undefined) order.color = input.color || undefined;
   order.quantity = content.quantity;
   order.lines = content.lines;
   order.components = design.components.map((c) => c.name);

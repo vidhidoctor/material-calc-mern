@@ -71,6 +71,13 @@ const PATHS = {
       <path d="M12 11v5M12 8h.01" />
     </>
   ),
+  history: (
+    <>
+      <path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 3" />
+    </>
+  ),
   refresh: <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4" />,
   sliders: <path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" />,
 } satisfies Record<string, ReactNode>;

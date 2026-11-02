@@ -24,6 +24,8 @@ const orderLine = z.object({
 const orderFields = z.object({
   party: requiredName('Party').toUpperCase(),
   orderDate: dateOnly.optional(),
+  /** Free text, kept as entered (trimmed); blank = no colour. */
+  color: z.string({ error: 'Color must be text.' }).trim().max(100, 'Color is too long (100 characters at most).').optional(),
   quantity: z.number({ error: INVALID_QUANTITY }).nullable().optional(),
   lines: z.array(orderLine, { error: 'Lines must be a list.' }).optional(),
   /** Type per typed column of the design, e.g. { "SEQ-3MM|PINK": "MATT" } (chosen in Production). */

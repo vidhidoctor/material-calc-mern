@@ -5,9 +5,12 @@ import express, { type Express } from 'express';
 import { getEnv } from './config/env.js';
 import { errorHandler, notFound } from './middleware/error-handler.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
+import { auditRoutes } from './modules/audit/audit.routes.js';
 import { authRoutes } from './modules/auth/auth.routes.js';
 import { costingRoutes } from './modules/costing/costing.routes.js';
+import { designCostingRoutes } from './modules/design-costing/design-costing.routes.js';
 import { designsRoutes } from './modules/designs/designs.routes.js';
+import { jobWorkCostingRoutes } from './modules/job-work-costing/job-work-costing.routes.js';
 import { materialCategoriesRoutes } from './modules/material-categories/material-categories.routes.js';
 import { componentNamesRoutes } from './modules/component-names/component-names.routes.js';
 import { materialsRoutes } from './modules/materials/materials.routes.js';
@@ -21,6 +24,8 @@ export function createApp(): Express {
   const app = express();
 
   app.disable('x-powered-by');
+  // Behind Render's proxy: req.ip is the visitor's address (recorded in the audit log).
+  app.set('trust proxy', 1);
   app.use(cors({ origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) }));
   app.use(express.json({ limit: '1mb' }));
 
@@ -38,6 +43,9 @@ export function createApp(): Express {
   app.use('/api/purchase', purchaseRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api/costing', costingRoutes);
+  app.use('/api/design-costing', designCostingRoutes);
+  app.use('/api/job-work-costing', jobWorkCostingRoutes);
+  app.use('/api/audit-logs', auditRoutes);
 
   // The built website (client/dist) is served by the API, so a deployment is one service at one address.
   const clientDist = fileURLToPath(new URL('../../client/dist', import.meta.url));

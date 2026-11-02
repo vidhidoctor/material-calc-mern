@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react';
 import { createBrowserRouter } from 'react-router';
+import { AuditLogPage } from '../features/audit/AuditLogPage';
 import { DepartmentsPage } from '../features/departments/DepartmentsPage';
+import { DesignCostingListPage } from '../features/design-costing/DesignCostingListPage';
+import { DesignCostingPage } from '../features/design-costing/DesignCostingPage';
+import { PriceListPrintPage } from '../features/design-costing/PriceListPrintPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
@@ -30,6 +34,7 @@ export const router = createBrowserRouter([
   { path: '/reset-password', element: <ResetPasswordPage /> },
   // Print page: no sidebar or top bar, only the A4 slips.
   { path: '/orders/:orderNo/purchase-order', element: <RequireAuth>{guarded('/orders', <PurchaseOrderPrintPage />)}</RequireAuth> },
+  { path: '/design-costing/:designNo/price-list', element: <RequireAuth>{guarded('/design-costing', <PriceListPrintPage />)}</RequireAuth> },
   {
     path: '/',
     element: (
@@ -46,11 +51,14 @@ export const router = createBrowserRouter([
       { path: 'orders', element: guarded('/orders', <OrdersPage />) },
       { path: 'orders/:orderNo', element: guarded('/orders', <OrderRedirect />) },
       { path: 'purchase', element: guarded('/purchase', <PurchasePage />) },
+      { path: 'design-costing', element: guarded('/design-costing', <DesignCostingListPage />) },
+      { path: 'design-costing/:designNo', element: guarded('/design-costing', <DesignCostingPage />) },
       { path: 'admin/users', element: guarded('/admin/users', <UsersPage />) },
       { path: 'admin/roles', element: guarded('/admin/roles', <RolesPage />) },
       { path: 'admin/departments', element: guarded('/admin/departments', <DepartmentsPage />) },
       { path: 'admin/materials', element: guarded('/admin/materials', <MaterialsPage />) },
       { path: 'admin/settings', element: guarded('/admin/settings', <SettingsPage />) },
+      { path: 'admin/audit', element: guarded('/admin/audit', <AuditLogPage />) },
       { path: '*', element: <NotFound /> },
     ],
   },
