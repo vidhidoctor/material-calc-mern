@@ -60,6 +60,7 @@ Seeded roles:
 - **Admin** — every permission (the seed always re-grants all permissions to Admin).
 - **Punching Employee** — PUNCHING_VIEW, PUNCHING_CREATE, PUNCHING_UPDATE.
 - **Production Employee** — PRODUCTION_VIEW, PRODUCTION_CREATE, PRODUCTION_UPDATE, PURCHASE_REQUIREMENT_VIEW.
+- **Production head** — DESIGN_COSTING_VIEW, DESIGN_COSTING_MANAGE (Design Costing, Job Work Costing, print settings).
 
 Seeded departments: Administration, Punching, Production.
 

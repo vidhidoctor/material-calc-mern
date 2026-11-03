@@ -21,7 +21,7 @@ export const PERMISSIONS = {
   COST_VIEW: 'See and set material rates and costs (₹)',
   AUDIT_VIEW: 'View the audit log (every change, who made it and when)',
   DESIGN_COSTING_VIEW: 'See Design Costing: punching details, costs and prices (₹) of every design',
-  DESIGN_COSTING_MANAGE: 'Edit punching details, rates and markup in Design Costing, and job work rates',
+  DESIGN_COSTING_MANAGE: 'Edit punching details, rates and markup in Design Costing, job work rates, and print settings',
 } as const;
 
 export type PermissionCode = keyof typeof PERMISSIONS;
@@ -83,11 +83,12 @@ export const AUDIT_ACTIONS = {
   PO_NAMES_SAVED: 'Purchase order names saved',
   DESIGN_COSTING_SAVED: 'Design costing saved',
   JOB_WORK_COSTING_SAVED: 'Job work costing saved',
+  PRINT_CONFIG_SAVED: 'Print settings saved',
 } as const;
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
 
 /** Kinds of records the audit log refers to (their History is shown on that record). */
-export const AUDIT_ENTITY_TYPES = ['Order', 'Design', 'Material', 'Category', 'ComponentName', 'Rate', 'DesignCosting', 'JobWorkCosting', 'User', 'Role', 'Department', 'Settings'] as const;
+export const AUDIT_ENTITY_TYPES = ['Order', 'Design', 'Material', 'Category', 'ComponentName', 'Rate', 'DesignCosting', 'JobWorkCosting', 'PrintConfig', 'User', 'Role', 'Department', 'Settings'] as const;
 export type AuditEntityType = (typeof AUDIT_ENTITY_TYPES)[number];
 
 /** Areas of the app, for filtering the audit log. */
@@ -113,6 +114,16 @@ export const DEFAULT_COSTING_MARKUP_PERCENT = 7;
 /** Stitch and laser heads of a size until the Manager enters others. */
 export const DEFAULT_COSTING_HEADS = 1;
 
+const RATE_COSTING_COLUMNS: readonly string[] = ['size', 'stitch', 'stitchRate', 'stitchHeads', 'stitchCost', 'laser', 'laserRate', 'laserHeads', 'laserCost', 'materialCost', 'base'];
+const JOB_WORK_COLUMNS: readonly string[] = ['size', 'stitch', 'stitchRate', 'stitchHeads', 'stitchCost', 'laser', 'laserRate', 'laserHeads', 'laserCost', 'rate', 'included', 'excluded', 'final'];
+
+/** Printed costing sheets: their columns in table order, and what they print until a Manager saves other settings. */
+export const PRINT_SHEETS = {
+  'rate-costing': { columns: RATE_COSTING_COLUMNS, defaults: { columns: RATE_COSTING_COLUMNS, totals: true } },
+  'job-work': { columns: JOB_WORK_COLUMNS, defaults: { columns: ['size', 'final'] as readonly string[], totals: false } },
+} as const;
+export type PrintSheet = keyof typeof PRINT_SHEETS;
+
 /** Copies printed of every purchase order, one per page, each headed with its department (in this order). */
 export const PURCHASE_ORDER_COPIES = ['ACCOUNTS DEPARTMENT', 'PURCHASE DEPARTMENT', 'PRODUCTION DEPARTMENT', 'JOB DEPARTMENT'] as const;
 
@@ -126,6 +137,7 @@ export const ROLES: Record<string, readonly PermissionCode[]> = {
   [ADMIN_ROLE]: PERMISSION_CODES,
   'Punching Employee': ['PUNCHING_VIEW', 'PUNCHING_CREATE', 'PUNCHING_UPDATE'],
   'Production Employee': ['PRODUCTION_VIEW', 'PRODUCTION_CREATE', 'PRODUCTION_UPDATE', 'PURCHASE_REQUIREMENT_VIEW'],
+  'Production head': ['DESIGN_COSTING_VIEW', 'DESIGN_COSTING_MANAGE'],
 };
 
 export const DEPARTMENTS = ['Administration', 'Punching', 'Production'] as const;

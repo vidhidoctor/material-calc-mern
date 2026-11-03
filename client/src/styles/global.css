@@ -2087,8 +2087,22 @@ a {
   color: var(--text);
   opacity: 1;
 }
-.order-stats[hidden] {
-  display: none;
+/* The header keeps its height on every tab, so the tabs never move. */
+.costing-subtitle-line {
+  display: block;
+}
+.costing-stats {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.costing-stats .order-stat {
+  box-sizing: border-box;
+  min-height: 92px;
+  align-items: center;
+  padding: 12px 14px;
+  gap: 10px;
+}
+.costing-stats .order-stat-value {
+  white-space: nowrap;
 }
 .costing-subtotal td {
   background: var(--surface-2);
@@ -2118,6 +2132,50 @@ a {
   text-align: left;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Printed costing tables: the panel that chooses the columns (never printed) and the sheet's total row. */
+.po-columns {
+  box-sizing: border-box;
+  max-width: 210mm;
+  margin: 0 auto 12px;
+  padding: 10px 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.po-columns legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.po-columns-actions {
+  justify-content: flex-start;
+  margin-bottom: 8px;
+}
+.po-columns-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px 12px;
+}
+.po-columns-list .checkbox-label {
+  padding-bottom: 4px;
+}
+.po-columns-totals {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.po-columns-save {
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.po-columns-empty {
+  text-align: center;
+}
+.po-slip-table tr.po-total-row td {
+  background: var(--po-rose);
+  font-weight: 700;
 }
 
 /* ---- Purchase order print slip (A4 portrait, one copy per department, each from a new page) ---- */
@@ -2165,6 +2223,13 @@ a {
   font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+/* Wide sheets print sideways (ColumnPrintSheet); on paper the page size comes from @page. */
+@media screen {
+  .po-page.po-landscape {
+    width: 297mm;
+    min-height: 210mm;
+  }
 }
 .po-slip {
   box-sizing: border-box;

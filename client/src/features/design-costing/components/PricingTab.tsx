@@ -15,6 +15,9 @@ function PriceCells({ amounts }: { amounts: DesignCostingAmountsDto }) {
 }
 
 interface Props {
+  designNo: string;
+  /** Unsaved entries: the price list prints what is saved. */
+  dirty: boolean;
   calculation: DesignCostingCalculationDto;
   draft: Draft;
   canManage: boolean;
@@ -23,7 +26,7 @@ interface Props {
 }
 
 /** Markup and final price per piece, with the Remarks printed on the price list. */
-export function PricingTab({ calculation, draft, canManage, setMarkup, setRate }: Props) {
+export function PricingTab({ designNo, dirty, calculation, draft, canManage, setMarkup, setRate }: Props) {
   return (
     <section className="card costing-panel costing-tab">
       <div className="costing-tab-head">
@@ -31,6 +34,15 @@ export function PricingTab({ calculation, draft, canManage, setMarkup, setRate }
           <h2>Pricing Summary</h2>
           <p className="muted small">Final price = base cost + markup. Only the final price and Remarks are printed on the price list, exactly as typed.</p>
         </div>
+        {dirty ? (
+          <button type="button" className="btn btn-sm" disabled title="Save the costing first: the price list prints what is saved.">
+            Print price list
+          </button>
+        ) : (
+          <a className="btn btn-sm" href={`/design-costing/${encodeURIComponent(designNo)}/price-list`} target="_blank" rel="noreferrer">
+            Print price list
+          </a>
+        )}
         <div className="costing-percents">
           <Field label="Markup %">
             <NumberInput decimal disabled={!canManage} value={draft.markup} onChange={setMarkup} />

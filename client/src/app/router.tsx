@@ -5,7 +5,9 @@ import { DepartmentsPage } from '../features/departments/DepartmentsPage';
 import { DesignCostingListPage } from '../features/design-costing/DesignCostingListPage';
 import { DesignCostingPage } from '../features/design-costing/DesignCostingPage';
 import { PriceListPrintPage } from '../features/design-costing/PriceListPrintPage';
+import { RateSheetPrintPage } from '../features/design-costing/RateSheetPrintPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
+import { JobWorkPrintPage } from '../features/job-work-costing/JobWorkPrintPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { SignupPage } from '../features/auth/SignupPage';
@@ -34,6 +36,8 @@ export const router = createBrowserRouter([
   { path: '/reset-password', element: <ResetPasswordPage /> },
   // Print page: no sidebar or top bar, only the A4 slips.
   { path: '/orders/:orderNo/purchase-order', element: <RequireAuth>{guarded('/orders', <PurchaseOrderPrintPage />)}</RequireAuth> },
+  { path: '/design-costing/:designNo/job-work-sheet', element: <RequireAuth>{guarded('/design-costing', <JobWorkPrintPage />)}</RequireAuth> },
+  { path: '/design-costing/:designNo/rate-sheet', element: <RequireAuth>{guarded('/design-costing', <RateSheetPrintPage />)}</RequireAuth> },
   { path: '/design-costing/:designNo/price-list', element: <RequireAuth>{guarded('/design-costing', <PriceListPrintPage />)}</RequireAuth> },
   {
     path: '/',

@@ -4,6 +4,9 @@ import { formatRupees, formatNumber } from '../../../lib/format';
 import { NO_RATE, rowKey, type Draft, type RateDraft } from '../costing-draft';
 
 interface Props {
+  designNo: string;
+  /** Unsaved entries: the sheet prints what is saved. */
+  dirty: boolean;
   calculation: DesignCostingCalculationDto;
   draft: Draft;
   canManage: boolean;
@@ -12,7 +15,7 @@ interface Props {
 }
 
 /** Stitch and laser rates per component and size, with the cost of one piece. */
-export function RateTab({ calculation, draft, canManage, setRate, onBulk }: Props) {
+export function RateTab({ designNo, dirty, calculation, draft, canManage, setRate, onBulk }: Props) {
   return (
     <section className="card costing-panel costing-tab">
       <div className="costing-tab-head">
@@ -20,11 +23,22 @@ export function RateTab({ calculation, draft, canManage, setRate, onBulk }: Prop
           <h2>Rate &amp; Costing</h2>
           <p className="muted small">Cost per piece. Stitch cost = stitches ÷ 1000 × stitch rate × stitch heads; laser cost = laser ÷ 1000 × laser rate × laser heads.</p>
         </div>
-        {canManage && (
-          <button type="button" className="btn btn-sm" onClick={onBulk}>
-            Bulk update
-          </button>
-        )}
+        <div className="row-actions">
+          {dirty ? (
+            <button type="button" className="btn btn-sm" disabled title="Save the costing first: the sheet prints what is saved.">
+              Print
+            </button>
+          ) : (
+            <a className="btn btn-sm" href={`/design-costing/${encodeURIComponent(designNo)}/rate-sheet`} target="_blank" rel="noreferrer">
+              Print
+            </a>
+          )}
+          {canManage && (
+            <button type="button" className="btn btn-sm" onClick={onBulk}>
+              Bulk update
+            </button>
+          )}
+        </div>
       </div>
       <div className="order-components">
         {calculation.components.map((component) => (

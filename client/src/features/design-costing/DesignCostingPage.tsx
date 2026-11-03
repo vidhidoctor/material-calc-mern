@@ -1,4 +1,4 @@
-import type { DesignCostingDto } from '@app/shared';
+import type { DesignCostingDto, JobWorkCostingDto } from '@app/shared';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { ComponentCard } from '../../components/ComponentCard';
@@ -9,7 +9,9 @@ import { useAuth } from '../../lib/auth';
 import { formatDateTime, formatRupees, formatNumber } from '../../lib/format';
 import { useDebounced } from '../../lib/use-debounced';
 import { HistoryButton } from '../audit/components/HistoryPanel';
+import { useJobWorkCosting } from '../job-work-costing/job-work-costing.hooks';
 import { JobWorkTab } from '../job-work-costing/JobWorkTab';
+import { useJobWorkEditor } from '../job-work-costing/use-job-work-editor';
 import { ComponentEditor } from '../punching/components/ComponentEditor';
 import { BulkRateModal, type BulkRates } from './components/BulkRateModal';
 import { MaterialTab } from './components/MaterialTab';
@@ -28,7 +30,18 @@ const TABS: readonly TabItem<Tab>[] = [
   { id: 'jobwork', label: 'Job Work Costing' },
 ];
 
-function Editor({ data, canManage }: { data: DesignCostingDto; canManage: boolean }) {
+/** One line per tab, so the header keeps its height whichever tab is open. */
+const TAB_DESCRIPTIONS: Record<Tab, string> = {
+  punching: 'Components, sizes and materials from the Punching Master.',
+  rates: 'Stitch and laser rates and heads per component and size.',
+  materials: 'What one piece of every size consumes, and what it costs.',
+  pricing: 'Markup and final price per piece, and the price list.',
+  jobwork: 'What the job worker is paid per piece. Nothing here changes your own costing or the Punching Master.',
+};
+
+const savedLine = (what: string, savedAt: string | null, savedBy: string | null) => (savedAt ? `${what} saved ${formatDateTime(savedAt)} by ${savedBy}` : `no ${what} saved yet`);
+
+function Editor({ data, jobWorkData, canManage }: { data: DesignCostingDto; jobWorkData: JobWorkCostingDto; canManage: boolean }) {
   const { designNo } = data.design;
   // Opens on the tab where the Manager works. Unsaved entries are kept when switching tabs.
   const [tab, setTab] = useTabParam(TABS, 'rates');
@@ -38,6 +51,7 @@ function Editor({ data, canManage }: { data: DesignCostingDto; canManage: boolea
   const [editing, setEditing] = useState<string | null>(null);
   const [bulk, setBulk] = useState(false);
   const save = useSaveDesignCosting(designNo);
+  const jobWork = useJobWorkEditor(jobWorkData);
 
   // Fresh data (e.g. after a punching edit) replaces the entries only when none are unsaved.
   useEffect(() => {
@@ -83,7 +97,8 @@ function Editor({ data, canManage }: { data: DesignCostingDto; canManage: boolea
   };
 
   const onSave = () => save.mutate(body, { onSuccess: () => setDirty(false) });
-  const priceListUrl = `/design-costing/${encodeURIComponent(designNo)}/price-list`;
+  const pending = jobWorkOpen ? jobWork.calculation.errors : calculation.errors;
+  const stale = jobWorkOpen ? jobWork.recalculating : recalculating;
 
   return (
     <>
@@ -91,54 +106,87 @@ function Editor({ data, canManage }: { data: DesignCostingDto; canManage: boolea
         title={`Design ${designNo}`}
         subtitle={
           <>
-            <strong>{data.design.productName}</strong> ·{' '}
-            {data.savedAt ? `costing saved ${formatDateTime(data.savedAt)} by ${data.savedBy}` : 'no costing saved yet'}
+            <span className="costing-subtitle-line">
+              <strong>{data.design.productName}</strong> · {jobWorkOpen ? savedLine('job work', jobWorkData.savedAt, jobWorkData.savedBy) : savedLine('costing', data.savedAt, data.savedBy)}
+            </span>
+            <span className="costing-subtitle-line">{TAB_DESCRIPTIONS[tab]}</span>
           </>
         }
         actions={
-          <>
-            {!jobWorkOpen && <HistoryButton type="DesignCosting" id={designNo} title={`Design costing ${designNo}`} />}
-            {jobWorkOpen && !dirty ? null : dirty ? (
-              <button type="button" className="btn" disabled title="Save the costing first: the sheet prints what is saved.">
-                Print price list
-              </button>
-            ) : (
-              <a className="btn" href={priceListUrl} target="_blank" rel="noreferrer">
-                Print price list
-              </a>
-            )}
-            {canManage && (!jobWorkOpen || dirty) && (
-              <button type="button" className="btn btn-primary" disabled={!dirty || save.isPending} onClick={onSave}>
-                {save.isPending ? 'Saving…' : dirty ? 'Save costing' : 'Saved'}
-              </button>
-            )}
-          </>
+          jobWorkOpen ? (
+            <>
+              <HistoryButton type="JobWorkCosting" id={designNo} title={`Job work costing ${designNo}`} />
+              {jobWork.dirty ? (
+                <button type="button" className="btn" disabled title="Save the job work first: the sheet prints what is saved.">
+                  Print
+                </button>
+              ) : (
+                <a className="btn" href={`/design-costing/${encodeURIComponent(designNo)}/job-work-sheet`} target="_blank" rel="noreferrer">
+                  Print
+                </a>
+              )}
+              {canManage && (
+                <button type="button" className="btn btn-primary" disabled={!jobWork.dirty || jobWork.saving} onClick={jobWork.save}>
+                  {jobWork.saving ? 'Saving…' : jobWork.dirty ? 'Save job work' : 'Saved'}
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <HistoryButton type="DesignCosting" id={designNo} title={`Design costing ${designNo}`} />
+              {canManage && (
+                <button type="button" className="btn btn-primary" disabled={!dirty || save.isPending} onClick={onSave}>
+                  {save.isPending ? 'Saving…' : dirty ? 'Save costing' : 'Saved'}
+                </button>
+              )}
+            </>
+          )
         }
       />
-      <ErrorAlert error={save.error ?? (dirty ? preview.error : null)} />
-      {!jobWorkOpen && calculation.errors.length > 0 && (
+      <ErrorAlert error={jobWorkOpen ? jobWork.error : (save.error ?? (dirty ? preview.error : null))} />
+
+      <div className={`stack ${stale ? 'is-stale' : ''}`}>
+        {/* Always shown, even with nothing pending, so the tabs below never move. */}
         <details className="alert alert-info costing-pending">
-          <summary>Pending inputs ({calculation.errors.length}): not in the figures yet</summary>
+          <summary>Pending inputs ({pending.length}){pending.length > 0 && ': not in the figures yet'}</summary>
           <ul className="costing-notes">
-            {calculation.errors.map((error) => (
+            {pending.map((error) => (
               <li key={error}>{error}</li>
             ))}
           </ul>
         </details>
-      )}
 
-      <div className={`stack ${recalculating ? 'is-stale' : ''}`}>
-        <div className="order-stats" hidden={jobWorkOpen}>
-          <StatCard icon="layers" label="Base cost, all components">
-            <strong className="order-stat-value">{formatRupees(calculation.total.base)}</strong>
-          </StatCard>
-          <StatCard icon="sliders" label={`Markup (${formatNumber(body.markupPercent)}%)`}>
-            <strong className="order-stat-value">{formatRupees(calculation.total.markup)}</strong>
-          </StatCard>
-          <StatCard icon="rupee" label="Final price, all components">
-            <strong className="order-stat-value">{formatRupees(calculation.total.finalPrice)}</strong>
-          </StatCard>
-        </div>
+        {jobWorkOpen ? (
+          <div className="order-stats costing-stats">
+            <StatCard icon="users" label="Job worker rate">
+              <strong className="order-stat-value">{formatRupees(jobWork.calculation.total.rate)}</strong>
+            </StatCard>
+            <StatCard icon="layers" label="Stitch cost">
+              <strong className="order-stat-value">{formatRupees(jobWork.calculation.total.stitchCost)}</strong>
+            </StatCard>
+            <StatCard icon="sliders" label="Laser cost">
+              <strong className="order-stat-value">{formatRupees(jobWork.calculation.total.laserCost)}</strong>
+            </StatCard>
+            <StatCard icon="package" label="Included materials">
+              <strong className="order-stat-value">{formatRupees(jobWork.calculation.total.includedMaterials)}</strong>
+            </StatCard>
+            <StatCard icon="rupee" label="Final job work cost">
+              <strong className="order-stat-value">{formatRupees(jobWork.calculation.total.finalCost)}</strong>
+            </StatCard>
+          </div>
+        ) : (
+          <div className="order-stats costing-stats">
+            <StatCard icon="layers" label="Base cost, all components">
+              <strong className="order-stat-value">{formatRupees(calculation.total.base)}</strong>
+            </StatCard>
+            <StatCard icon="sliders" label={`Markup (${formatNumber(body.markupPercent)}%)`}>
+              <strong className="order-stat-value">{formatRupees(calculation.total.markup)}</strong>
+            </StatCard>
+            <StatCard icon="rupee" label="Final price, all components">
+              <strong className="order-stat-value">{formatRupees(calculation.total.finalPrice)}</strong>
+            </StatCard>
+          </div>
+        )}
 
         <Tabs label="Design costing" tabs={TABS} active={tab} onChange={setTab} />
 
@@ -150,15 +198,12 @@ function Editor({ data, canManage }: { data: DesignCostingDto; canManage: boolea
             ))}
           </div>
         )}
-        {tab === 'rates' && <RateTab calculation={calculation} draft={draft} canManage={canManage} setRate={setRate} onBulk={() => setBulk(true)} />}
+        {tab === 'rates' && <RateTab designNo={designNo} dirty={dirty} calculation={calculation} draft={draft} canManage={canManage} setRate={setRate} onBulk={() => setBulk(true)} />}
         {tab === 'materials' && <MaterialTab data={data} calculation={calculation} draft={draft} canManage={canManage} setType={setType} setCord={setCord} />}
         {tab === 'pricing' && (
-          <PricingTab calculation={calculation} draft={draft} canManage={canManage} setMarkup={(v) => change((d) => ({ ...d, markup: v }))} setRate={setRate} />
+          <PricingTab designNo={designNo} dirty={dirty} calculation={calculation} draft={draft} canManage={canManage} setMarkup={(v) => change((d) => ({ ...d, markup: v }))} setRate={setRate} />
         )}
-        {/* Stays mounted, so its unsaved entries survive switching tabs, like the costing's. */}
-        <div hidden={!jobWorkOpen}>
-          <JobWorkTab designNo={designNo} canManage={canManage} />
-        </div>
+        {jobWorkOpen && <JobWorkTab editor={jobWork} canManage={canManage} />}
       </div>
 
       {editing && <ComponentEditor key={editing} design={data.design} componentName={editing} viaCosting onClose={() => setEditing(null)} />}
@@ -167,17 +212,20 @@ function Editor({ data, canManage }: { data: DesignCostingDto; canManage: boolea
   );
 }
 
-/** One design: its punching details, the rates entered per size, and the resulting cost and price. */
+/** One design: its punching details, the rates entered per size, the resulting cost and price, and its job work costing. */
 export function DesignCostingPage() {
   const designNo = useParams().designNo ?? '';
   const auth = useAuth();
   const costing = useDesignCosting(designNo);
+  const jobWork = useJobWorkCosting(designNo);
   return (
     <>
       <Link to="/design-costing" className="back-link">
         ← Design Costing
       </Link>
-      <QueryState query={costing}>{(data) => <Editor key={data.design.designNo} data={data} canManage={auth.can('DESIGN_COSTING_MANAGE')} />}</QueryState>
+      <QueryState query={costing}>
+        {(data) => <QueryState query={jobWork}>{(jobWorkData) => <Editor key={data.design.designNo} data={data} jobWorkData={jobWorkData} canManage={auth.can('DESIGN_COSTING_MANAGE')} />}</QueryState>}
+      </QueryState>
     </>
   );
 }

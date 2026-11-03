@@ -40,4 +40,5 @@ export const queryKeys = {
   jobWorkPrefix: ['costing', 'job-work'] as const,
   jobWork: (designNo: string) => ['costing', 'job-work', 'detail', designNo] as const,
   jobWorkPreview: (designNo: string, body: object) => ['costing', 'job-work', 'preview', designNo, body] as const,
+  printConfig: (sheet: string) => ['print-config', sheet] as const,
 };

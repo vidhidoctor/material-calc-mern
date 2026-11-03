@@ -15,6 +15,7 @@ import { materialCategoriesRoutes } from './modules/material-categories/material
 import { componentNamesRoutes } from './modules/component-names/component-names.routes.js';
 import { materialsRoutes } from './modules/materials/materials.routes.js';
 import { ordersRoutes } from './modules/orders/orders.routes.js';
+import { printConfigRoutes } from './modules/print-config/print-config.routes.js';
 import { productionRoutes } from './modules/production/production.routes.js';
 import { purchaseRoutes } from './modules/purchase/purchase.routes.js';
 import { settingsRoutes } from './modules/settings/settings.routes.js';
@@ -45,6 +46,7 @@ export function createApp(): Express {
   app.use('/api/costing', costingRoutes);
   app.use('/api/design-costing', designCostingRoutes);
   app.use('/api/job-work-costing', jobWorkCostingRoutes);
+  app.use('/api/print-config', printConfigRoutes);
   app.use('/api/audit-logs', auditRoutes);
 
   // The built website (client/dist) is served by the API, so a deployment is one service at one address.

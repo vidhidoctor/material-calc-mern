@@ -9,6 +9,7 @@ import { JobWorkCostingModel } from '../job-work-costing/job-work-costing.model.
 import { MaterialCategoryModel } from '../material-categories/material-category.model.js';
 import { MaterialModel } from '../materials/material.model.js';
 import { OrderModel } from '../orders/order.model.js';
+import { PrintConfigModel } from '../print-config/print-config.model.js';
 import { RoleModel } from '../roles/role.model.js';
 import { SettingsModel, SETTINGS_ID } from '../settings/settings.model.js';
 import { UserModel } from '../users/user.model.js';
@@ -110,6 +111,14 @@ export const AUDIT_ENTITIES: Record<AuditEntityType, EntityDef> = {
     load: async (id) => {
       const costing = await JobWorkCostingModel.findOne({ designNo: id }).lean();
       return costing ? { label: `Job work costing ${costing.designNo}`, snapshot: strip(costing, 'updatedAt', 'updatedBy')! } : null;
+    },
+  },
+  PrintConfig: {
+    module: 'Costing',
+    viewers: ['DESIGN_COSTING_VIEW'],
+    load: async (id) => {
+      const config = await PrintConfigModel.findOne({ sheet: id }).lean();
+      return config ? { label: `Print settings ${config.sheet}`, snapshot: strip(config, 'updatedAt', 'updatedBy')! } : null;
     },
   },
   User: {

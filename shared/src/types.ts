@@ -658,6 +658,16 @@ export interface JobWorkCostingDto {
   calculation: JobWorkCalculationDto;
 }
 
+/** The columns a printed costing sheet shows, for everyone who prints it. */
+export interface PrintConfigDto {
+  sheet: string;
+  columns: string[];
+  totals: boolean;
+  /** null = no settings saved yet: the sheet's defaults. */
+  savedAt: string | null;
+  savedBy: string | null;
+}
+
 /** Rate of one type of a category (e.g. Sequence · PURE GLASS ₹8,000 per roll + 5%), Admin only. */
 export interface TypeRateDto {
   category: string;

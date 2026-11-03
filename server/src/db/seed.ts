@@ -67,7 +67,8 @@ export async function seedFoundation({ adminEmail, adminPassword }: SeedOptions)
       const result = await RoleModel.updateOne({ name }, { $set: { permissions: [...permissions] } }, { upsert: true });
       log.push(`Role ${name}: ${result.upsertedCount ? 'created' : 'exists'}, all ${permissions.length} permissions granted`);
     } else {
-      const result = await RoleModel.updateOne({ name }, { $setOnInsert: { name, permissions: [...permissions] } }, { upsert: true });
+      // Role names are unique ignoring case: a "PRODUCTION HEAD" made by Admin is this role, not a clash.
+      const result = await RoleModel.updateOne({ name }, { $setOnInsert: { name, permissions: [...permissions] } }, { upsert: true, collation: { locale: 'en', strength: 2 } });
       log.push(`Role ${name}: ${result.upsertedCount ? 'created' : 'exists (left unchanged)'}`);
     }
   }
