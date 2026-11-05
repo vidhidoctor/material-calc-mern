@@ -1,5 +1,5 @@
 import { COLOR_PATTERN, normalizeType, type MaterialCategoryDto } from '@app/shared';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal } from '../../../components/Modal';
 import { ErrorAlert, Field } from '../../../components/ui';
 import type { CategoryBody } from '../materials.api';
@@ -35,7 +35,9 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
     (category?.fields ?? [{ key: '', label: '', required: true, missingMessage: null }]).map((f) => ({ ...f, id: id() })),
   );
   const [steps, setSteps] = useState<StepRow[]>(() => (category?.steps ?? [{ key: '', label: '', formula: '' }]).map((s) => ({ ...s, id: id() })));
-  const [purchaseStep, setPurchaseStep] = useState(category?.purchaseStep ?? '');
+  // The purchase step is a row, not a name: it can be chosen before the step is named, and survives a rename.
+  const [purchaseRow, setPurchaseRow] = useState<number | null>(() => steps.find((s) => s.key === category?.purchaseStep)?.id ?? null);
+  const purchaseStep = steps.find((s) => s.id === purchaseRow)?.key.trim().toUpperCase() ?? '';
   const [orderStep, setOrderStep] = useState(category?.orderStep ?? '');
   const [wholeUnits, setWholeUnits] = useState(category?.wholeUnits ?? false);
   const [types, setTypes] = useState<string[]>(category?.types ?? []);
@@ -50,14 +52,29 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
 
   const usedFields = fields.filter((f) => f.key.trim() || f.label.trim());
   const usedSteps = steps.filter((s) => s.key.trim() || s.formula.trim());
-  const incomplete =
-    !code.trim() ||
-    !name.trim() ||
-    !unit.trim() ||
-    usedSteps.length === 0 ||
-    usedFields.some((f) => !f.key.trim() || !f.label.trim()) ||
-    usedSteps.some((s) => !s.key.trim() || !s.formula.trim()) ||
-    !usedSteps.some((s) => s.key.trim().toUpperCase() === purchaseStep.toUpperCase());
+  /** What still stops the category being saved, shown beside the Save button; null = ready. */
+  const missing = !code.trim()
+    ? 'Enter the Code.'
+    : !name.trim()
+      ? 'Enter the Name.'
+      : !unit.trim()
+        ? 'Enter the Unit.'
+        : usedFields.some((f) => !f.key.trim() || !f.label.trim())
+          ? 'Each field needs both a name and a label (or clear the row).'
+          : usedSteps.length === 0
+            ? 'Add a formula step: a step name and a formula.'
+            : usedSteps.some((s) => !s.key.trim() || !s.formula.trim())
+              ? 'Each formula step needs both a step name and a formula.'
+              : !purchaseStep || !usedSteps.some((s) => s.id === purchaseRow)
+                ? 'Select the step that is the purchase quantity (Purchase column).'
+                : null;
+  const incomplete = missing !== null;
+
+  // The error shows at the top of the form, which can be scrolled out of view at the Save button.
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (save.error) errorRef.current?.scrollIntoView({ block: 'center' });
+  }, [save.error]);
 
   const updateField = (rowId: number, patch: Partial<FieldRow>) => setFields((rows) => rows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)));
   const updateStep = (rowId: number, patch: Partial<StepRow>) => setSteps((rows) => rows.map((r) => (r.id === rowId ? { ...r, ...patch } : r)));
@@ -89,6 +106,7 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
       onSubmit={onSubmit}
       footer={
         <>
+          {missing && <span className="muted small footer-note">{missing}</span>}
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>
@@ -99,7 +117,9 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
       }
     >
       <div className="stack">
-        <ErrorAlert error={save.error} />
+        <div ref={errorRef}>
+          <ErrorAlert error={save.error} />
+        </div>
 
         <div className="category-top">
           <Field label="Code" required hint={category ? 'Cannot change (materials refer to it).' : 'e.g. ZARDOSHI'}>
@@ -201,8 +221,8 @@ export function CategoryFormModal({ category, onClose }: { category: MaterialCat
                         type="radio"
                         name="purchase-step"
                         aria-label="Purchase quantity"
-                        checked={!!s.key && s.key.toUpperCase() === purchaseStep.toUpperCase()}
-                        onChange={() => setPurchaseStep(s.key.toUpperCase())}
+                        checked={s.id === purchaseRow}
+                        onChange={() => setPurchaseRow(s.id)}
                       />
                     </td>
                     <td>
