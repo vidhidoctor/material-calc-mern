@@ -19,7 +19,7 @@ const heads = (label: string) =>
 
 /** What the Manager enters. Also the body of a preview, which calculates without saving. */
 export const designCostingBody = z.object({
-  markupPercent: z.number({ error: 'Markup must be a number.' }).min(0, 'Markup cannot be negative.').max(1000, 'Markup is too large (1000% at most).'),
+  discountPercent: z.number({ error: 'Discount must be a number.' }).min(0, 'Discount cannot be negative.').max(99.99, 'Discount must be below 100%.'),
   rows: z
     .array(
       z.object({

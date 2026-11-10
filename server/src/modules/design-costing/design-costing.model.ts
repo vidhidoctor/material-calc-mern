@@ -16,7 +16,10 @@ export interface DesignCostingRow {
 /** One costing record per design (the punching details stay in the design). */
 export interface DesignCosting {
   designNo: string;
-  markupPercent: number;
+  /** The party's discount; the markup is worked out from it. Missing on records saved before (they have markupPercent). */
+  discountPercent?: number;
+  /** Older records: the markup % entered then, used as the discount until the next save. */
+  markupPercent?: number;
   rows: DesignCostingRow[];
   /** Type costed for each typed column (lists: column keys may contain dots). */
   types: { key: string; type: string }[];
@@ -42,7 +45,8 @@ const rowSchema = new Schema<DesignCostingRow>(
 const designCostingSchema = new Schema<DesignCosting>(
   {
     designNo: { type: String, required: true, unique: true },
-    markupPercent: { type: Number, required: true, min: 0 },
+    discountPercent: { type: Number, min: 0, max: 99.99 },
+    markupPercent: { type: Number, min: 0 },
     rows: { type: [rowSchema], default: [] },
     types: { type: [new Schema({ key: { type: String, required: true }, type: { type: String, required: true } }, { _id: false })], default: [] },
     cords: {

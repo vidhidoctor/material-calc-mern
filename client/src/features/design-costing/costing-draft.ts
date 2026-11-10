@@ -11,7 +11,7 @@ export interface RateDraft {
 
 /** The entries as typed; numbers are parsed only when sent. */
 export interface Draft {
-  markup: string;
+  discount: string;
   rates: Record<string, RateDraft>;
   types: Record<string, string>;
   cords: Record<string, { denier: string; rate: string }>;
@@ -23,7 +23,7 @@ const text = (value: number | null | undefined) => (value == null ? '' : String(
 
 export function toDraft(saved: DesignCostingInputDto): Draft {
   return {
-    markup: String(saved.markupPercent),
+    discount: String(saved.discountPercent),
     rates: Object.fromEntries(saved.rows.map((r) => [rowKey(r.component, r.size), { stitch: text(r.stitchRate), laser: text(r.laserRate), stitchHeads: String(r.stitchHeads), laserHeads: String(r.laserHeads), note: r.note }])),
     types: saved.types,
     cords: Object.fromEntries(Object.entries(saved.cords).map(([key, c]) => [key, { denier: text(c.denier), rate: text(c.ratePerUnit) }])),
@@ -32,7 +32,7 @@ export function toDraft(saved: DesignCostingInputDto): Draft {
 
 export function toBody(draft: Draft, data: DesignCostingDto): DesignCostingInputDto {
   return {
-    markupPercent: parseNumberInput(draft.markup) ?? 0,
+    discountPercent: parseNumberInput(draft.discount) ?? 0,
     rows: data.design.components.flatMap((c) =>
       c.sizes.map((s) => {
         const rate = draft.rates[rowKey(c.name, s.size)] ?? NO_RATE;

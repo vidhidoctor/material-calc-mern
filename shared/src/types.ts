@@ -534,7 +534,8 @@ export interface DesignCostingRateRowDto {
 
 /** What the Manager enters: the body of a save or a preview. */
 export interface DesignCostingInputDto {
-  markupPercent: number;
+  /** The party's discount %; the final price is worked back from it so the business receives the base cost. */
+  discountPercent: number;
   rows: DesignCostingRateRowDto[];
   /** Type costed for each typed column ("SEQ-3MM|PINK" → "MATT"); orders still choose their own. */
   types: Record<string, string>;
@@ -557,6 +558,8 @@ export interface DesignCostingSizeDto extends DesignCostingAmountsDto {
   size: string;
   stitch: number;
   laser: number | null;
+  /** Cost of each material column in one piece (key → ₹); materials without a rate are left out. */
+  materials: Record<string, DecimalString>;
 }
 
 /** What one piece of every size consumes of one material column, across all components. */
@@ -572,6 +575,8 @@ export interface DesignCostingMaterialDto {
 }
 
 export interface DesignCostingCalculationDto {
+  /** The markup % the discount needs (7% discount → 7.53%). */
+  markupPercent: DecimalString;
   materials: DesignCostingMaterialDto[];
   components: {
     name: string;
@@ -579,6 +584,8 @@ export interface DesignCostingCalculationDto {
     sizes: DesignCostingSizeDto[];
     /** One piece of every size of the component. */
     total: DesignCostingAmountsDto;
+    /** The same per material column. */
+    materials: Record<string, DecimalString>;
   }[];
   /** All components. */
   total: DesignCostingAmountsDto;
@@ -620,6 +627,8 @@ export interface JobWorkInputDto {
     laserRate: number | null;
     stitchHeads: number;
     laserHeads: number;
+    /** Remarks for the job worker, printed as typed on the job work sheet. */
+    note: string;
   }[];
   /** Column keys of materials the job worker's rate already covers. */
   excluded: string[];
@@ -642,9 +651,19 @@ export interface JobWorkCalculationDto {
   components: {
     name: string;
     /** stitch and laser as used in the figures; punchingStitch and punchingLaser as in the Punching Master. */
-    sizes: (JobWorkAmountsDto & { size: string; stitch: number; laser: number | null; punchingStitch: number; punchingLaser: number | null })[];
+    sizes: (JobWorkAmountsDto & {
+      size: string;
+      stitch: number;
+      laser: number | null;
+      punchingStitch: number;
+      punchingLaser: number | null;
+      /** Cost of each material column in one piece (key → ₹), included or not; materials without a rate are left out. */
+      materials: Record<string, DecimalString>;
+    })[];
     /** One piece of every size of the component. */
     total: JobWorkAmountsDto;
+    /** The same per material column. */
+    materials: Record<string, DecimalString>;
   }[];
   total: JobWorkAmountsDto;
   errors: string[];
@@ -663,6 +682,8 @@ export interface PrintConfigDto {
   sheet: string;
   columns: string[];
   totals: boolean;
+  /** Material columns (e.g. "SEQ-3MM|WHITE") that get their own cost column, on sheets that offer it. */
+  materials: string[];
   /** null = no settings saved yet: the sheet's defaults. */
   savedAt: string | null;
   savedBy: string | null;

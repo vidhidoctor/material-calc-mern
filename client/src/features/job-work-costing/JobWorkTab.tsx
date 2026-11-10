@@ -109,6 +109,7 @@ export function JobWorkTab({ editor, canManage }: { editor: JobWorkEditor; canMa
                       <th className="align-right">Included materials</th>
                       <th className="align-right">Excluded materials</th>
                       <th className="align-right">Final cost / pc</th>
+                      <th>Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -142,6 +143,16 @@ export function JobWorkTab({ editor, canManage }: { editor: JobWorkEditor; canMa
                           <td className="align-right">{formatRupees(s.laserCost)}</td>
                           <td className="align-right">{input('rate', 'job worker rate', '₹')}</td>
                           <AmountCells amounts={s} />
+                          <td>
+                            <input
+                              className="input input-sm costing-note-input"
+                              aria-label={`${label} remarks`}
+                              maxLength={200}
+                              disabled={!canManage}
+                              value={row.note}
+                              onChange={(e) => setCell(key, 'note', e.target.value)}
+                            />
+                          </td>
                         </tr>
                       );
                     })}
@@ -154,6 +165,7 @@ export function JobWorkTab({ editor, canManage }: { editor: JobWorkEditor; canMa
                       <td className="align-right">{formatRupees(component.total.laserCost)}</td>
                       <td className="align-right">{formatRupees(component.total.rate)}</td>
                       <AmountCells amounts={component.total} />
+                      <td />
                     </tr>
                   </tfoot>
                 </table>

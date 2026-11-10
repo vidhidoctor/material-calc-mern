@@ -106,12 +106,16 @@ describe('job work costing API', () => {
     assert.deepEqual([belt.total.rate, belt.total.finalCost], ['0', '5']);
     assert.deepEqual([res.body.calculation.total.rate, res.body.calculation.total.finalCost], ['155', '182']);
     assert.equal(res.body.calculation.materials[1].included, false);
+    // Each material's cost per piece, included or not, per size and per component (for the print's material columns).
+    assert.deepEqual(kali.sizes[0].materials, { 'JW-BEAD': '10', 'JW-METAL': '25' });
+    assert.deepEqual(kali.materials, { 'JW-BEAD': '22', 'JW-METAL': '55' });
+    assert.deepEqual(belt.materials, { 'JW-BEAD': '5' });
     const again = (await ctx.api.get(path).set(bearer(viewer))).body;
     assert.deepEqual(again.saved.excluded, ['JW-METAL']);
   });
 
   it('never touches the design costing or Material Master, and the other way round', async () => {
-    const costing = { markupPercent: 12, rows: [{ component: 'KALI', size: '18', stitchRate: 4, laserRate: 5, note: 'Own costing' }], types: {}, cords: {} };
+    const costing = { discountPercent: 12, rows: [{ component: 'KALI', size: '18', stitchRate: 4, laserRate: 5, note: 'Own costing' }], types: {}, cords: {} };
     assert.equal((await ctx.api.put(costingPath).set(bearer(manager)).send(costing)).status, 200);
     const before = (await ctx.api.get(costingPath).set(bearer(manager))).body;
     const rates = await MaterialRateModel.find().lean();
@@ -125,7 +129,7 @@ describe('job work costing API', () => {
     assert.deepEqual(stripId(await MaterialRateModel.find().lean()), stripId(rates));
 
     // Saving the design costing leaves the job work rates alone.
-    assert.equal((await ctx.api.put(costingPath).set(bearer(manager)).send({ ...costing, markupPercent: 50 })).status, 200);
+    assert.equal((await ctx.api.put(costingPath).set(bearer(manager)).send({ ...costing, discountPercent: 50 })).status, 200);
     const jobWork = (await ctx.api.get(path).set(bearer(manager))).body;
     assert.equal(jobWork.saved.rows.length, 1);
     assert.equal(jobWork.saved.rows[0].rate, 999);
@@ -172,8 +176,21 @@ describe('job work costing API', () => {
   it('a record saved before stitch and laser were added still loads with its rate', async () => {
     await JobWorkCostingModel.collection.updateOne({ designNo: 'JW-1' }, { $set: { rows: [{ component: 'KALI', size: '18', rate: 999 }] } });
     const old = (await ctx.api.get(path).set(bearer(manager))).body;
-    assert.deepEqual(old.saved.rows[0], { component: 'KALI', size: '18', rate: 999, stitch: null, laser: null, stitchRate: null, laserRate: null, stitchHeads: 1, laserHeads: 1 });
+    assert.deepEqual(old.saved.rows[0], { component: 'KALI', size: '18', rate: 999, stitch: null, laser: null, stitchRate: null, laserRate: null, stitchHeads: 1, laserHeads: 1, note: '' });
     assert.equal(old.calculation.components[0].sizes[0].stitchCost, '0');
+  });
+
+  it('remarks are saved per size, trimmed; a size with only remarks is kept; too long is refused', async () => {
+    const rows = [
+      { component: 'KALI', size: '18', rate: 999, note: '  Deliver by Friday ' },
+      { component: 'KALI', size: '20', note: 'Thread from stock' },
+    ];
+    const saved = await ctx.api.put(path).set(bearer(manager)).send({ rows, excluded: ['JW-BEAD'] });
+    assert.equal(saved.status, 200, JSON.stringify(saved.body));
+    assert.deepEqual(saved.body.saved.rows.map((r: { size: string; note: string }) => [r.size, r.note]), [['18', 'Deliver by Friday'], ['20', 'Thread from stock']]);
+    assert.deepEqual((await ctx.api.get(path).set(bearer(viewer))).body.saved.rows.map((r: { note: string }) => r.note), ['Deliver by Friday', 'Thread from stock']);
+    assert.equal((await ctx.api.put(path).set(bearer(manager)).send({ rows: [{ component: 'KALI', size: '18', note: 'x'.repeat(201) }], excluded: [] })).status, 400);
+    assert.equal((await ctx.api.put(path).set(bearer(manager)).send({ rows: [{ component: 'KALI', size: '18', rate: 999 }], excluded: ['JW-BEAD'] })).status, 200);
   });
 
   it('follows punching edits; a material added later starts included', async () => {

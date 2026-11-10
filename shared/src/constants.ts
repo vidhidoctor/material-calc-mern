@@ -109,18 +109,18 @@ export const isOrderEnteredField = (key: string): boolean => key.trim().toUpperC
 export const APP_NAME = 'Creative Embroidery ERP';
 
 /** Markup a design starts with until its costing is saved (the Manager can change it per design). */
-export const DEFAULT_COSTING_MARKUP_PERCENT = 7;
+export const DEFAULT_COSTING_DISCOUNT_PERCENT = 7;
 
 /** Stitch and laser heads of a size until the Manager enters others. */
 export const DEFAULT_COSTING_HEADS = 1;
 
-const RATE_COSTING_COLUMNS: readonly string[] = ['size', 'stitch', 'stitchRate', 'stitchHeads', 'stitchCost', 'laser', 'laserRate', 'laserHeads', 'laserCost', 'materialCost', 'base'];
-const JOB_WORK_COLUMNS: readonly string[] = ['size', 'stitch', 'stitchRate', 'stitchHeads', 'stitchCost', 'laser', 'laserRate', 'laserHeads', 'laserCost', 'rate', 'included', 'excluded', 'final'];
+const RATE_COSTING_COLUMNS: readonly string[] = ['size', 'stitch', 'stitchRate', 'stitchHeads', 'stitchCost', 'laser', 'laserRate', 'laserHeads', 'laserCost', 'materialCost', 'base', 'markup', 'finalPrice', 'remarks'];
+const JOB_WORK_COLUMNS: readonly string[] = ['size', 'stitch', 'stitchRate', 'stitchHeads', 'stitchCost', 'laser', 'laserRate', 'laserHeads', 'laserCost', 'rate', 'included', 'excluded', 'final', 'remarks'];
 
 /** Printed costing sheets: their columns in table order, and what they print until a Manager saves other settings. */
 export const PRINT_SHEETS = {
-  'rate-costing': { columns: RATE_COSTING_COLUMNS, defaults: { columns: RATE_COSTING_COLUMNS, totals: true } },
-  'job-work': { columns: JOB_WORK_COLUMNS, defaults: { columns: ['size', 'final'] as readonly string[], totals: false } },
+  'rate-costing': { columns: RATE_COSTING_COLUMNS, defaults: { columns: RATE_COSTING_COLUMNS, totals: true, materials: [] as readonly string[] } },
+  'job-work': { columns: JOB_WORK_COLUMNS, defaults: { columns: ['size', 'final'] as readonly string[], totals: false, materials: [] as readonly string[] } },
 } as const;
 export type PrintSheet = keyof typeof PRINT_SHEETS;
 

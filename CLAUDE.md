@@ -51,7 +51,8 @@ Imports in server/ and shared/ end in `.js` (NodeNext ESM).
   colour; Production picks the type per order (`order.types`, key `CODE|COLOUR^TYPE`); purchase and cost follow the type.
 - Don't seed sample data (fixture 26-49) into Atlas; the fixture is for tests only. The user enters real data.
 - Design Costing (modules/design-costing, one record per design): stitch and laser rates are entered per component + size
-  and never go in Material Master; base cost, markup and final price are pure maths in calculation/design-costing.ts. It
+  and never go in Material Master; final price = base cost ÷ (1 − discount %) (markup = final − base, so after the discount
+  the business receives the base cost); pure maths in calculation/design-costing.ts. It
   chooses its own type/denier/rate for typed and cord columns (orders still choose theirs). Figures on screen come from the
   server (`/preview`), not client maths.
 - Job Work Costing (modules/job-work-costing, a tab of Design Costing, its own record per design; its header, pending inputs and

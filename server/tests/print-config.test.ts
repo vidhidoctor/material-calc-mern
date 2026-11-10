@@ -29,7 +29,9 @@ describe('print configuration', () => {
 
   it('starts from each sheet\'s defaults, for anyone who can print', async () => {
     const rateConfig = (await ctx.api.get(rate).set(bearer(viewer))).body;
-    assert.deepEqual([rateConfig.columns, rateConfig.totals, rateConfig.savedAt], [[...PRINT_SHEETS['rate-costing'].columns], true, null]);
+    assert.deepEqual([rateConfig.columns, rateConfig.totals, rateConfig.materials, rateConfig.savedAt], [[...PRINT_SHEETS['rate-costing'].columns], true, [], null]);
+    assert.ok(['markup', 'finalPrice', 'remarks'].every((c) => rateConfig.columns.includes(c)), 'the pricing columns are on the rate sheet');
+    assert.ok(PRINT_SHEETS['job-work'].columns.includes('remarks'), 'the job work sheet offers Remarks');
     const jobConfig = (await ctx.api.get(job).set(bearer(viewer))).body;
     assert.deepEqual([jobConfig.columns, jobConfig.totals], [['size', 'final'], false]);
   });
@@ -54,6 +56,18 @@ describe('print configuration', () => {
     assert.notEqual(read.savedAt, null);
     const changed = await ctx.api.put(rate).set(bearer(manager)).send({ columns: ['size', 'base'], totals: true });
     assert.deepEqual([changed.body.columns, changed.body.totals], [['size', 'base'], true]);
+  });
+
+  it('the chosen materials are saved with the columns (colour by colour); none when not sent', async () => {
+    const chosen = ['SEQ-3MM|WHITE', 'BEAD-2.5MM', 'SEQ-3MM|WHITE'];
+    const on = await ctx.api.put(rate).set(bearer(manager)).send({ columns: ['size', 'materialCost', 'finalPrice', 'remarks'], totals: true, materials: chosen });
+    assert.deepEqual([on.body.columns, on.body.materials], [['size', 'materialCost', 'finalPrice', 'remarks'], ['SEQ-3MM|WHITE', 'BEAD-2.5MM']]);
+    assert.deepEqual((await ctx.api.get(rate).set(bearer(viewer))).body.materials, ['SEQ-3MM|WHITE', 'BEAD-2.5MM']);
+    const off = await ctx.api.put(rate).set(bearer(manager)).send({ columns: ['size', 'base'], totals: true });
+    assert.deepEqual(off.body.materials, []);
+    for (const bad of ['yes', [''], [5]]) {
+      assert.equal((await ctx.api.put(rate).set(bearer(manager)).send({ columns: ['size'], totals: true, materials: bad })).status, 400, JSON.stringify(bad));
+    }
   });
 
   it('the two sheets are saved separately', async () => {

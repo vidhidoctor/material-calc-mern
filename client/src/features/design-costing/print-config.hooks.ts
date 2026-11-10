@@ -10,7 +10,7 @@ export const usePrintConfig = (sheet: PrintSheet) => useQuery({ queryKey: queryK
 export function useSavePrintConfig(sheet: PrintSheet) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: { columns: string[]; totals: boolean }) => api<PrintConfigDto>(path(sheet), { method: 'PUT', body }),
+    mutationFn: (body: { columns: string[]; totals: boolean; materials: string[] }) => api<PrintConfigDto>(path(sheet), { method: 'PUT', body }),
     onSuccess: (saved) => {
       queryClient.setQueryData(queryKeys.printConfig(sheet), saved);
       return queryClient.invalidateQueries({ queryKey: queryKeys.audit, refetchType: 'active' });

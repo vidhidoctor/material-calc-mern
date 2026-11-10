@@ -11,6 +11,11 @@ export const printConfigBody = z.object({
     .min(1, 'Choose at least one column to print.')
     .max(50, 'Too many columns.'),
   totals: z.boolean({ error: 'Totals must be yes or no.' }),
+  /** Material column keys; one sheet's settings serve every design, so keys of other designs are kept too. */
+  materials: z
+    .array(z.string({ error: 'Material must be text.' }).trim().min(1, 'Material is required.').max(200, 'Material is too long.'), { error: 'Materials must be a list.' })
+    .max(500, 'Too many materials.')
+    .default([]),
 });
 
 export type PrintConfigInput = z.infer<typeof printConfigBody>;

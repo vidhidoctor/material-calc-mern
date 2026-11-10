@@ -14,17 +14,21 @@ export interface SheetColumn<Row, Total> {
   /** Left out for columns that do not add up (quantities, rates). */
   total?: (total: Total) => ReactNode;
   strong?: boolean;
+  /** Extra class for the column's cells, e.g. po-remarks for left-aligned text. */
+  className?: string;
 }
 
 interface Selection {
   columns: string[];
   totals: boolean;
+  /** Ids of the material columns ticked (material column keys). */
+  materials: string[];
 }
 
 interface Props<Row, Total> {
   /** Which saved print configuration this sheet uses. */
   sheet: PrintSheet;
-  /** Sheet heading, e.g. RATE & COSTING. */
+  /** Sheet heading, e.g. RATE & PRICING. */
   title: string;
   /** Lines under the heading (.po-order-ref). */
   children: ReactNode;
@@ -32,13 +36,17 @@ interface Props<Row, Total> {
   backLabel: string;
   /** In the order of the table on screen; the sheet keeps that order. */
   columns: readonly SheetColumn<Row, Total>[];
+  /** One column per material of this design (id = material column key); the ticked ones print just before the column `before`. */
+  materialColumns?: { before: string; columns: readonly SheetColumn<Row, Total>[] };
   components: { name: string; rows: (Row & { size: string })[]; total: Total }[];
 }
 
 /** More columns than this do not fit A4 portrait at a readable size. */
 const PORTRAIT_MAX_COLUMNS = 7;
+/** More columns than this print in a smaller font, even sideways. */
+const DENSE_COLUMNS = 14;
 
-function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, columns, components }: Props<Row, Total> & { config: PrintConfigDto }) {
+function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, columns, materialColumns, components }: Props<Row, Total> & { config: PrintConfigDto }) {
   const auth = useAuth();
   const canEdit = auth.can('DESIGN_COSTING_MANAGE');
   const save = useSavePrintConfig(sheet);
@@ -47,12 +55,25 @@ function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, 
   const selection = draft ?? config;
 
   const allIds = columns.map((c) => c.id);
-  const shown = columns.filter((c) => selection.columns.includes(c.id));
+  const materialIds = new Set(materialColumns?.columns.map((c) => c.id));
+  // The material columns sit inside the table order, so ticking them never moves the other columns.
+  const ordered = materialColumns
+    ? columns.flatMap((c) => (c.id === materialColumns.before ? [...materialColumns.columns, c] : [c]))
+    : columns;
+  const shown = ordered.filter((c) => (materialIds.has(c.id) ? selection.materials : selection.columns).includes(c.id));
+  const chosen = columns.filter((c) => selection.columns.includes(c.id));
   const showTotals = selection.totals && shown.some((c) => c.total);
   const landscape = shown.length > PORTRAIT_MAX_COLUMNS;
+  const dense = shown.length > DENSE_COLUMNS;
 
   const change = (update: (current: Selection) => Selection) => setDraft((d) => (d ? update(d) : d));
   const toggle = (id: string, on: boolean) => change((d) => ({ ...d, columns: on ? [...d.columns, id] : d.columns.filter((c) => c !== id) }));
+  // Settings serve every design: materials of other designs stay as they were.
+  const toggleMaterial = (id: string, on: boolean) => change((d) => ({ ...d, materials: on ? [...d.materials, id] : d.materials.filter((m) => m !== id) }));
+  const setAllMaterials = (on: boolean) =>
+    change((d) => ({ ...d, materials: on ? [...new Set([...d.materials, ...materialIds])] : d.materials.filter((m) => !materialIds.has(m)) }));
+  const designMaterials = materialColumns?.columns ?? [];
+  const tickedMaterials = designMaterials.filter((c) => selection.materials.includes(c.id)).length;
 
   return (
     <>
@@ -69,7 +90,7 @@ function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, 
               : 'Using the standard print settings.'}
         </span>
         {canEdit && !draft && (
-          <button type="button" className="btn" onClick={() => setDraft({ columns: config.columns, totals: config.totals })}>
+          <button type="button" className="btn" onClick={() => setDraft({ columns: config.columns, totals: config.totals, materials: config.materials })}>
             Edit print settings
           </button>
         )}
@@ -83,10 +104,10 @@ function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, 
           <legend>Columns to print</legend>
           <ErrorAlert error={save.error} />
           <div className="row-actions po-columns-actions">
-            <button type="button" className="btn btn-sm" disabled={shown.length === columns.length} onClick={() => change((d) => ({ ...d, columns: allIds }))}>
+            <button type="button" className="btn btn-sm" disabled={chosen.length === columns.length} onClick={() => change((d) => ({ ...d, columns: allIds }))}>
               Select all
             </button>
-            <button type="button" className="btn btn-sm" disabled={shown.length === 0} onClick={() => change((d) => ({ ...d, columns: [] }))}>
+            <button type="button" className="btn btn-sm" disabled={chosen.length === 0} onClick={() => change((d) => ({ ...d, columns: [] }))}>
               Deselect all
             </button>
           </div>
@@ -102,21 +123,47 @@ function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, 
               Component totals
             </label>
           </div>
+          {designMaterials.length > 0 && (
+            <div className="po-columns-materials">
+              <div className="po-columns-materials-head">
+                <strong>Materials</strong>
+                <span className="muted small">
+                  Each ticked material gets its own cost column. {tickedMaterials} of {designMaterials.length} in this design ticked.
+                </span>
+                <div className="row-actions">
+                  <button type="button" className="btn btn-sm" disabled={tickedMaterials === designMaterials.length} onClick={() => setAllMaterials(true)}>
+                    Select all materials
+                  </button>
+                  <button type="button" className="btn btn-sm" disabled={tickedMaterials === 0} onClick={() => setAllMaterials(false)}>
+                    None
+                  </button>
+                </div>
+              </div>
+              <div className="po-columns-list">
+                {designMaterials.map((c) => (
+                  <label key={c.id} className="checkbox-label">
+                    <input type="checkbox" checked={draft.materials.includes(c.id)} onChange={(e) => toggleMaterial(c.id, e.target.checked)} />
+                    {c.header}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="row-actions po-columns-save">
             <button type="button" className="btn btn-ghost" disabled={save.isPending} onClick={() => setDraft(null)}>
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" disabled={shown.length === 0 || save.isPending} onClick={() => save.mutate(draft, { onSuccess: () => setDraft(null) })}>
+            <button type="button" className="btn btn-primary" disabled={chosen.length === 0 || save.isPending} onClick={() => save.mutate(draft, { onSuccess: () => setDraft(null) })}>
               {save.isPending ? 'Saving…' : 'Save print configuration'}
             </button>
           </div>
         </fieldset>
       )}
 
-      {shown.length === 0 ? (
+      {chosen.length === 0 ? (
         <p className="no-print muted po-columns-empty">Tick at least one column to print.</p>
       ) : (
-        <div className={`po-page ${landscape ? 'po-landscape' : ''}`}>
+        <div className={`po-page ${landscape ? 'po-landscape' : ''} ${dense ? 'po-dense' : ''}`}>
           <article className="po-slip">
             <PrintHeader title={title} date={new Date().toISOString()}>
               {children}
@@ -138,7 +185,7 @@ function Sheet<Row, Total>({ config, sheet, title, children, backTo, backLabel, 
                     {component.rows.map((row) => (
                       <tr key={row.size}>
                         {shown.map((c) => (
-                          <td key={c.id} className={c.strong ? 'po-qty' : undefined}>
+                          <td key={c.id} className={[c.strong ? 'po-qty' : '', c.className ?? ''].join(' ').trim() || undefined}>
                             {c.cell(row)}
                           </td>
                         ))}

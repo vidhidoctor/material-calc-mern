@@ -16,6 +16,8 @@ export interface JobWorkCosting {
     /** Missing on older records and when left at the default (DEFAULT_COSTING_HEADS). */
     stitchHeads?: number;
     laserHeads?: number;
+    /** Remarks for the job worker, printed as typed on the job work sheet. Missing on older records. */
+    note?: string;
   }[];
   /**
    * Column keys of materials left out of the job work cost (already covered by the job worker's rate).
@@ -42,6 +44,7 @@ const jobWorkCostingSchema = new Schema<JobWorkCosting>(
             laserRate: { type: Number, default: null, min: 0 },
             stitchHeads: { type: Number, default: undefined, min: 0 },
             laserHeads: { type: Number, default: undefined, min: 0 },
+            note: { type: String, default: undefined },
           },
           { _id: false },
         ),

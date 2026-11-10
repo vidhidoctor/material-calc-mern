@@ -40,6 +40,7 @@ export const jobWorkCostingBody = z.object({
         laserRate: rate('Laser rate'),
         stitchHeads: heads('Stitch heads'),
         laserHeads: heads('Laser heads'),
+        note: z.string({ error: 'Remarks must be text.' }).trim().max(200, 'Remarks are too long (200 characters at most).').default(''),
       }),
       { error: 'Rows must be a list.' },
     )

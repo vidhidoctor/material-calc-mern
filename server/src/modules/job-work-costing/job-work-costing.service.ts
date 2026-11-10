@@ -15,6 +15,8 @@ export const JOB_WORK_MESSAGES = {
 
 const rowKey = (component: string, size: string) => `${component}\u0000${size}`;
 
+const toCostMap = (costs: ReadonlyMap<string, Decimal>) => Object.fromEntries([...costs].map(([key, cost]) => [key, toDecimalString(cost)]));
+
 function toAmountsDto(amounts: JobWorkAmounts): JobWorkAmountsDto {
   return {
     rate: toDecimalString(amounts.rate),
@@ -38,6 +40,7 @@ function toJobWorkInput(costing: JobWorkCosting | null): JobWorkInputDto {
       laserRate: r.laserRate ?? null,
       stitchHeads: r.stitchHeads ?? DEFAULT_COSTING_HEADS,
       laserHeads: r.laserHeads ?? DEFAULT_COSTING_HEADS,
+      note: r.note ?? '',
     })),
     excluded: [...(costing?.excluded ?? [])],
   };
@@ -66,12 +69,15 @@ async function calculate(design: Design, input: JobWorkInputDto): Promise<JobWor
       const laser = entry?.laser ?? s.laser ?? null;
       let included = new Decimal(0);
       let left = new Decimal(0);
+      /** Cost of each material in one piece, included or not (materials without a rate are left out). */
+      const byMaterial = new Map<string, Decimal>();
       for (const [key, qty] of Object.entries(lookup(component.name, s.size) ?? {})) {
         const { perUnit, error } = coster(key);
         if (error) errors.add(error);
         const cost = perUnit ? perUnit.times(qty) : null;
         if (cost && excluded.has(key)) left = left.plus(cost);
         else if (cost) included = included.plus(cost);
+        if (cost) byMaterial.set(key, (byMaterial.get(key) ?? new Decimal(0)).plus(cost));
         const total = totals.get(key);
         totals.set(key, { qty: (total?.qty ?? new Decimal(0)).plus(qty), cost: cost ? (total?.cost ?? new Decimal(0)).plus(cost) : null });
       }
@@ -86,9 +92,11 @@ async function calculate(design: Design, input: JobWorkInputDto): Promise<JobWor
         includedMaterials: included,
         excludedMaterials: left,
       });
-      return { size: s.size, stitch, laser, punchingStitch: s.stitch, punchingLaser: s.laser ?? null, amounts };
+      return { size: s.size, stitch, laser, punchingStitch: s.stitch, punchingLaser: s.laser ?? null, amounts, byMaterial };
     });
-    return { name: component.name, sizes, total: sumJobWork(sizes.map((s) => s.amounts)) };
+    const byMaterial = new Map<string, Decimal>();
+    for (const s of sizes) for (const [key, cost] of s.byMaterial) byMaterial.set(key, (byMaterial.get(key) ?? new Decimal(0)).plus(cost));
+    return { name: component.name, sizes, total: sumJobWork(sizes.map((s) => s.amounts)), byMaterial };
   });
 
   if (noRate > 0) errors.add(JOB_WORK_MESSAGES.missingRates(noRate));
@@ -100,8 +108,9 @@ async function calculate(design: Design, input: JobWorkInputDto): Promise<JobWor
     }),
     components: components.map((c) => ({
       name: c.name,
-      sizes: c.sizes.map(({ amounts, ...s }) => ({ ...s, ...toAmountsDto(amounts) })),
+      sizes: c.sizes.map(({ amounts, byMaterial, ...s }) => ({ ...s, ...toAmountsDto(amounts), materials: toCostMap(byMaterial) })),
       total: toAmountsDto(c.total),
+      materials: toCostMap(c.byMaterial),
     })),
     total: toAmountsDto(sumJobWork(components.map((c) => c.total))),
     errors: [...errors],
@@ -132,7 +141,7 @@ export async function saveJobWorkCosting(designNo: string, input: JobWorkCosting
   const rows = input.rows.filter(
     (r) =>
       known.has(rowKey(r.component, r.size)) &&
-      (r.rate !== null || r.stitch !== null || r.laser !== null || r.stitchRate !== null || r.laserRate !== null || r.stitchHeads !== DEFAULT_COSTING_HEADS || r.laserHeads !== DEFAULT_COSTING_HEADS),
+      (r.rate !== null || r.stitch !== null || r.laser !== null || r.stitchRate !== null || r.laserRate !== null || r.stitchHeads !== DEFAULT_COSTING_HEADS || r.laserHeads !== DEFAULT_COSTING_HEADS || r.note !== ''),
   );
   await JobWorkCostingModel.updateOne(
     { designNo: design.designNo },

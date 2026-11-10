@@ -2078,6 +2078,10 @@ a {
   width: 62px;
   min-width: 62px;
 }
+.costing-table.job-work-table .input.costing-note-input {
+  width: 180px;
+  min-width: 180px;
+}
 .costing-table.job-work-table .input.job-work-qty {
   width: 76px;
   min-width: 76px;
@@ -2170,6 +2174,21 @@ a {
   justify-content: flex-end;
   margin-top: 10px;
 }
+.po-columns-materials {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.po-columns-materials-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+.po-columns-materials-head .row-actions {
+  margin-left: auto;
+}
 .po-columns-empty {
   text-align: center;
 }
@@ -2223,6 +2242,15 @@ a {
   font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
+}
+/* Very wide sheets (e.g. one column per material) use a smaller font so they still fit. */
+.po-dense .po-slip-table th,
+.po-dense .po-slip-table td {
+  padding: 0.7mm 0.8mm;
+  font-size: 7pt;
+}
+.po-dense .po-slip-table th {
+  font-size: 6.5pt;
 }
 /* Wide sheets print sideways (ColumnPrintSheet); on paper the page size comes from @page. */
 @media screen {

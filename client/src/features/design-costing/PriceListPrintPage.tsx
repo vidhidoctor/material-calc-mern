@@ -22,10 +22,10 @@ export function PriceListPrintPage() {
   return (
     <div className="po-print">
       <div className="po-toolbar no-print">
-        <Link to={`/design-costing/${encodeURIComponent(designNo)}?tab=pricing`} className="btn btn-ghost">
+        <Link to={`/design-costing/${encodeURIComponent(designNo)}`} className="btn btn-ghost">
           ← Design Costing
         </Link>
-        <span className="muted small po-toolbar-note">Prints the saved costing. Type the Remarks in Pricing Summary.</span>
+        <span className="muted small po-toolbar-note">Prints the saved costing. Type the Remarks in Rate & Pricing.</span>
         <button type="button" className="btn btn-primary" disabled={!query.data} onClick={() => window.print()}>
           Print
         </button>

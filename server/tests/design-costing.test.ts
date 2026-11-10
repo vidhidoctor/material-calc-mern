@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
-import { costOfSize, sumCosts } from '../src/calculation/design-costing.js';
+import { costOfSize, markupPercentFor, sumCosts } from '../src/calculation/design-costing.js';
 import { Decimal } from '../src/calculation/engine.js';
 import { MaterialRateModel } from '../src/modules/costing/material-rate.model.js';
 import { DesignCostingModel } from '../src/modules/design-costing/design-costing.model.js';
@@ -12,9 +12,15 @@ const money = (value: Decimal) => value.toDecimalPlaces(2).toNumber();
 describe('design costing maths', () => {
   const base100 = { stitch: 0, laser: null, stitchRate: null, laserRate: null, stitchHeads: 1, laserHeads: 1, materialCost: new Decimal(100) };
 
-  it('final price = base + markup', () => {
-    assert.deepEqual([100, 0, 100], ((c) => [money(c.base), money(c.markup), money(c.finalPrice)])(costOfSize(base100, 0)));
-    assert.deepEqual([100, 10, 110], ((c) => [money(c.base), money(c.markup), money(c.finalPrice)])(costOfSize(base100, 10)));
+  it('₹100 base with 7% discount: final ₹107.53, markup ₹7.53, and after the discount ₹100 is left', () => {
+    const c = costOfSize(base100, 7);
+    assert.deepEqual([money(c.base), money(c.markup), money(c.finalPrice)], [100, 7.53, 107.53]);
+    const discount = c.finalPrice.times(7).dividedBy(100);
+    assert.equal(money(c.finalPrice.minus(discount)), 100, 'net receivable = base cost');
+    assert.equal(c.finalPrice.minus(discount).toDecimalPlaces(10).toString(), '100');
+    assert.equal(money(markupPercentFor(7)), 7.53);
+    assert.deepEqual([money(costOfSize(base100, 0).finalPrice), money(markupPercentFor(0))], [100, 0]);
+    assert.deepEqual([money(costOfSize(base100, 60).finalPrice), money(costOfSize(base100, 60).markup)], [250, 150]);
   });
 
   it('stitch and laser cost are multiplied by their own heads', () => {
@@ -37,7 +43,7 @@ describe('design costing API', () => {
   let punching: string;
   const admin = () => bearer(ctx.adminToken);
   const path = '/api/design-costing/COST-1';
-  const empty = { markupPercent: 0, rows: [], types: {}, cords: {} };
+  const empty = { discountPercent: 0, rows: [], types: {}, cords: {} };
   const kali18 = { component: 'KALI', size: '18', stitchRate: 4, laserRate: 5, note: '  Rush job - check with Ramesh ' };
 
   const roleUser = async (email: string, roleName: string, permissions: string[]) => {
@@ -81,10 +87,11 @@ describe('design costing API', () => {
     assert.deepEqual(list.body.map((d: { designNo: string; savedAt: string | null }) => [d.designNo, d.savedAt]), [['COST-1', null]]);
   });
 
-  it('starts with the punching details, 7% markup and no rates; missing entries are reported', async () => {
+  it('starts with the punching details, 7% discount and no rates; missing entries are reported', async () => {
     const res = await ctx.api.get(path).set(bearer(manager));
     assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.saved.markupPercent, 7);
+    assert.equal(res.body.saved.discountPercent, 7);
+    assert.equal(Number(res.body.calculation.markupPercent).toFixed(2), '7.53');
     assert.equal(res.body.design.components[0].sizes[0].stitch, 5000);
     assert.deepEqual(res.body.cords.map((c: { key: string }) => c.key), ['CORD']);
     assert.equal(res.body.calculation.components[0].sizes[0].stitchCost, '0');
@@ -109,10 +116,10 @@ describe('design costing API', () => {
     assert.equal(await DesignCostingModel.countDocuments(), 0);
   });
 
-  it('saves rates and markup with the design; totals are per component and overall; Material Master gets no rate', async () => {
+  it('saves rates and discount with the design; totals are per component and overall; Material Master gets no rate', async () => {
     const before = await MaterialRateModel.countDocuments();
     const body = {
-      markupPercent: 10,
+      discountPercent: 20,
       rows: [kali18, { component: 'KALI', size: '20', stitchRate: 2, laserRate: null }, { component: 'GONE', size: '1', stitchRate: 1, laserRate: null }],
       types: {},
       cords: { CORD: { denier: 9000, ratePerUnit: 100 } },
@@ -122,6 +129,12 @@ describe('design costing API', () => {
     assert.equal(res.body.savedBy, 'manager@example.com');
     assert.equal(res.body.saved.rows.length, 2, 'rows of unknown sizes are dropped');
     assert.equal(res.body.saved.rows[0].note, 'Rush job - check with Ramesh');
+    // Each material's cost per piece, per size and per component; they add up to the material cost.
+    const kali = res.body.calculation.components[0];
+    assert.deepEqual(kali.sizes[0].materials, { CORD: '1', 'TST-BEAD': '10' });
+    assert.equal(kali.sizes[0].materialCost, '11');
+    assert.deepEqual(kali.sizes[1].materials, {});
+    assert.deepEqual(kali.materials, { CORD: '1', 'TST-BEAD': '10' });
     assert.equal(res.body.saved.rows[1].note, '');
     // One piece of every size, in Material Master order (the test bead was added last).
     type Material = { key: string; unit: string; qty: string; cost: string | null };
@@ -129,19 +142,21 @@ describe('design costing API', () => {
     assert.deepEqual(res.body.calculation.errors, []);
     const component = res.body.calculation.components[0];
     assert.equal(component.total.base, '61'); // 41 + (10,000 ÷ 1000 × 2)
-    assert.equal(component.total.markup, '6.1');
-    assert.equal(component.total.finalPrice, '67.1');
-    assert.equal(res.body.calculation.total.finalPrice, '67.1');
+    // 61 ÷ (1 − 20%) = 76.25; markup 15.25 (25% of the base).
+    assert.equal(component.total.markup, '15.25');
+    assert.equal(component.total.finalPrice, '76.25');
+    assert.equal(res.body.calculation.total.finalPrice, '76.25');
+    assert.equal(res.body.calculation.markupPercent, '25');
     assert.equal(await MaterialRateModel.countDocuments(), before);
 
-    // Editable: any saved markup stays, including 0.
-    const zero = await ctx.api.put(path).set(bearer(manager)).send({ ...body, markupPercent: 0 });
-    assert.equal(zero.body.saved.markupPercent, 0);
+    // Editable: any saved discount stays, including 0 (then no markup).
+    const zero = await ctx.api.put(path).set(bearer(manager)).send({ ...body, discountPercent: 0 });
+    assert.equal(zero.body.saved.discountPercent, 0);
     assert.equal(zero.body.calculation.total.markup, '0');
     assert.equal((await ctx.api.put(path).set(bearer(manager)).send(body)).status, 200);
 
     const again = await ctx.api.get(path).set(bearer(viewer));
-    assert.equal(again.body.saved.markupPercent, 10);
+    assert.equal(again.body.saved.discountPercent, 20);
     assert.deepEqual(again.body.saved.cords, { CORD: { denier: 9000, ratePerUnit: 100 } });
     assert.notEqual((await ctx.api.get('/api/design-costing').query({ q: 'COST-1' }).set(bearer(viewer))).body[0].savedAt, null);
   });
@@ -166,12 +181,12 @@ describe('design costing API', () => {
     assert.equal(fresh.saved.rows[0].laserHeads, 1);
 
     const rows = [{ ...kali18, stitchHeads: 2, laserHeads: 1.5 }, { component: 'KALI', size: '20', stitchRate: null, laserRate: null, stitchHeads: 3, laserHeads: 1 }];
-    const body = { ...empty, markupPercent: 10, rows, cords: { CORD: { denier: 9000, ratePerUnit: 100 } } };
+    const body = { ...empty, discountPercent: 20, rows, cords: { CORD: { denier: 9000, ratePerUnit: 100 } } };
     const saved = await ctx.api.put(path).set(bearer(manager)).send(body);
     assert.equal(saved.status, 200, JSON.stringify(saved.body));
     const size = saved.body.calculation.components[0].sizes[0];
     // Stitch 6000 (set by the test above) ÷ 1000 × 4 × 2 = 48; laser 2000 ÷ 1000 × 5 × 1.5 = 15; material 11.
-    assert.deepEqual([size.stitchCost, size.laserCost, size.base, size.markup, size.finalPrice], ['48', '15', '74', '7.4', '81.4']);
+    assert.deepEqual([size.stitchCost, size.laserCost, size.base, size.markup, size.finalPrice], ['48', '15', '74', '18.5', '92.5']);
     assert.equal(saved.body.saved.rows.length, 2, 'a size with only heads is kept');
     const again = (await ctx.api.get(path).set(bearer(viewer))).body;
     assert.deepEqual([again.saved.rows[0].stitchHeads, again.saved.rows[0].laserHeads, again.saved.rows[1].stitchHeads], [2, 1.5, 3]);
@@ -183,28 +198,29 @@ describe('design costing API', () => {
 
   it('a size with only remarks is kept; remarks that are too long are refused', async () => {
     const onlyNote = { component: 'KALI', size: '20', stitchRate: null, laserRate: null, note: 'Sample approved' };
-    const saved = await ctx.api.put(path).set(bearer(manager)).send({ ...empty, rows: [kali18, onlyNote], cords: { CORD: { denier: 9000, ratePerUnit: 100 } }, markupPercent: 10 });
+    const saved = await ctx.api.put(path).set(bearer(manager)).send({ ...empty, rows: [kali18, onlyNote], cords: { CORD: { denier: 9000, ratePerUnit: 100 } }, discountPercent: 20 });
     assert.equal(saved.status, 200, JSON.stringify(saved.body));
     assert.equal(saved.body.saved.rows.find((r: { size: string }) => r.size === '20').note, 'Sample approved');
     assert.equal((await ctx.api.put(path).set(bearer(manager)).send({ ...empty, rows: [{ ...onlyNote, note: 'x'.repeat(201) }] })).status, 400);
   });
 
-  it('a discount or job rate saved earlier no longer changes any figure, and goes with the next save', async () => {
+  it('a record saved with a markup % reads it as the discount; the next save stores the discount; old job rates change nothing', async () => {
     const baseBefore = (await ctx.api.get(path).set(bearer(manager))).body.calculation.total.base;
-    await DesignCostingModel.collection.updateOne({ designNo: 'COST-1' }, { $set: { discountPercent: 7, 'rows.0.jobRate': 50 } });
+    await DesignCostingModel.collection.updateOne({ designNo: 'COST-1' }, { $set: { markupPercent: 7, 'rows.0.jobRate': 50 }, $unset: { discountPercent: '' } });
     const costing = (await ctx.api.get(path).set(bearer(manager))).body;
-    assert.equal(costing.saved.discountPercent, undefined);
+    assert.equal(costing.saved.discountPercent, 7);
+    assert.equal(costing.saved.markupPercent, undefined);
     assert.equal(costing.saved.rows[0].jobRate, undefined);
     assert.equal(costing.calculation.total.base, baseBefore);
-    assert.equal(costing.calculation.total.finalPrice, new Decimal(costing.calculation.total.base).plus(costing.calculation.total.markup).toString());
-    const { markupPercent, rows, types, cords } = costing.saved;
-    assert.equal((await ctx.api.put(path).set(bearer(manager)).send({ markupPercent, rows, types, cords })).status, 200);
+    const base = new Decimal(costing.calculation.total.base);
+    assert.equal(new Decimal(costing.calculation.total.finalPrice).toDecimalPlaces(4).toString(), base.dividedBy(0.93).toDecimalPlaces(4).toString());
+    const { discountPercent, rows, types, cords } = costing.saved;
+    assert.equal((await ctx.api.put(path).set(bearer(manager)).send({ discountPercent, rows, types, cords })).status, 200);
     const stored = await DesignCostingModel.collection.findOne({ designNo: 'COST-1' });
-    assert.equal(stored?.discountPercent, undefined);
-    assert.equal(stored?.rows[0].jobRate, undefined);
+    assert.deepEqual([stored?.discountPercent, stored?.markupPercent, stored?.rows[0].jobRate], [7, undefined, undefined]);
   });
 
-  it('a typed colour is costed with the type chosen here; unknown types and bad markup are refused', async () => {
+  it('a typed colour is costed with the type chosen here; unknown types and a bad discount are refused', async () => {
     const sizes = [{ size: '18', stitch: 0, consumption: { 'SEQ-3MM|PINK': 1000 } }];
     assert.equal((await ctx.api.put(`${path}/components/BLOUSE`).set(bearer(manager)).send({ sizes })).status, 200);
     const rows: unknown[] = [];
@@ -217,8 +233,9 @@ describe('design costing API', () => {
     const bad = await ctx.api.put(path).set(bearer(manager)).send({ ...empty, types: { 'SEQ-3MM|PINK': 'PLASTIC' } });
     assert.equal(bad.status, 400);
     assert.equal(bad.body.error, 'PLASTIC is not a Sequence type.');
-    assert.equal((await ctx.api.post(`${path}/preview`).set(bearer(manager)).send({ ...empty, markupPercent: -1 })).status, 400);
-  });
+    for (const discountPercent of [-1, 100, 150]) {
+      assert.equal((await ctx.api.post(`${path}/preview`).set(bearer(manager)).send({ ...empty, discountPercent })).status, 400, String(discountPercent));
+    }  });
 
   it('a save is recorded in the audit log; the record follows a renumbered design and goes with a deleted one', async () => {
     const history = await ctx.api.get('/api/audit-logs/entity/DesignCosting/COST-1').set(admin());

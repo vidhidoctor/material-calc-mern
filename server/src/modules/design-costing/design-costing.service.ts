@@ -1,6 +1,6 @@
 import {
   DEFAULT_COSTING_HEADS,
-  DEFAULT_COSTING_MARKUP_PERCENT,
+  DEFAULT_COSTING_DISCOUNT_PERCENT,
   sortVariantKeys,
   parseVariantKey,
   type DesignCostingAmountsDto,
@@ -11,7 +11,7 @@ import {
   type DesignCostingMaterialDto,
   type MaterialColumnDto,
 } from '@app/shared';
-import { costOfSize, sumCosts, type CostingAmounts } from '../../calculation/design-costing.js';
+import { costOfSize, markupPercentFor, sumCosts, type CostingAmounts } from '../../calculation/design-costing.js';
 import { Decimal, toDecimalString } from '../../calculation/engine.js';
 import { AppError } from '../../lib/app-error.js';
 import { designColumnCoster, designCostColumns } from '../costing/costing.service.js';
@@ -53,9 +53,11 @@ export function costerFor(input: { types: Record<string, string>; cords: Record<
   return designColumnCoster(input.types, cords);
 }
 
+const toCostMap = (costs: ReadonlyMap<string, Decimal>) => Object.fromEntries([...costs].map(([key, cost]) => [key, toDecimalString(cost)]));
+
 export function toInput(costing: DesignCosting | null): DesignCostingInputDto {
   return {
-    markupPercent: costing?.markupPercent ?? DEFAULT_COSTING_MARKUP_PERCENT,
+    discountPercent: costing?.discountPercent ?? costing?.markupPercent ?? DEFAULT_COSTING_DISCOUNT_PERCENT,
     rows: (costing?.rows ?? []).map(({ component, size, stitchRate, laserRate, stitchHeads, laserHeads, note }) => ({
       component,
       size,
@@ -87,21 +89,28 @@ async function calculate(design: Design, input: DesignCostingInput | DesignCosti
       if (s.stitch > 0 && rate?.stitchRate == null) noStitchRate += 1;
       if ((s.laser ?? 0) > 0 && rate?.laserRate == null) noLaserRate += 1;
       let materialCost = new Decimal(0);
+      /** Cost of each material in one piece (materials without a rate are left out). */
+      const byMaterial = new Map<string, Decimal>();
       for (const [key, qty] of Object.entries(lookup(component.name, s.size) ?? {})) {
         const { perUnit, error } = coster(key);
         if (error) errors.add(error);
         const cost = perUnit ? perUnit.times(qty) : null;
-        if (cost) materialCost = materialCost.plus(cost);
+        if (cost) {
+          materialCost = materialCost.plus(cost);
+          byMaterial.set(key, (byMaterial.get(key) ?? new Decimal(0)).plus(cost));
+        }
         const total = materialTotals.get(key);
         materialTotals.set(key, { qty: (total?.qty ?? new Decimal(0)).plus(qty), cost: cost ? (total?.cost ?? new Decimal(0)).plus(cost) : null });
       }
       const amounts = costOfSize(
         { stitch: s.stitch, laser: s.laser ?? null, stitchRate: rate?.stitchRate ?? null, laserRate: rate?.laserRate ?? null, stitchHeads: rate?.stitchHeads ?? DEFAULT_COSTING_HEADS, laserHeads: rate?.laserHeads ?? DEFAULT_COSTING_HEADS, materialCost },
-        input.markupPercent,
+        input.discountPercent,
       );
-      return { size: s.size, stitch: s.stitch, laser: s.laser ?? null, amounts };
+      return { size: s.size, stitch: s.stitch, laser: s.laser ?? null, amounts, byMaterial };
     });
-    return { name: component.name, sizes, total: sumCosts(sizes.map((s) => s.amounts)) };
+    const byMaterial = new Map<string, Decimal>();
+    for (const s of sizes) for (const [key, cost] of s.byMaterial) byMaterial.set(key, (byMaterial.get(key) ?? new Decimal(0)).plus(cost));
+    return { name: component.name, sizes, total: sumCosts(sizes.map((s) => s.amounts)), byMaterial };
   });
 
   if (noStitchRate > 0) errors.add(DESIGN_COSTING_MESSAGES.missingRates(noStitchRate, 'stitch'));
@@ -117,11 +126,13 @@ async function calculate(design: Design, input: DesignCostingInput | DesignCosti
     };
   });
   return {
+    markupPercent: toDecimalString(markupPercentFor(input.discountPercent)),
     materials,
     components: components.map((c) => ({
       name: c.name,
-      sizes: c.sizes.map((s) => ({ size: s.size, stitch: s.stitch, laser: s.laser, ...toAmountsDto(s.amounts) })),
+      sizes: c.sizes.map((s) => ({ size: s.size, stitch: s.stitch, laser: s.laser, ...toAmountsDto(s.amounts), materials: toCostMap(s.byMaterial) })),
       total: toAmountsDto(c.total),
+      materials: toCostMap(c.byMaterial),
     })),
     total: toAmountsDto(sumCosts(components.map((c) => c.total))),
     errors: [...errors],
@@ -176,7 +187,8 @@ export async function saveDesignCosting(designNo: string, input: DesignCostingIn
   await DesignCostingModel.updateOne(
     { designNo: design.designNo },
     // Costings saved while a discount existed lose it on their next save (it no longer affects any figure).
-    { $set: { markupPercent: input.markupPercent, rows, types, cords, updatedAt: new Date(), updatedBy: actorEmail }, $unset: { discountPercent: 1 } },
+    // Older records kept a markup %; the discount replaces it.
+    { $set: { discountPercent: input.discountPercent, rows, types, cords, updatedAt: new Date(), updatedBy: actorEmail }, $unset: { markupPercent: 1 } },
     // strict: false, or Mongoose drops the $unset of a field no longer in the schema.
     { upsert: true, strict: false },
   );

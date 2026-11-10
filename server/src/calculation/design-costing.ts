@@ -5,8 +5,9 @@ import { Decimal } from './engine.js';
  *   Stitch cost = stitches ÷ 1000 × stitch rate × stitch heads
  *   Laser cost  = laser ÷ 1000 × laser rate × laser heads
  *   Base cost   = stitch + laser + material
- *   Markup      = base × markup %
- *   Final price = base + markup
+ *   Final price = base ÷ (1 − discount %)   so that after the party's discount the business receives the base cost
+ *   Markup      = final price − base
+ * Discount must be below 100 (validated at the API).
  */
 
 export interface CostingAmounts {
@@ -30,12 +31,17 @@ export interface CostingSizeInput {
 
 export const perThousand = (quantity: number | null, rate: number | null, heads: number) => new Decimal(quantity ?? 0).dividedBy(1000).times(rate ?? 0).times(heads);
 
-export function costOfSize(input: CostingSizeInput, markupPercent: number): CostingAmounts {
+export function costOfSize(input: CostingSizeInput, discountPercent: number): CostingAmounts {
   const stitchCost = perThousand(input.stitch, input.stitchRate, input.stitchHeads);
   const laserCost = perThousand(input.laser, input.laserRate, input.laserHeads);
   const base = stitchCost.plus(laserCost).plus(input.materialCost);
-  const markup = base.times(markupPercent).dividedBy(100);
-  return { stitchCost, laserCost, materialCost: input.materialCost, base, markup, finalPrice: base.plus(markup) };
+  const finalPrice = base.dividedBy(new Decimal(1).minus(new Decimal(discountPercent).dividedBy(100)));
+  return { stitchCost, laserCost, materialCost: input.materialCost, base, markup: finalPrice.minus(base), finalPrice };
+}
+
+/** The markup % a discount needs: 7% discount → 7.53% markup (7 ÷ 93 × 100). */
+export function markupPercentFor(discountPercent: number): Decimal {
+  return new Decimal(discountPercent).dividedBy(new Decimal(100).minus(discountPercent)).times(100);
 }
 
 /** Totals are the sum of the unrounded amounts. */

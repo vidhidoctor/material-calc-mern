@@ -17,6 +17,7 @@ export interface RowDraft {
   stitchHeads: string;
   laserHeads: string;
   rate: string;
+  note: string;
 }
 
 interface Draft {
@@ -25,7 +26,7 @@ interface Draft {
 }
 
 export const HEADS = String(DEFAULT_COSTING_HEADS);
-export const NO_ROW: RowDraft = { stitch: '', laser: '', stitchRate: '', laserRate: '', stitchHeads: HEADS, laserHeads: HEADS, rate: '' };
+export const NO_ROW: RowDraft = { stitch: '', laser: '', stitchRate: '', laserRate: '', stitchHeads: HEADS, laserHeads: HEADS, rate: '', note: '' };
 
 const toDraft = (saved: JobWorkInputDto): Draft => ({
   rows: Object.fromEntries(
@@ -39,6 +40,7 @@ const toDraft = (saved: JobWorkInputDto): Draft => ({
         stitchHeads: String(r.stitchHeads),
         laserHeads: String(r.laserHeads),
         rate: text(r.rate),
+        note: r.note,
       },
     ]),
   ),
@@ -61,6 +63,7 @@ function toBody(draft: Draft, data: JobWorkCostingDto): JobWorkInputDto {
           stitchHeads: parseNumberInput(row.stitchHeads) ?? DEFAULT_COSTING_HEADS,
           laserHeads: parseNumberInput(row.laserHeads) ?? DEFAULT_COSTING_HEADS,
           rate: parseNumberInput(row.rate),
+          note: row.note,
         };
       }),
     ),

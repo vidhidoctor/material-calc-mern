@@ -6,14 +6,17 @@ import { QueryState } from '../../components/ui';
 import { formatNumber, formatRupees } from '../../lib/format';
 import { useJobWorkCosting } from './job-work-costing.hooks';
 
-type Row = JobWorkCalculationDto['components'][number]['sizes'][number] & { entry?: JobWorkInputDto['rows'][number] };
+type Component = JobWorkCalculationDto['components'][number];
+type Row = Component['sizes'][number] & { entry?: JobWorkInputDto['rows'][number] };
+type Total = JobWorkAmountsDto & { materials: Component['materials'] };
 
 const rowKey = (component: string, size: string) => `${component}\u0000${size}`;
 const quantity = (value: number | null) => (value === null ? '—' : formatNumber(value, 0));
 const rate = (value: number | null | undefined) => (value == null ? '—' : formatNumber(value, 4));
+const money = (value: string | undefined) => (value === undefined ? '—' : formatRupees(value));
 
 // The columns of the Job Work Summary table, in its order.
-const COLUMNS: readonly SheetColumn<Row, JobWorkAmountsDto>[] = [
+const COLUMNS: readonly SheetColumn<Row, Total>[] = [
   { id: 'size', header: 'Size', cell: (r) => r.size },
   { id: 'stitch', header: 'Stitches', cell: (r) => quantity(r.stitch) },
   { id: 'stitchRate', header: 'Stitch Rate', cell: (r) => rate(r.entry?.stitchRate) },
@@ -27,6 +30,7 @@ const COLUMNS: readonly SheetColumn<Row, JobWorkAmountsDto>[] = [
   { id: 'included', header: 'Included Materials', cell: (r) => formatRupees(r.includedMaterials), total: (t) => formatRupees(t.includedMaterials) },
   { id: 'excluded', header: 'Excluded Materials', cell: (r) => formatRupees(r.excludedMaterials), total: (t) => formatRupees(t.excludedMaterials) },
   { id: 'final', header: 'Final Cost / Pc', cell: (r) => formatRupees(r.finalCost), total: (t) => formatRupees(t.finalCost), strong: true },
+  { id: 'remarks', header: 'Remarks', cell: (r) => r.entry?.note ?? '', className: 'po-remarks' },
 ];
 
 /** Printable Job Work Summary table: the saved figures, with the columns saved in the print settings. */
@@ -46,6 +50,14 @@ export function JobWorkPrintPage() {
       <QueryState query={query}>
         {(data) => {
           const entries = new Map(data.saved.rows.map((r) => [rowKey(r.component, r.size), r]));
+          // One cost column per material the design uses (the ticked ones print), just before Included Materials.
+          // Excluded ones say so: the job worker's rate already covers them.
+          const materialColumns: SheetColumn<Row, Total>[] = data.calculation.materials.map((m) => ({
+            id: m.key,
+            header: [m.label, m.detail, m.included ? '' : '(excluded)'].filter(Boolean).join(' '),
+            cell: (r) => money(r.materials[m.key]),
+            total: (t) => money(t.materials[m.key]),
+          }));
           return (
             <ColumnPrintSheet
               title="JOB WORK COSTING"
@@ -53,10 +65,11 @@ export function JobWorkPrintPage() {
               backLabel="Job Work Costing"
               sheet="job-work"
               columns={COLUMNS}
+              materialColumns={{ before: 'included', columns: materialColumns }}
               components={data.calculation.components.map((c) => ({
                 name: c.name,
                 rows: c.sizes.map((s) => ({ ...s, entry: entries.get(rowKey(c.name, s.size)) })),
-                total: c.total,
+                total: { ...c.total, materials: c.materials },
               }))}
             >
               <p className="po-order-ref">

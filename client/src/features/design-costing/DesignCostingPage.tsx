@@ -15,27 +15,24 @@ import { useJobWorkEditor } from '../job-work-costing/use-job-work-editor';
 import { ComponentEditor } from '../punching/components/ComponentEditor';
 import { BulkRateModal, type BulkRates } from './components/BulkRateModal';
 import { MaterialTab } from './components/MaterialTab';
-import { PricingTab } from './components/PricingTab';
 import { RateTab } from './components/RateTab';
 import { NO_RATE, rowKey, toBody, toDraft, type Draft, type RateDraft } from './costing-draft';
 import { useDesignCosting, useDesignCostingPreview, useSaveDesignCosting } from './design-costing.hooks';
 
-type Tab = 'punching' | 'rates' | 'materials' | 'pricing' | 'jobwork';
+type Tab = 'punching' | 'rates' | 'materials' | 'jobwork';
 
 const TABS: readonly TabItem<Tab>[] = [
   { id: 'punching', label: 'Punching Details' },
-  { id: 'rates', label: 'Rate & Costing' },
+  { id: 'rates', label: 'Rate & Pricing' },
   { id: 'materials', label: 'Material Requirement' },
-  { id: 'pricing', label: 'Pricing Summary' },
   { id: 'jobwork', label: 'Job Work Costing' },
 ];
 
 /** One line per tab, so the header keeps its height whichever tab is open. */
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
   punching: 'Components, sizes and materials from the Punching Master.',
-  rates: 'Stitch and laser rates and heads per component and size.',
+  rates: 'Stitch and laser rates and heads per size, discount, markup, final price and remarks.',
   materials: 'What one piece of every size consumes, and what it costs.',
-  pricing: 'Markup and final price per piece, and the price list.',
   jobwork: 'What the job worker is paid per piece. Nothing here changes your own costing or the Punching Master.',
 };
 
@@ -179,7 +176,7 @@ function Editor({ data, jobWorkData, canManage }: { data: DesignCostingDto; jobW
             <StatCard icon="layers" label="Base cost, all components">
               <strong className="order-stat-value">{formatRupees(calculation.total.base)}</strong>
             </StatCard>
-            <StatCard icon="sliders" label={`Markup (${formatNumber(body.markupPercent)}%)`}>
+            <StatCard icon="sliders" label={`Markup (${formatNumber(calculation.markupPercent)}% for ${formatNumber(body.discountPercent)}% discount)`}>
               <strong className="order-stat-value">{formatRupees(calculation.total.markup)}</strong>
             </StatCard>
             <StatCard icon="rupee" label="Final price, all components">
@@ -198,11 +195,19 @@ function Editor({ data, jobWorkData, canManage }: { data: DesignCostingDto; jobW
             ))}
           </div>
         )}
-        {tab === 'rates' && <RateTab designNo={designNo} dirty={dirty} calculation={calculation} draft={draft} canManage={canManage} setRate={setRate} onBulk={() => setBulk(true)} />}
-        {tab === 'materials' && <MaterialTab data={data} calculation={calculation} draft={draft} canManage={canManage} setType={setType} setCord={setCord} />}
-        {tab === 'pricing' && (
-          <PricingTab designNo={designNo} dirty={dirty} calculation={calculation} draft={draft} canManage={canManage} setMarkup={(v) => change((d) => ({ ...d, markup: v }))} setRate={setRate} />
+        {tab === 'rates' && (
+          <RateTab
+            designNo={designNo}
+            dirty={dirty}
+            calculation={calculation}
+            draft={draft}
+            canManage={canManage}
+            setRate={setRate}
+            setDiscount={(v) => change((d) => ({ ...d, discount: v }))}
+            onBulk={() => setBulk(true)}
+          />
         )}
+        {tab === 'materials' && <MaterialTab data={data} calculation={calculation} draft={draft} canManage={canManage} setType={setType} setCord={setCord} />}
         {jobWorkOpen && <JobWorkTab editor={jobWork} canManage={canManage} />}
       </div>
 
